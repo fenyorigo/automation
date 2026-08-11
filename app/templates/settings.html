@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="hu"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251f"><title>Kért beállítások – Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head><body class="{{ 'read-only' if not can_write }}">
+<header class="topbar history-topbar"><div><p class="eyebrow">Végrehajtás nélkül</p><h1>Kért beállítások</h1></div>
+<a class="back-link" href="{{ url_for('dashboard') }}">Vissza az áttekintőhöz</a>{% include '_account_menu.html' %}</header>
+<main><section class="history-panel">
+{% if not can_write %}<p class="notice">Csak olvasási jogosultsággal vagy bejelentkezve; a módosító űrlapok nem érhetők el.</p>{% endif %}
+{% if devices %}
+<form class="history-controls" method="get"><label>Eszköz<select name="device">
+{% for device in devices %}<option value="{{ device.id }}" {{ 'selected' if device.id == selected.id }}>{{ device.source_label }} – {{ device.name }}</option>{% endfor %}
+</select></label><button type="submit">Kiválasztás</button></form>
+
+<div class="setting-context"><div><span>Mért hőmérséklet</span><strong>{{ selected.measured_temperature_c|temperature }} °C</strong></div>
+<div><span>Eszközön beállítva</span><strong>{{ selected.target_temperature_c|temperature }} °C</strong></div>
+<div><span>Eszköz állapota</span><strong>{{ 'Bekapcsolva' if selected.power else 'Kikapcsolva' }}</strong></div></div>
+
+<p class="notice">A mentés csak az adatbázisba kerül. Az eszköz beállítása nem változik meg.</p>
+<form class="desired-form" method="post" action="{{ url_for('save_settings', device_id=selected.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% set desired = selected.requested or {} %}
+<div class="form-grid">
+<label>Állapot<select name="power"><option value="0" {{ 'selected' if desired.get('power', selected.power) == false }}>Kikapcsolva</option><option value="1" {{ 'selected' if desired.get('power', selected.power) == true }}>Bekapcsolva</option></select></label>
+<label>Kért hőmérséklet<input type="number" name="temperature_c" step="0.5" min="{{ 16 if selected.source_system == 'connectlife' else 5 }}" max="{{ 30 if selected.source_system == 'connectlife' else 22 }}" required value="{{ desired.get('temperature_c', selected.target_temperature_c) }}"></label>
+{% if selected.source_system == 'connectlife' %}
+<label>Üzemmód<select name="mode">{% for value,label in [('cool','Hűtés'),('heat','Fűtés'),('dry','Szárítás'),('fan','Ventilátor'),('auto','Automata')] %}<option value="{{ value }}" {{ 'selected' if desired.get('mode',selected.mode)==value }}>{{ label }}</option>{% endfor %}</select></label>
+<label>Ventilátorsebesség<select name="fan_speed">{% for value,label in [('auto','Automata'),('low','Alacsony'),('mid_low','Közepesen alacsony'),('mid','Közepes'),('mid_high','Középmagas'),('high','Magas')] %}<option value="{{ value }}" {{ 'selected' if desired.get('fan_speed')==value }}>{{ label }}</option>{% endfor %}</select></label>
+<label>Alvásprofil<select name="sleep">{% for value,label in [('off','Kikapcsolva'),('general','Általános'),('elder','Idősebb'),('young','Fiatal'),('kid','Gyermek')] %}<option value="{{ value }}" {{ 'selected' if desired.get('sleep','off')==value }}>{{ label }}</option>{% endfor %}</select></label>
+<div class="check-options"><label><input type="checkbox" name="swing" value="1" {{ 'checked' if desired.get('swing') }}> Hinta</label><label><input type="checkbox" name="fast_cool" value="1" {{ 'checked' if desired.get('fast_cool') }}> Gyors hűtés</label><label><input type="checkbox" name="quiet" value="1" {{ 'checked' if desired.get('quiet') }}> Csendes</label></div>
+{% else %}
+<label>Szabályozási mód<select name="control_mode"><option value="manual" {{ 'selected' if desired.get('control_mode',selected.mode)=='manual' }}>Kézi</option><option value="auto" {{ 'selected' if desired.get('control_mode',selected.mode)=='auto' }}>Automata</option></select></label>
+{% endif %}
+</div><button type="submit">Kérés mentése</button>
+{% if request.args.get('saved')=='yes' %}<span class="saved-note">Adatbázisba mentve, nincs végrehajtva</span>{% endif %}
+</form>
+{% if selected.requested %}<p class="event-time">Utolsó várakozó kérés: {{ selected.requested_at|local_time }}</p>{% endif %}
+{% else %}<p class="chart-empty">Nincs beállítható eszköz.</p>{% endif %}
+</section></main></body></html>

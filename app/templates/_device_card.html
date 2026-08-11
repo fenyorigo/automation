@@ -1,0 +1,54 @@
+<article id="device-{{ device.id }}" class="device-card {{ 'is-offline' if device.online is sameas false }} {{ 'is-manual' if device.managed_manually }}">
+  <div class="card-heading">
+    <div><p class="source">{{ device.source_label }}</p><h3>{{ device.name }}</h3></div>
+    <span class="badge {{ 'manual' if device.managed_manually else ('online' if device.online else 'offline') }}">
+      {{ 'Kézi állapot' if device.managed_manually else ('Elérhető' if device.online else 'Nem elérhető') }}
+    </span>
+  </div>
+  {% if device.managed_manually %}
+  <div class="manual-state {{ 'powered' if device.manual_power_state else 'stopped' }}">
+    <span class="manual-state-label">Kazán</span><strong>{{ 'Bekapcsolva' if device.manual_power_state else 'Kikapcsolva' }}</strong>
+  </div>
+  <div class="derived-target"><span>Célhőmérséklet</span>
+    {% if device.derived_target_temperature_c is defined %}<strong>{{ device.derived_target_temperature_c|temperature }} °C</strong><small>{{ device.derived_target_source }}</small>
+    {% else %}<strong>—</strong><small>nincs friss Computherm-adat</small>{% endif %}
+  </div>
+  {% else %}
+  <div class="temperature"><span class="temperature-value">{{ device.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
+  {% endif %}
+  {% if device.source_system not in ['esp32', 'manual'] %}
+  <dl class="state-grid">
+    <div><dt>Célhőmérséklet</dt><dd>{{ device.target_temperature_c|temperature }} °C</dd></div>
+    <div><dt>Állapot</dt><dd class="{{ 'power-on' if device.source_system == 'connectlife' and device.power else '' }}">{% if device.power is none %}—{% elif device.power %}Bekapcsolva{% else %}Kikapcsolva{% endif %}</dd></div>
+    <div><dt>Üzemmód</dt><dd>{{ device.mode or '—' }}</dd></div>
+    <div><dt>Aktív</dt><dd>{% if device.active is none %}—{% elif device.active %}Igen{% else %}Nem{% endif %}</dd></div>
+  </dl>
+  {% endif %}
+  {% if device.hostname %}<div class="card-footer"><span>{{ device.hostname }}</span><time>{{ device.last_poll_at|local_time }}</time></div>{% endif %}
+  {% if device.room_name %}<p class="device-location">{{ device.zone_name or 'Zónán kívül' }} · {{ device.room_name }}</p>{% endif %}
+  {% if not device.online and device.error_message %}<p class="error-message">{{ device.error_code }}: {{ device.error_message }}</p>{% endif %}
+
+  {% if device.source_system in ['connectlife', 'manual'] %}
+    {% if can_write and device.managed_manually %}
+    <form class="maintenance-form" method="post" action="{{ url_for('update_power', device_id=device.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <fieldset><legend>Kézi állapot</legend><div class="segmented">
+        <label><input type="radio" name="manual_power_state" value="0" {{ 'checked' if not device.manual_power_state }}> Kikapcsolva</label>
+        <label><input type="radio" name="manual_power_state" value="1" {{ 'checked' if device.manual_power_state }}> Bekapcsolva</label>
+      </div></fieldset><button type="submit">Állapot mentése</button>
+      {% if request.args.get('saved') == 'power_saved' %}<span class="saved-note">Változás naplózva</span>{% endif %}
+      {% if request.args.get('saved') == 'power_unchanged' %}<span class="saved-note">Nem változott</span>{% endif %}
+      {% if device.manual_state_changed_at %}<p class="event-time">Utolsó állapotváltozás: {{ device.manual_state_changed_at|local_time }}</p>{% endif %}
+    </form>
+    {% endif %}
+    {% if can_write %}
+    <form class="maintenance-form service-form" method="post" action="{{ url_for('record_service', device_id=device.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><p class="form-title">Szerviz rögzítése</p>
+      <div class="date-fields"><label>Utolsó szerviz<input required type="date" name="last_service_date" value="{{ device.last_service_date or '' }}"></label><label>Következő szerviz<input type="date" name="next_service_due" value="{{ device.next_service_due or '' }}"></label></div>
+      <button type="submit">Szerviz mentése</button>{% if request.args.get('saved') == 'service_saved' %}<span class="saved-note">Szerviz naplózva</span>{% endif %}
+    </form>
+    {% elif device.last_service_date or device.next_service_due %}
+    <dl class="readonly-service"><div><dt>Utolsó szerviz</dt><dd>{{ device.last_service_date or '—' }}</dd></div><div><dt>Következő szerviz</dt><dd>{{ device.next_service_due or '—' }}</dd></div></dl>
+    {% endif %}
+  {% endif %}
+</article>

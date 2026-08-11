@@ -1,0 +1,65 @@
+# AI related
+.codex/
+.claude/
+
+# Python
+.venv/
+.pio/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables / secrets
+.env
+.dashboard-secret
+.env.local
+.env.*.local
+config.php
+cookies.txt
+
+# Runtime secrets
+*.pem
+*.key
+
+# Database dumps / archives
+*.sql
+*.sql.gz
+*.tgz
+!SQL/
+!SQL/**/*.sql
+
+# Local device inventory and captured protocol data
+config/devices.json
+connectlife/*.json
+connectlife/snapshots/
+computherm/*.pcap
+docs/device-inventory.md
+docs/computherm.md
+docs/computherm.txt
+db chat with chatgpt.txt
+
+# Runtime / OS noise
+logs/*.lock
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Cache / temp
+*.cache
+*.tmp
+
+# Generated data (később)
+data/
+exports/
+reports/

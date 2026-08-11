@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body class="{{ 'read-only' if not can_write }}">
+  <header class="topbar dashboard-topbar">
+    <div class="dashboard-heading">
+      <p class="eyebrow">Otthoni automatizálás</p>
+      <h1>Klímaáttekintő</h1>
+      <p class="header-updated">Utolsó lekérdezés: {{ latest_poll|local_time }}</p>
+      <nav class="main-nav" aria-label="Funkciók">
+        <a class="history-link" href="{{ url_for('history') }}">Mérési előzmények</a>
+        <a class="history-link" href="{{ url_for('settings') }}">Kért beállítások</a>
+        <a class="history-link" href="{{ url_for('schedules') }}">Időprofilok</a>
+        <a class="history-link" href="{{ url_for('locations') }}">Helyiségek</a>
+        <a class="history-link" href="{{ url_for('analysis') }}">Elemzések</a>
+        <a class="history-link" href="{{ url_for('outdoor_sources') }}">Külső hőmérséklet</a>
+        <a class="history-link" href="{{ url_for('ventilation') }}">Szellőztetés</a>
+        <a class="history-link" href="{{ url_for('climate_log') }}">Klíma</a>
+        {% if can_write %}<a class="history-link" href="{{ url_for('users') }}">Felhasználók</a>{% endif %}
+      </nav>
+    </div>
+    <div class="system-status" aria-label="Elérhető eszközök">
+      <span class="status-dot"></span>
+      <strong>{{ successful }}/{{ monitored_count }}</strong> eszköz elérhető
+    </div>
+    {% include '_account_menu.html' %}
+    {% if can_write %}
+    <form class="manual-poll-form" method="post" action="{{ url_for('poll_now') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Kézi lekérdezés</button>
+    </form>
+    {% endif %}
+  </header>
+
+  <main>
+    {% if poll_notice %}
+    <p class="poll-notice {{ poll_notice.kind }}" role="status">{{ poll_notice.message }}</p>
+    {% endif %}
+    <section class="summary" aria-labelledby="devices-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Jelenlegi állapot</p>
+          <h2 id="devices-title">Hőmérsékletek</h2>
+        </div>
+        <nav class="view-switch" aria-label="Áttekintő csoportosítása">
+          <a class="{{ 'selected' if view_mode == 'device' }}" href="{{ url_for('dashboard', view='device') }}">Eszközök</a>
+          <a class="{{ 'selected' if view_mode == 'room' }}" href="{{ url_for('dashboard', view='room') }}">Zónák és helyiségek</a>
+        </nav>
+      </div>
+
+      {% if view_mode == 'device' %}
+      <div class="device-grid">
+        {% for device in devices %}
+        {% include '_device_card.html' %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="zone-groups">
+        {% for zone in room_groups %}
+        <section class="zone-block"><div class="zone-heading"><p class="eyebrow">Zóna</p><h2>{{ zone.name }}</h2></div>
+          {% for room in zone.rooms %}
+          <section class="room-block"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{{ room.devices|length }} eszköz</span></div>
+            {% if room.devices %}<div class="device-grid">{% for device in room.devices %}{% include '_device_card.html' %}{% endfor %}</div>
+            {% else %}<p class="room-empty">Jelenleg nincs hozzárendelt eszköz.</p>{% endif %}
+          </section>
+          {% endfor %}
+        </section>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="poll-log" aria-labelledby="poll-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Diagnosztika</p>
+          <h2 id="poll-title">Legutóbbi lekérdezések</h2>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Időpont</th><th>Eszköz</th><th>Eredmény</th><th>Idő</th></tr>
+          </thead>
+          <tbody>
+            {% for attempt in attempts %}
+            <tr>
+              <td>{{ attempt.attempted_at|local_time }}</td>
+              <td><strong>{{ attempt.name or attempt.hostname }}</strong><small>{{ attempt.hostname }}</small></td>
+              <td><span class="badge {{ 'online' if attempt.success else 'offline' }}">{{ 'Sikeres' if attempt.success else attempt.error_code or 'Sikertelen' }}</span></td>
+              <td>{{ attempt.duration_ms }} ms</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,14 @@
+[Unit]
+Description=Home automation periodic device poller
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/automation
+ExecStart=%h/Projects/automation/.venv/bin/python %h/Projects/automation/app/poll_scheduler.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

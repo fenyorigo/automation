@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>Klíma – Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='dashboard.css') }}">
+</head>
+<body class="{{ 'read-only' if not can_write }}">
+<header class="topbar history-topbar">
+  <div><p class="eyebrow">Vezérlés és eseménynapló</p><h1>Klíma</h1></div>
+  <a class="back-link" href="{{ url_for('dashboard') }}">Vissza az áttekintőhöz</a>
+  {% include '_account_menu.html' %}
+</header>
+<main>
+{% if notice %}<p class="poll-notice {{ notice.kind }}">{{ notice.message }}</p>{% endif %}
+
+{% if can_write %}
+<section class="history-panel">
+  <p class="eyebrow">ConnectLife</p><h2>Klíma vezérlése</h2>
+  <p class="reset-explanation">A parancs előtt és után is friss állapotlekérdezés történik. Bekapcsolás csak kikapcsolt, kikapcsolás csak bekapcsolt eszköznél indul el.</p>
+  <form class="climate-start-form climate-control-form" method="post" action="{{ url_for('control_climate_from_ui') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Helyiség
+      <select id="control-device" name="device_id" required>
+        {% for device in devices %}<option value="{{ device.id }}" data-power="{{ 1 if device.power else 0 }}" data-target="{{ device.target_temperature_c if device.target_temperature_c is not none else '' }}" data-observed="{{ device.state_observed_at|local_time if device.state_observed_at else 'nincs adat' }}">{{ device.room_name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Jelenlegi állapot<input id="control-state" type="text" readonly></label>
+    <label>Célhőmérséklet
+      <input id="control-target" type="number" name="temperature_c" min="16" max="30" step="1" required>
+      <small id="control-target-time"></small>
+    </label>
+    <div class="climate-control-actions">
+      <button id="control-on" type="submit" name="action" value="on">Klíma bekapcsolása</button>
+      <button id="control-off" type="submit" name="action" value="off">Klíma kikapcsolása</button>
+    </div>
+  </form>
+</section>
+
+<section class="history-panel">
+  <p class="eyebrow">Távirányító</p><h2>Kézi esemény rögzítése</h2>
+  <p class="reset-explanation">Csak akkor használd, ha a klímát a saját távirányítójával kapcsoltad be. Ez az űrlap nem vezérli az eszközt.</p>
+  <form class="climate-start-form manual-climate-form" method="post" action="{{ url_for('start_climate_operation') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Helyiség<select name="device_id" required>{% for device in devices %}<option value="{{ device.id }}">{{ device.room_name }}</option>{% endfor %}</select></label>
+    <label>Indítás időpontja<input type="datetime-local" name="started_at" value="{{ now_local }}" required></label>
+    <label>Megjegyzés<input type="text" name="note" maxlength="500"></label>
+    <button type="submit">Indítás naplózása</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="history-panel">
+  <p class="eyebrow">Események</p><h2>Klímanapló</h2>
+  {% if events %}<div class="ventilation-list">{% for event in events %}
+  <article class="{{ 'is-open' if not event.ended_at }}"><div>
+    <strong>{{ event.room_name }}{% if not event.ended_at %} <span class="badge online">Aktív</span>{% endif %}</strong>
+    <small>{{ event.started_at|local_time }} – {{ event.ended_at|local_time if event.ended_at else 'folyamatban' }}</small>
+    <small>Indítási célérték: {% if event.started_target_temperature_c is not none %}{{ event.started_target_temperature_c|temperature }} °C{% else %}nincs adat{% endif %}</small>
+    {% if event.ended_at %}<small>Leállítási célérték: {% if event.ended_target_temperature_c is not none %}{{ event.ended_target_temperature_c|temperature }} °C{% else %}nincs adat{% endif %}</small>{% endif %}
+    <small>{{ event.device_name }} · {{ event.created_by_name }}</small>{% if event.note %}<p>{{ event.note }}</p>{% endif %}
+  </div>{% if not event.ended_at and can_write %}<form method="post" action="{{ url_for('finish_climate_operation',event_id=event.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Leállítás időpontja<input type="datetime-local" name="ended_at" value="{{ now_local }}" required></label>
+    <button type="submit">Leállítás naplózása</button>
+  </form>{% endif %}</article>{% endfor %}</div>
+  {% else %}<p class="chart-empty">Még nincs rögzített klímahasználat.</p>{% endif %}
+</section>
+
+<section class="history-panel">
+  <p class="eyebrow">Audit</p><h2>Vezérlési kísérletek</h2>
+  {% if attempts %}<div class="table-wrap"><table><thead><tr><th>Időpont</th><th>Klíma</th><th>Parancs</th><th>Eredmény</th><th>Felhasználó</th></tr></thead><tbody>{% for item in attempts %}<tr>
+    <td>{{ item.requested_at|local_time }}</td><td>{{ item.device_name }}</td>
+    <td>{{ 'Bekapcsolás' if item.requested_power else 'Kikapcsolás' }}{% if item.requested_temperature_c is not none %}<small>{{ item.requested_temperature_c|temperature }} °C</small>{% endif %}</td>
+    <td><span class="badge {{ 'online' if item.status=='verified' else 'offline' if item.status=='failed' else 'manual' }}">{{ item.status }}</span>{% if item.error_message %}<small>{{ item.error_message }}</small>{% endif %}</td><td>{{ item.username }}</td>
+  </tr>{% endfor %}</tbody></table></div>{% else %}<p class="chart-empty">Még nem történt UI-ból indított klímaparancs.</p>{% endif %}
+</section>
+</main>
+<script>
+const device=document.getElementById('control-device');
+const state=document.getElementById('control-state');
+const target=document.getElementById('control-target');
+const targetTime=document.getElementById('control-target-time');
+const onButton=document.getElementById('control-on');
+const offButton=document.getElementById('control-off');
+function updateControl(){
+  if(!device)return;
+  const option=device.options[device.selectedIndex];
+  const powered=option.dataset.power==='1';
+  state.value=powered?'Bekapcsolva':'Kikapcsolva';
+  target.value=option.dataset.target||'';
+  target.required=!powered;
+  target.disabled=powered;
+  targetTime.textContent='Utolsó lekérdezés: '+option.dataset.observed;
+  onButton.hidden=powered;
+  offButton.hidden=!powered;
+}
+if(device){device.addEventListener('change',updateControl);updateControl();}
+</script>
+</body></html>

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "devices": [
+    {
+      "source_system": "esp32",
+      "hostname": "esp32-room-1",
+      "expected_ip": "192.0.2.10",
+      "mac_address": "02:00:00:00:00:01",
+      "device_id": "esp32-room-1",
+      "enabled": true
+    },
+    {
+      "source_system": "connectlife",
+      "hostname": "climate-room-1",
+      "expected_ip": "192.0.2.20",
+      "mac_address": "02:00:00:00:00:02",
+      "device_id": "climate-room-1",
+      "connectlife_name": "Room 1",
+      "auid": "REPLACE_WITH_AUID",
+      "enabled": true
+    },
+    {
+      "source_system": "computherm",
+      "hostname": "thermostat-zone-1",
+      "expected_ip": "192.0.2.30",
+      "mac_address": "02:00:00:00:00:03",
+      "device_id": "thermostat-zone-1",
+      "device_type_code": "0x4ead",
+      "enabled": true
+    }
+  ]
+}

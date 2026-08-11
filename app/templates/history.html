@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>Mérési előzmények – Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body class="{{ 'read-only' if not can_write }}">
+  <header class="topbar history-topbar">
+    <div>
+      <p class="eyebrow">Otthoni automatizálás</p>
+      <h1>Mérési előzmények</h1>
+    </div>
+    <a class="back-link" href="{{ url_for('dashboard') }}">Vissza az áttekintőhöz</a>
+    {% include '_account_menu.html' %}
+  </header>
+  <main>
+    {% if history_notice %}
+    <p class="poll-notice {{ history_notice.kind }}" role="status">{{ history_notice.message }}</p>
+    {% endif %}
+    <section class="history-panel">
+      {% if devices %}
+      <form class="history-controls" method="get">
+        <label>Eszköz
+          <select name="device">
+            {% for device in devices %}
+            <option value="{{ device.id }}" {{ 'selected' if device.id == selected.id }}>{{ device.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Időtáv
+          <select name="range">
+            <option value="24h" {{ 'selected' if range_key == '24h' }}>24 óra</option>
+            <option value="7d" {{ 'selected' if range_key == '7d' }}>7 nap</option>
+            <option value="30d" {{ 'selected' if range_key == '30d' }}>30 nap</option>
+          </select>
+        </label>
+        <button type="submit">Megjelenítés</button>
+      </form>
+
+      {% if gnuplot_error %}
+      <p class="chart-error">{{ gnuplot_error }}</p>
+      {% elif points %}
+      <div class="chart-frame">
+        <img src="{{ url_for('history_chart', device=selected.id, range=range_key) }}" alt="{{ selected.name }} hőmérsékleti grafikonja">
+      </div>
+      <dl class="history-stats">
+        <div><dt>Minimum</dt><dd>{{ stats.minimum|temperature }} °C</dd></div>
+        <div><dt>Átlag</dt><dd>{{ stats.average|temperature }} °C</dd></div>
+        <div><dt>Maximum</dt><dd>{{ stats.maximum|temperature }} °C</dd></div>
+        <div><dt>Mérések</dt><dd>{{ points|length }}</dd></div>
+      </dl>
+      {% else %}
+      <p class="chart-empty">A kiválasztott időszakban nincs eltárolt hőmérsékleti adat.</p>
+      {% endif %}
+      {% else %}
+      <p class="chart-empty">Nincs megjeleníthető hőmérséklet-érzékelő.</p>
+      {% endif %}
+    </section>
+
+    {% if can_write %}<section class="history-panel sensor-reset-panel" aria-labelledby="sensor-reset-title">
+      <p class="eyebrow">Karbantartás</p>
+      <h2 id="sensor-reset-title">Szenzormérések nullázása</h2>
+      <p class="reset-explanation">A kiválasztott szenzorok összes korábbi mérési értéke végleg törlődik. Az eszközök és a lekérdezési napló megmaradnak.</p>
+      {% if resettable_sensors %}
+      <form method="post" action="{{ url_for('reset_sensor_history') }}" onsubmit="return confirm('Biztosan törlöd a kiválasztott szenzorok összes korábbi mérési értékét? Ez nem vonható vissza.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="sensor-reset-list">
+          {% for sensor in resettable_sensors %}
+          <label>
+            <input type="checkbox" name="sensor_id" value="{{ sensor.id }}" {{ 'disabled' if not sensor.reading_count }}>
+            <span><strong>{{ sensor.device_name }}</strong><small>{{ sensor.hostname }} · {{ sensor.reading_count }} mérés{% if sensor.last_reading_at %} · utolsó: {{ sensor.last_reading_at|local_time }}{% endif %}</small></span>
+          </label>
+          {% endfor %}
+        </div>
+        <button class="danger-button" type="submit">Kijelölt mérések törlése</button>
+      </form>
+      {% else %}
+      <p class="chart-empty">Nincs nullázható hőmérséklet-szenzor.</p>
+      {% endif %}
+    </section>{% endif %}
+  </main>
+</body>
+</html>

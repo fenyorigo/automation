@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>Külső hőmérséklet – Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body class="{{ 'read-only' if not can_write }}">
+  <header class="topbar history-topbar">
+    <div><p class="eyebrow">Otthoni automatizálás</p><h1>Külső hőmérséklet</h1></div>
+    <a class="back-link" href="{{ url_for('dashboard') }}">Vissza az áttekintőhöz</a>
+    {% include '_account_menu.html' %}
+  </header>
+  <main>
+    {% if notice %}<p class="poll-notice {{ notice.kind }}" role="status">{{ notice.message }}</p>{% endif %}
+    <section class="history-panel">
+      <p class="eyebrow">Aktuális választás</p>
+      {% if selected %}
+      <h2>{{ selected.temperature_c|temperature }} °C</h2>
+      <p class="reset-explanation">{{ selected.display_name }} · mérve: {{ selected.observed_at|local_time }}</p>
+      {% else %}
+      <p class="chart-empty">Nincs aktív, kellően friss külső hőmérsékleti adat.</p>
+      {% endif %}
+    </section>
+    <section class="history-panel">
+      <p class="eyebrow">Prioritási sorrend</p><h2>Adatforrások</h2>
+      <p class="reset-explanation">A rendszer az aktív, friss adatot adó források közül a legkisebb prioritásszámút választja.</p>
+      <form method="post" action="{{ url_for('save_outdoor_sources') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="outdoor-source-list">
+          {% for source in sources %}
+          <article>
+            <label class="source-toggle"><input type="checkbox" name="active_{{ source.id }}" value="1" {{ 'checked' if source.is_active }}><span><strong>{{ source.display_name }}</strong><small>{{ source.source_code }}</small></span></label>
+            <label>Prioritás<input type="number" name="priority_{{ source.id }}" min="1" max="999" value="{{ source.priority }}" required></label>
+            <label>Max. életkor (perc)<input type="number" name="max_age_{{ source.id }}" min="1" max="1440" value="{{ source.max_age_minutes }}" required></label>
+            <div class="source-reading"><span>Legutóbbi adat</span><strong>{% if source.temperature_c is not none %}{{ source.temperature_c|temperature }} °C{% else %}—{% endif %}</strong><small>{% if source.observed_at %}{{ source.observed_at|local_time }}{% else %}még nincs mérés{% endif %}</small></div>
+          </article>
+          {% endfor %}
+        </div>
+        <button class="primary-button" type="submit">Források mentése</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

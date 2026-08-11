@@ -1,0 +1,7 @@
+connectlife
+broadlink
+python-dotenv
+mariadb
+flask
+pandas
+matplotlib

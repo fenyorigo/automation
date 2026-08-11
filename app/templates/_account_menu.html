@@ -1,0 +1,4 @@
+<div class="account-menu">
+  <span><strong>{{ current_user.username }}</strong><small>{{ 'Szerkesztő' if can_write else 'Csak olvasó' }}</small></span>
+  <form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Kilépés</button></form>
+</div>

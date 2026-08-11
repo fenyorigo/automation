@@ -1,0 +1,14 @@
+[Unit]
+Description=Home automation web dashboard
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/automation
+ExecStart=%h/Projects/automation/.venv/bin/python %h/Projects/automation/app/dashboard.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,213 @@
+Connectlife lépések
+1. API-ból egyetlen property írása ⭐⭐⭐⭐⭐
+Ez a legfontosabb.
+Nem vennék még Shellyt.
+Először bizonyítsuk be, hogy tudunk írni.
+Valami teljesen veszélytelen dolgot.
+Sorrend:
+26°C
+↓
+
+25°C
+
+↓
+
+26°C
+
+kikapcsolt klímán.
+Ha ez sikerül:
+✔ API hitelesítés OK
+✔ property írás OK
+✔ property olvasás OK
+2. Minden írható mező dokumentálása
+Most már tudjuk:
+t_power
+
+t_temp
+
+t_work_mode
+
+t_fan_speed
+
+t_up_down
+
+...
+
+de nem tudjuk pontosan
+t_work_mode
+
+0 ?
+1 ?
+2 cool
+3 ?
+4 ?
+
+Ezt 10 perc alatt ki lehet deríteni.
+Telefon:
+Auto
+
+↓
+
+Heat
+
+↓
+
+Cool
+
+↓
+
+Dry
+
+↓
+
+Fan
+
+Minden után dump.
+Kész a mapping.
+Ugyanez ventilátorra.
+3. Saját Python wrapper
+Én nem a connectlife package-et használnám közvetlenül mindenhol.
+Írnék egy kb. 150 soros saját wrappert.
+Például:
+
+cl = ConnectLife()
+
+cl.rooms()
+
+cl.temperature("Dolgozó")
+
+cl.set_temperature("Dolgozó",25)
+
+cl.power("Dolgozó",True)
+
+cl.mode("Dolgozó","heat")
+
+Így később teljesen független leszel attól, hogyan változik a csomag.
+4. REST API
+A wrapper fölé:
+GET
+
+/api/climates
+
+GET
+
+/api/climates/dolgozo
+
+POST
+
+/api/climates/dolgozo/temp
+
+POST
+
+/api/climates/dolgozo/mode
+
+Cloudflare mögött.
+5. Shelly PoC
+Csak ekkor venném meg.
+Mert akkor már tudjuk:
+Shelly
+
+↓
+
+Python
+
+↓
+
+ConnectLife
+
+↓
+
+Hisense
+
+működik.
+6. Automatika
+Ez ráér.
+Először csak
+if temp > 27
+
+print("BE KÉNE KAPCSOLNI")
+
+Semmi vezérlés.
+Utána
+AUTO = False
+
+kapcsoló.
+Majd
+AUTO = True
+
+7. Computherm
+A tcpdump szerintem teljesen külön szál.
+Lehet, hogy kiderül róla valami.
+Lehet, hogy nem.
+Már nem kritikus.
+Amit én még hozzátennék
+Én nem FastAPI-val kezdenék.
+Hanem egyetlen Python script.
+
+python climate_test.py
+
+ami ezt csinálja:
+
+5 klíma lekérése
+
+↓
+
+JSON kiírás
+
+↓
+
+összefoglaló
+
+Dolgozó
+
+26°C
+
+OFF
+
+Cool
+
+Auto
+
+--------
+
+Utána:
+set temp
+
+↓
+
+újra lekérdezés
+
+↓
+
+ellenőrzés
+
+Ha ez működik, onnantól már szinte mindegy, hogy Flask, FastAPI vagy saját webes felület kerül rá.
+Szerintem a projekt állása
+Én most így értékelném:
+██████████░░░░░░░░░░ 45%
+
+✔ ConnectLife elérhető
+
+✔ 5 klíma azonosítva
+
+✔ Property-list megvan
+
+✔ Állapot lekérdezés működik
+
+⬜ Property írás
+
+⬜ Saját wrapper
+
+⬜ REST API
+
+⬜ Shelly
+
+⬜ Automatika
+
+És van még egy gondolatom, ami szerintem hosszú távon nagyon jól illeszkedne a könyvkatalógus-projekted filozófiájához. Ott is a "motor" és a "webes felület" külön réteg. Itt is ezt csinálnám:
+connectlife.py – csak a klímákkal beszél.
+shelly.py – csak a szenzorokkal.
+automation.py – csak a szabályokat tartalmazza.
+api.py – HTTP végpontok.
+ui.py – később egy egyszerű webes kezelőfelület.
+Így a rendszer moduláris marad, és ha egyszer a Hisense helyett más klímák lesznek, csak a connectlife.py helyére kerül egy új modul, a többi változatlan maradhat. Ez nagyon hasonlít arra az architektúrára, amit a könyvkatalógusnál is következetesen felépítettél.
