@@ -54,7 +54,7 @@ class Database:
                     sensor_id = self._upsert_sensor(cursor, device_id, config, measurement)
                     self._insert_measurement(cursor, sensor_id, result, measurement)
                 if result.state is not None:
-                    self._insert_state(cursor, device_id, result)
+                    self._insert_state(cursor, device_id, config, result)
             self._insert_attempt(cursor, device_id, result, duration_ms)
             self.connection.commit()
         except Exception:
@@ -171,8 +171,19 @@ class Database:
         )
 
     @staticmethod
-    def _insert_state(cursor: mariadb.Cursor, device_id: int, result: PollResult) -> None:
+    def _insert_state(
+        cursor: mariadb.Cursor, device_id: int, config: DeviceConfig, result: PollResult
+    ) -> None:
         state = result.state or {}
+        previous_power = None
+        if config.source_system == "connectlife":
+            cursor.execute(
+                """SELECT power FROM device_states WHERE device_id=? AND power IS NOT NULL
+                   ORDER BY observed_at DESC,id DESC LIMIT 1""",
+                (device_id,),
+            )
+            previous = cursor.fetchone()
+            previous_power = bool(previous[0]) if previous is not None else None
         timestamp_token = result.observed_at.replace("-", "").replace(":", "").replace(".", "")
         cursor.execute(
             """
@@ -202,6 +213,52 @@ class Database:
                 json_value(state.get("raw", state)),
             ),
         )
+        current_power = state.get("power")
+        if (
+            config.source_system == "connectlife"
+            and previous_power is not None
+            and current_power is not None
+            and previous_power != bool(current_power)
+        ):
+            Database._record_detected_climate_transition(
+                cursor, device_id, bool(current_power), result, state
+            )
+
+    @staticmethod
+    def _record_detected_climate_transition(
+        cursor: mariadb.Cursor,
+        device_id: int,
+        current_power: bool,
+        result: PollResult,
+        state: dict[str, Any],
+    ) -> None:
+        observed_at = maria_timestamp(result.observed_at)
+        cursor.execute("SELECT room_id FROM devices WHERE id=?", (device_id,))
+        row = cursor.fetchone()
+        if row is None or row[0] is None:
+            return
+        if current_power:
+            cursor.execute(
+                "SELECT 1 FROM climate_operation_events WHERE device_id=? AND ended_at IS NULL",
+                (device_id,),
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """INSERT INTO climate_operation_events
+                       (device_id,room_id,started_at,open_device_id,
+                        started_target_temperature_c,note,event_origin,created_by)
+                       VALUES (?,?,?,?,?,?,'state_detection',NULL)""",
+                    (device_id, int(row[0]), observed_at, device_id,
+                     state.get("target_temperature_c"),
+                     "Periodikus lekérdezéssel észlelt bekapcsolás"),
+                )
+        else:
+            cursor.execute(
+                """UPDATE climate_operation_events
+                   SET ended_at=?,open_device_id=NULL,ended_target_temperature_c=?
+                   WHERE device_id=? AND ended_at IS NULL""",
+                (observed_at, state.get("target_temperature_c"), device_id),
+            )
 
     @staticmethod
     def _insert_attempt(

@@ -38,3 +38,13 @@ See [polling documentation](docs/polling.md) and
 The local language model never controls devices. All device actions are
 deterministic, authenticated, audited, checked against current state before
 execution, and verified by reading the affected device afterward.
+
+## Energy reading import
+
+Historical electricity and gas meter readings can be imported from a UTF-8 CSV
+with `recorded_at` and `reading_value` columns (an optional `note` column is accepted):
+
+```sh
+.venv/bin/python app/import_energy_readings.py readings.csv --meter electricity_main
+.venv/bin/python app/import_energy_readings.py gas.csv --meter gas_main --default-time 09:00
+```

@@ -15,6 +15,7 @@ import threading
 import urllib.error
 import urllib.request
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -578,7 +579,10 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     return devices, attempts
 
 
-def load_room_groups(devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def load_room_groups(
+    devices: list[dict[str, Any]],
+    outdoor_temperature: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     connection = connect_database()
     cursor = connection.cursor()
     try:
@@ -602,6 +606,9 @@ def load_room_groups(devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
             by_zone[zone_name] = group
             groups.append(group)
         room["devices"] = [item for item in devices if item["room_id"] == room["room_id"]]
+        room["outdoor_temperature"] = (
+            outdoor_temperature if room["room_name"] == "Kültéri" else None
+        )
         group["rooms"].append(room)
 
     unassigned = [item for item in devices if item["room_id"] is None]
@@ -706,12 +713,12 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
         cursor.execute(
             """SELECT e.id,e.device_id,d.name AS device_name,r.name AS room_name,
                       e.started_at,e.ended_at,e.started_target_temperature_c,
-                      e.ended_target_temperature_c,e.note,
-                      u.username AS created_by_name
+                      e.ended_target_temperature_c,e.note,e.event_origin,
+                      COALESCE(u.username,'Automatikus észlelés') AS created_by_name
                FROM climate_operation_events e
                JOIN devices d ON d.id=e.device_id
                JOIN rooms r ON r.id=e.room_id
-               JOIN app_users u ON u.id=e.created_by
+               LEFT JOIN app_users u ON u.id=e.created_by
                ORDER BY e.started_at DESC,e.id DESC LIMIT 100"""
         )
         events = rows_as_dicts(cursor)
@@ -736,6 +743,38 @@ def parse_local_datetime(value: str) -> str:
         parsed = parsed.astimezone()
     parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+
+def load_energy_readings() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT m.id,m.meter_code,m.display_name,m.energy_type,m.unit,
+                      r.reading_value,r.recorded_at
+               FROM energy_meters m
+               LEFT JOIN energy_meter_readings r ON r.id=(
+                 SELECT r2.id FROM energy_meter_readings r2 WHERE r2.meter_id=m.id
+                 ORDER BY r2.recorded_at DESC,r2.id DESC LIMIT 1
+               )
+               WHERE m.is_active=1 ORDER BY FIELD(m.energy_type,'electricity','gas')"""
+        )
+        meters = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT r.id,r.recorded_at,r.reading_value,r.entry_source,r.note,
+                      m.display_name,m.energy_type,m.unit,
+                      u.username AS recorded_by_name,
+                      r.reading_value-LAG(r.reading_value) OVER
+                        (PARTITION BY r.meter_id ORDER BY r.recorded_at,r.id) AS consumption
+               FROM energy_meter_readings r
+               JOIN energy_meters m ON m.id=r.meter_id
+               LEFT JOIN app_users u ON u.id=r.recorded_by
+               ORDER BY r.recorded_at DESC,r.id DESC LIMIT 200"""
+        )
+        return meters, rows_as_dicts(cursor)
+    finally:
+        cursor.close()
+        connection.close()
 
 
 def csrf_token() -> str:
@@ -969,6 +1008,7 @@ def update_user(user_id: int):
 @app.get("/")
 def dashboard() -> str:
     devices, attempts = load_dashboard()
+    _, outdoor_temperature = load_outdoor_sources()
     requested_view = request.args.get("view")
     if requested_view in {"device", "room"}:
         session["dashboard_view"] = requested_view
@@ -988,8 +1028,59 @@ def dashboard() -> str:
         latest_poll=latest_poll,
         poll_notice=session.pop("poll_notice", None),
         view_mode=view_mode,
-        room_groups=load_room_groups(devices),
+        room_groups=load_room_groups(devices, outdoor_temperature),
     )
+
+
+@app.get("/energy")
+def energy() -> str:
+    meters, readings = load_energy_readings()
+    return render_template(
+        "energy.html", meters=meters, readings=readings,
+        now_local=datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M"),
+        notice=session.pop("energy_notice", None),
+    )
+
+
+@app.post("/energy/readings")
+def create_energy_reading():
+    validate_csrf()
+    try:
+        meter_id = int(request.form["meter_id"])
+        recorded_at = parse_local_datetime(request.form["recorded_at"])
+        reading_value = Decimal(request.form["reading_value"].replace(",", "."))
+        if reading_value < 0:
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM energy_meters WHERE id=? AND is_active=1", (meter_id,))
+        if cursor.fetchone() is None:
+            abort(400)
+        cursor.execute(
+            """INSERT INTO energy_meter_readings
+               (meter_id,recorded_at,reading_value,entry_source,recorded_by,note)
+               VALUES (?,?,?,'manual',?,?)""",
+            (meter_id, recorded_at, reading_value, g.current_user["id"],
+             request.form.get("note", "").strip() or None),
+        )
+        connection.commit()
+    except mariadb.IntegrityError:
+        connection.rollback()
+        session["energy_notice"] = {
+            "kind": "warning", "message": "Ehhez a mérőhöz erre az időpontra már van óraállás."
+        }
+        return redirect(url_for("energy"))
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["energy_notice"] = {"kind": "success", "message": "Az óraállást rögzítettük."}
+    return redirect(url_for("energy"))
 
 
 @app.post("/poll-now")
@@ -1257,8 +1348,8 @@ def persist_climate_control(
                     cursor.execute(
                         """INSERT INTO climate_operation_events
                            (device_id,room_id,started_at,open_device_id,
-                            started_target_temperature_c,note,created_by)
-                           VALUES (?,?,?,?,?,'UI-vezérlés',?)""",
+                            started_target_temperature_c,note,event_origin,created_by)
+                           VALUES (?,?,?,?,?,'UI-vezérlés','ui_control',?)""",
                         (device_id, room_id, now, device_id,
                          verified.get("target_temperature_c"), g.current_user["id"]),
                     )

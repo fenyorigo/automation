@@ -20,6 +20,7 @@
         <a class="history-link" href="{{ url_for('locations') }}">Helyiségek</a>
         <a class="history-link" href="{{ url_for('analysis') }}">Elemzések</a>
         <a class="history-link" href="{{ url_for('outdoor_sources') }}">Külső hőmérséklet</a>
+        <a class="history-link" href="{{ url_for('energy') }}">Energia</a>
         <a class="history-link" href="{{ url_for('ventilation') }}">Szellőztetés</a>
         <a class="history-link" href="{{ url_for('climate_log') }}">Klíma</a>
         {% if can_write %}<a class="history-link" href="{{ url_for('users') }}">Felhasználók</a>{% endif %}
@@ -65,9 +66,16 @@
         {% for zone in room_groups %}
         <section class="zone-block"><div class="zone-heading"><p class="eyebrow">Zóna</p><h2>{{ zone.name }}</h2></div>
           {% for room in zone.rooms %}
-          <section class="room-block"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{{ room.devices|length }} eszköz</span></div>
+          <section class="room-block"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{% if room.outdoor_temperature %}aktuális szolgáltatói adat{% else %}{{ room.devices|length }} eszköz{% endif %}</span></div>
+            {% if room.outdoor_temperature %}
+            <article class="outdoor-temperature-card">
+              <div><p class="source">Külső hőmérséklet</p><h3>{{ room.outdoor_temperature.display_name }}</h3></div>
+              <div class="temperature"><span class="temperature-value">{{ room.outdoor_temperature.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
+              <footer class="card-footer"><span>Szolgáltatói mérés</span><time>{{ room.outdoor_temperature.observed_at|local_time }}</time></footer>
+            </article>
+            {% endif %}
             {% if room.devices %}<div class="device-grid">{% for device in room.devices %}{% include '_device_card.html' %}{% endfor %}</div>
-            {% else %}<p class="room-empty">Jelenleg nincs hozzárendelt eszköz.</p>{% endif %}
+            {% elif not room.outdoor_temperature %}<p class="room-empty">Jelenleg nincs hozzárendelt eszköz.</p>{% endif %}
           </section>
           {% endfor %}
         </section>

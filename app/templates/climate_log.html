@@ -41,7 +41,7 @@
 
 <section class="history-panel">
   <p class="eyebrow">Távirányító</p><h2>Kézi esemény rögzítése</h2>
-  <p class="reset-explanation">Csak akkor használd, ha a klímát a saját távirányítójával kapcsoltad be. Ez az űrlap nem vezérli az eszközt.</p>
+  <p class="reset-explanation">A rendszer a következő lekérdezéskor automatikusan felismeri a távirányítós vagy ConnectLife-kapcsolást. Ez a kézi űrlap csak korrekcióhoz használható, és nem vezérli az eszközt.</p>
   <form class="climate-start-form manual-climate-form" method="post" action="{{ url_for('start_climate_operation') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Helyiség<select name="device_id" required>{% for device in devices %}<option value="{{ device.id }}">{{ device.room_name }}</option>{% endfor %}</select></label>
@@ -60,7 +60,7 @@
     <small>{{ event.started_at|local_time }} – {{ event.ended_at|local_time if event.ended_at else 'folyamatban' }}</small>
     <small>Indítási célérték: {% if event.started_target_temperature_c is not none %}{{ event.started_target_temperature_c|temperature }} °C{% else %}nincs adat{% endif %}</small>
     {% if event.ended_at %}<small>Leállítási célérték: {% if event.ended_target_temperature_c is not none %}{{ event.ended_target_temperature_c|temperature }} °C{% else %}nincs adat{% endif %}</small>{% endif %}
-    <small>{{ event.device_name }} · {{ event.created_by_name }}</small>{% if event.note %}<p>{{ event.note }}</p>{% endif %}
+    <small>{{ event.device_name }} · {{ event.created_by_name }}{% if event.event_origin == 'state_detection' %} · észlelés időpontja{% endif %}</small>{% if event.note %}<p>{{ event.note }}</p>{% endif %}
   </div>{% if not event.ended_at and can_write %}<form method="post" action="{{ url_for('finish_climate_operation',event_id=event.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Leállítás időpontja<input type="datetime-local" name="ended_at" value="{{ now_local }}" required></label>

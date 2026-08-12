@@ -96,6 +96,8 @@ dd.power-on { color: #d05a16; }
 .room-heading { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:11px; }
 .room-heading span { color:var(--muted); font-size:.72rem; }
 .room-empty { padding:18px; border-radius:12px; background:var(--paper); color:var(--muted); font-size:.8rem; }
+.outdoor-temperature-card { width:100%; max-width:calc((100% - 32px) / 3); min-width:0; padding:21px; border:1px solid var(--line); border-radius:20px; background:var(--card); box-shadow:var(--shadow); }
+.outdoor-temperature-card + .device-grid { margin-top:16px; }
 .read-only main form[method="post"] { display:none; }
 .history-panel { margin-bottom: 56px; padding: 22px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
 .history-controls { display: flex; align-items: end; gap: 12px; margin-bottom: 20px; }
@@ -186,6 +188,15 @@ dd.power-on { color: #d05a16; }
 .analysis-steps li::before { grid-row:1/3; content:counter(analysis-step); display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:var(--green-soft); color:var(--green); font-weight:800; }
 .analysis-steps span { color:var(--muted); font-size:.8rem; line-height:1.45; }
 .outdoor-source-list { display:grid; gap:10px; margin-top:16px; }
+.energy-meter-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-top:16px; }
+.energy-meter-grid article { padding:16px; border-radius:12px; background:var(--paper); }
+.energy-meter-grid span,.energy-meter-grid strong,.energy-meter-grid small { display:block; }
+.energy-meter-grid span,.energy-meter-grid small { color:var(--muted); font-size:.72rem; }
+.energy-meter-grid strong { margin:6px 0; font-size:1.35rem; }
+.energy-reading-form { display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr auto; align-items:end; gap:10px; margin-top:16px; }
+.energy-reading-form label { color:var(--muted); font-size:.7rem; font-weight:700; }
+.energy-reading-form input,.energy-reading-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
+.energy-reading-form button { margin-top:0; }
 .outdoor-source-list article { display:grid; grid-template-columns:2fr .65fr 1fr 1fr; align-items:end; gap:12px; padding:14px; border:1px solid var(--line); border-radius:12px; }
 .outdoor-source-list article>label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .outdoor-source-list input[type=number] { display:block; width:100%; min-height:40px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
@@ -233,7 +244,10 @@ th { color: var(--muted); font-size: .68rem; letter-spacing: .06em; text-transfo
 tbody tr:last-child td { border-bottom: 0; }
 td small { display: block; margin-top: 2px; color: var(--muted); }
 
-@media (max-width: 900px) { .device-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) {
+  .device-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .outdoor-temperature-card { max-width:calc((100% - 16px) / 2); }
+}
 @media (max-width: 600px) {
   .topbar, main { width: min(100% - 20px, 1180px); }
   .topbar { align-items: start; padding-top: 24px; }
@@ -245,6 +259,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .system-status { padding: 8px 11px; font-size: .75rem; }
   .device-grid { grid-template-columns: 1fr; gap: 11px; }
   .device-card { padding: 18px; border-radius: 17px; }
+  .outdoor-temperature-card { max-width:none; padding:18px; border-radius:17px; }
   .temperature { margin-block: 23px 18px; }
   .temperature-value { font-size: 4.3rem; }
   .date-fields { grid-template-columns: 1fr; }
@@ -266,6 +281,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .user-create-form,.user-list form { grid-template-columns:1fr; }
   .analysis-status { grid-template-columns:1fr; }
   .outdoor-source-list article { grid-template-columns:1fr; }
+  .energy-meter-grid,.energy-reading-form { grid-template-columns:1fr; }
   .ventilation-form { grid-template-columns:1fr; }
   .ventilation-start-form { grid-template-columns:1fr; }
   .ventilation-form label.wide { grid-column:auto; }
