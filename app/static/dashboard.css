@@ -197,6 +197,10 @@ dd.power-on { color: #d05a16; }
 .energy-reading-form label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .energy-reading-form input,.energy-reading-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
 .energy-reading-form button { margin-top:0; }
+.backup-list { display:grid; gap:10px; margin-top:16px; }
+.backup-list article { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:14px; border:1px solid var(--line); border-radius:12px; }
+.backup-list strong,.backup-list small { display:block; }
+.backup-list small { margin-top:4px; color:var(--muted); font-size:.7rem; }
 .outdoor-source-list article { display:grid; grid-template-columns:2fr .65fr 1fr 1fr; align-items:end; gap:12px; padding:14px; border:1px solid var(--line); border-radius:12px; }
 .outdoor-source-list article>label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .outdoor-source-list input[type=number] { display:block; width:100%; min-height:40px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
@@ -282,6 +286,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .analysis-status { grid-template-columns:1fr; }
   .outdoor-source-list article { grid-template-columns:1fr; }
   .energy-meter-grid,.energy-reading-form { grid-template-columns:1fr; }
+  .backup-list article { align-items:flex-start; flex-direction:column; }
   .ventilation-form { grid-template-columns:1fr; }
   .ventilation-start-form { grid-template-columns:1fr; }
   .ventilation-form label.wide { grid-column:auto; }

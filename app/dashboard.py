@@ -21,13 +21,14 @@ from typing import Any
 
 import mariadb
 from dotenv import load_dotenv
-from flask import Flask, Response, abort, g, redirect, render_template, request, session, url_for
+from flask import Flask, Response, abort, g, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from poll_devices import DEFAULT_CONFIG, load_devices
 from poll_scheduler import run_cycle
 from polling_lock import PollCycleBusy, polling_cycle_lock
 from climate_control import ClimateControlResult, control_climate
+from database_backup import create_database_export, export_directory, list_database_exports
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1040,6 +1041,38 @@ def energy() -> str:
         now_local=datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M"),
         notice=session.pop("energy_notice", None),
     )
+
+
+@app.get("/backups")
+@editor_required
+def backups() -> str:
+    return render_template(
+        "backups.html", exports=list_database_exports(),
+        notice=session.pop("backup_notice", None),
+    )
+
+
+@app.post("/backups")
+@editor_required
+def create_backup():
+    validate_csrf()
+    try:
+        path = create_database_export()
+        session["backup_notice"] = {
+            "kind": "success", "message": f"Az adatbázismentés elkészült: {path.name}"
+        }
+    except Exception as error:
+        app.logger.exception("Database export failed")
+        session["backup_notice"] = {"kind": "error", "message": str(error)}
+    return redirect(url_for("backups"))
+
+
+@app.get("/backups/<path:filename>")
+@editor_required
+def download_backup(filename: str):
+    if not re.fullmatch(r"home_automation_[0-9]{8}T[0-9]{6}Z\.sql\.gz", filename):
+        abort(404)
+    return send_from_directory(export_directory(), filename, as_attachment=True)
 
 
 @app.post("/energy/readings")
