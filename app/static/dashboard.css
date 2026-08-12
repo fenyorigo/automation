@@ -89,6 +89,10 @@ dd.power-on { color: #d05a16; }
 .view-switch { display:flex; gap:6px; padding:4px; border:1px solid var(--line); border-radius:999px; background:var(--card); }
 .view-switch a { padding:8px 12px; border-radius:999px; color:var(--muted); font-size:.75rem; font-weight:800; text-decoration:none; }
 .view-switch a.selected { background:var(--ink); color:white; }
+.device-type-groups { display:grid; gap:28px; }
+.device-type-group + .device-type-group { padding-top:24px; border-top:1px solid var(--line); }
+.device-type-heading { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-bottom:14px; }
+.device-type-heading span { color:var(--muted); font-size:.72rem; }
 .zone-groups { display:grid; gap:26px; }
 .zone-block { padding:20px; border:1px solid var(--line); border-radius:22px; background:rgba(255,253,248,.55); }
 .zone-heading { margin-bottom:16px; }

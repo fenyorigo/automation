@@ -57,9 +57,19 @@
       </div>
 
       {% if view_mode == 'device' %}
-      <div class="device-grid">
-        {% for device in devices %}
-        {% include '_device_card.html' %}
+      <div class="device-type-groups">
+        {% for group in device_groups %}
+        <section class="device-type-group">
+          <div class="device-type-heading">
+            <div><p class="eyebrow">Eszköztípus</p><h2>{{ group.name }}</h2></div>
+            <span>{{ group.devices|length }} eszköz</span>
+          </div>
+          <div class="device-grid">
+            {% for device in group.devices %}
+            {% include '_device_card.html' %}
+            {% endfor %}
+          </div>
+        </section>
         {% endfor %}
       </div>
       {% else %}

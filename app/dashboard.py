@@ -70,6 +70,13 @@ SOURCE_LABELS = {
     "manual": "Kézi",
 }
 
+DEVICE_GROUPS = (
+    ("esp32", "ESP32 hőmérők"),
+    ("computherm", "Computherm termosztátok"),
+    ("connectlife", "Hisense klímák"),
+    ("manual", "Kézi eszközök"),
+)
+
 COMPUTHERM_LOCATION = {
     "iot-computherm-emelet": "emelet",
     "iot-computherm-foldszint": "földszint",
@@ -624,6 +631,26 @@ def load_room_groups(
     return groups
 
 
+def load_device_groups(devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    groups = [
+        {
+            "source_system": source_system,
+            "name": name,
+            "devices": [
+                device for device in devices if device["source_system"] == source_system
+            ],
+        }
+        for source_system, name in DEVICE_GROUPS
+    ]
+    known_sources = {source_system for source_system, _ in DEVICE_GROUPS}
+    other_devices = [
+        device for device in devices if device["source_system"] not in known_sources
+    ]
+    if other_devices:
+        groups.append({"source_system": "other", "name": "Egyéb eszközök", "devices": other_devices})
+    return [group for group in groups if group["devices"]]
+
+
 def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     connection = connect_database()
     cursor = connection.cursor()
@@ -1030,6 +1057,7 @@ def dashboard() -> str:
         poll_marker=latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
         poll_notice=session.pop("poll_notice", None),
         view_mode=view_mode,
+        device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_temperature),
     )
 
