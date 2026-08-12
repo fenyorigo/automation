@@ -26,6 +26,8 @@ GND   VCC   DAT
 | piros | tápfeszültség | `VCC` |
 | sárga | 1-Wire adat | `DAT` |
 
+![A DS18B20 érzékelő fekete, piros és sárga vezetéke](../images/DS18B20.jpeg)
+
 A sodrott vezetékvégeket úgy rögzítsük, hogy kilógó elemi szál ne érhessen a
 szomszédos kapocshoz. A csavarokat húzzuk meg, majd mindhárom vezetéket külön,
 enyhén meghúzva ellenőrizzük.
@@ -37,6 +39,10 @@ enyhén meghúzva ellenőrizzük.
 | `GND` | fehér | `GND` | közös föld |
 | `VCC` | szürke | `3.3V` | a DS18B20 tápellátása |
 | `DAT` | lila | `IO16` / `GPIO16` | 1-Wire adat |
+
+![A GND, VCC és DAT jelölésű csatlakozópanel](../images/ESP32-panel.jpeg)
+
+![Az ESP32 alaplap csatlakozóinak feliratai](../images/ESP32-alaplap.jpeg)
 
 A firmware-ben a DS18B20 adatvonala `GPIO16`-ra van beállítva:
 
