@@ -1,5 +1,69 @@
 # ESP32 hőmérséklet-érzékelő
 
+## ESP32 – DS18B20 – panel huzalozása
+
+A DS18B20 hőmérő nem közvetlenül, hanem egy hárompólusú csavaros
+csatlakozópanel közbeiktatásával kapcsolódik az ESP32-höz. A panelen található
+`472` jelölésű, 4,7 kΩ-os ellenállás a DS18B20 adatvezetéke és a tápfeszültség
+közötti szükséges felhúzóellenállás; külön ellenállást nem kell beépíteni.
+
+Az összeszerelést az ESP32 USB-tápjának kihúzása után végezzük. A bekötésnél
+elsődlegesen mindig a panel és az ESP32 feliratait kövessük, ne pusztán a
+vezetékszíneket.
+
+### DS18B20 és a csatlakozópanel
+
+A panelt úgy tartva, hogy a zöld csavaros sorkapocs felül, a három csatlakozótüske
+pedig alul legyen, a kapcsok és tüskék sorrendje balról jobbra:
+
+```text
+GND   VCC   DAT
+```
+
+| DS18B20 vezetéke | Funkció | Panel csavaros sorkapcsa |
+|---|---|---|
+| fekete | föld | `GND` |
+| piros | tápfeszültség | `VCC` |
+| sárga | 1-Wire adat | `DAT` |
+
+A sodrott vezetékvégeket úgy rögzítsük, hogy kilógó elemi szál ne érhessen a
+szomszédos kapocshoz. A csavarokat húzzuk meg, majd mindhárom vezetéket külön,
+enyhén meghúzva ellenőrizzük.
+
+### A csatlakozópanel és az ESP32
+
+| Panel tüskéje | Jumper vezeték | ESP32 csatlakozója | Funkció |
+|---|---|---|---|
+| `GND` | fehér | `GND` | közös föld |
+| `VCC` | szürke | `3.3V` | a DS18B20 tápellátása |
+| `DAT` | lila | `IO16` / `GPIO16` | 1-Wire adat |
+
+A firmware-ben a DS18B20 adatvonala `GPIO16`-ra van beállítva:
+
+```cpp
+constexpr uint8_t DS18B20_PIN = 16;
+```
+
+A szenzort **3,3 V-ról** tápláljuk. A panel `VCC` vezetékét ne kössük az ESP32
+`5V` csatlakozójára. A `GND`, `VCC` vagy `DAT` felirat helye panelváltozatonként
+eltérhet, ezért új panel bekötése előtt mindig olvassuk le a nyomtatott
+jelöléseket.
+
+### Bekapcsolás előtti ellenőrzés
+
+1. A fekete DS18B20-vezeték a panel `GND` kapcsában van.
+2. A piros DS18B20-vezeték a panel `VCC` kapcsában van.
+3. A sárga DS18B20-vezeték a panel `DAT` kapcsában van.
+4. A panel `GND` tüskéje az ESP32 `GND` csatlakozójára megy.
+5. A panel `VCC` tüskéje az ESP32 `3.3V` csatlakozójára megy.
+6. A panel `DAT` tüskéje az ESP32 `IO16` csatlakozójára megy.
+7. Nincs kilógó vezetékszál, laza csavar vagy egymáshoz érő csatlakozó.
+
+Az első bekapcsolás után a soros monitoron a `Sensor found at address:` üzenet,
+majd a hőmérsékletértékek megjelenése igazolja a DS18B20 felismerését. A
+`sensor_not_found` vagy `sensor_read_failed` hiba esetén először a táp-, föld-
+és adatvezeték sorrendjét, majd a csavaros kötések szilárdságát ellenőrizzük.
+
 ## Wi-Fi konfigurálása USB-n keresztül
 
 Az USB-kapcsolat firmware feltöltésére, első konfigurálásra és helyreállításra
