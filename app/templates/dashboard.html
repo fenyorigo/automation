@@ -111,5 +111,33 @@
       </div>
     </section>
   </main>
+  <script>
+  (() => {
+    const knownPoll = {{ poll_marker|tojson }};
+    let checking = false;
+    async function refreshAfterCompletedPoll() {
+      if (checking || document.hidden) return;
+      checking = true;
+      try {
+        const response = await fetch({{ url_for('poll_status')|tojson }}, {
+          cache: 'no-store', credentials: 'same-origin'
+        });
+        if (!response.ok) return;
+        const status = await response.json();
+        if (!status.busy && status.latest_poll && status.latest_poll !== knownPoll) {
+          window.location.reload();
+        }
+      } catch (_) {
+        // A következő ellenőrzés újrapróbálja, ha a gép alszik vagy a hálózat megszakad.
+      } finally {
+        checking = false;
+      }
+    }
+    window.setInterval(refreshAfterCompletedPoll, 5000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) refreshAfterCompletedPoll();
+    });
+  })();
+  </script>
 </body>
 </html>

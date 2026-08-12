@@ -16,6 +16,21 @@ class PollCycleBusy(RuntimeError):
     """Raised when another process already owns the polling-cycle lock."""
 
 
+def polling_operation_active() -> bool:
+    path = Path(os.getenv("POLL_LOCK_FILE", str(DEFAULT_LOCK_FILE)))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle: TextIO = path.open("a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        return False
+    finally:
+        handle.close()
+
+
 @contextmanager
 def polling_cycle_lock(*, wait: bool = False, operation: str = "poll") -> Iterator[None]:
     path = Path(os.getenv("POLL_LOCK_FILE", str(DEFAULT_LOCK_FILE)))

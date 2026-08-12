@@ -21,12 +21,12 @@ from typing import Any
 
 import mariadb
 from dotenv import load_dotenv
-from flask import Flask, Response, abort, g, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Flask, Response, abort, g, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from poll_devices import DEFAULT_CONFIG, load_devices
 from poll_scheduler import run_cycle
-from polling_lock import PollCycleBusy, polling_cycle_lock
+from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_active
 from climate_control import ClimateControlResult, control_climate
 from database_backup import create_database_export, export_directory, list_database_exports
 
@@ -1027,10 +1027,29 @@ def dashboard() -> str:
         successful=successful,
         monitored_count=monitored_count,
         latest_poll=latest_poll,
+        poll_marker=latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
         poll_notice=session.pop("poll_notice", None),
         view_mode=view_mode,
         room_groups=load_room_groups(devices, outdoor_temperature),
     )
+
+
+@app.get("/poll-status")
+def poll_status():
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("SELECT MAX(completed_at) FROM poll_attempts")
+        latest_poll = cursor.fetchone()[0]
+    finally:
+        cursor.close()
+        connection.close()
+    response = jsonify({
+        "busy": polling_operation_active(),
+        "latest_poll": latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
+    })
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/energy")
