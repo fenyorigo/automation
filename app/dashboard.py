@@ -451,21 +451,31 @@ def gnuplot_quote(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def render_temperature_svg(points: list[tuple[datetime, float]], title: str) -> bytes:
+def render_temperature_svg(
+    series: list[tuple[str, list[tuple[datetime, float]]]], title: str
+) -> bytes:
     if GNUPLOT_BIN is None:
         raise RuntimeError(GNUPLOT_ERROR or "A gnuplot nem érhető el.")
     with tempfile.TemporaryDirectory(prefix="automation-chart-") as temporary:
         directory = Path(temporary)
-        data_path = directory / "temperature.dat"
         output_path = directory / "temperature.svg"
         script_path = directory / "chart.gnuplot"
-        data_path.write_text(
-            "".join(
-                f"{int(moment.replace(tzinfo=UTC).timestamp())} {value:.4f}\n"
-                for moment, value in points
-            ),
-            encoding="utf-8",
-        )
+        data_paths = []
+        for index, (name, points) in enumerate(series):
+            data_path = directory / f"temperature-{index}.dat"
+            data_path.write_text(
+                "".join(
+                    f"{int(moment.replace(tzinfo=UTC).timestamp())} {value:.4f}\n"
+                    for moment, value in points
+                ),
+                encoding="utf-8",
+            )
+            data_paths.append((name, data_path))
+        palette = ["#17765b", "#d65a31", "#386cb0", "#9b59b6", "#c49a00", "#5b6770", "#e157a0", "#2f9e44"]
+        plots = [
+            f'"{gnuplot_quote(str(path))}" using 1:2 with lines lw 2.5 lc rgb "{palette[index % len(palette)]}" title "{gnuplot_quote(name)}"'
+            for index, (name, path) in enumerate(data_paths)
+        ]
         script_path.write_text(
             "\n".join(
                 [
@@ -480,9 +490,9 @@ def render_temperature_svg(points: list[tuple[datetime, float]], title: str) -> 
                     'set grid xtics ytics lc rgb "#dcd9ce"',
                     'set border lc rgb "#60706a"',
                     'set tics textcolor rgb "#60706a"',
-                    'set key off',
+                    'set key outside top center horizontal box opaque',
                     'set margins 11,3,5,4',
-                    f'plot "{gnuplot_quote(str(data_path))}" using 1:2 with lines lw 3 lc rgb "#17765b"',
+                    "plot " + ", \\\n     ".join(plots),
                 ]
             ),
             encoding="utf-8",
@@ -1209,23 +1219,28 @@ def history() -> str:
     history_notice = session.pop("history_notice", None)
     if not devices:
         return render_template(
-            "history.html", devices=[], selected=None, range_key="24h", points=[],
+            "history.html", devices=[], selected_devices=[], range_key="24h", series=[],
             gnuplot_error=GNUPLOT_ERROR, resettable_sensors=resettable_sensors,
             history_notice=history_notice,
         )
-    requested_id = request.args.get("device", type=int)
-    selected = next((item for item in devices if item["id"] == requested_id), devices[0])
+    requested_ids = list(dict.fromkeys(request.args.getlist("device", type=int)))
+    selected_devices = [item for item in devices if item["id"] in requested_ids]
+    if not selected_devices:
+        selected_devices = [devices[0]]
     range_key = request.args.get("range", "24h")
     if range_key not in HISTORY_RANGES:
         range_key = "24h"
-    points = load_temperature_history(selected["id"], HISTORY_RANGES[range_key])
-    values = [item[1] for item in points]
-    stats = None
-    if values:
-        stats = {"minimum": min(values), "maximum": max(values), "average": sum(values) / len(values)}
+    series = []
+    for device in selected_devices:
+        points = load_temperature_history(device["id"], HISTORY_RANGES[range_key])
+        values = [item[1] for item in points]
+        stats = None
+        if values:
+            stats = {"minimum": min(values), "maximum": max(values), "average": sum(values) / len(values)}
+        series.append({"device": device, "points": points, "stats": stats})
     return render_template(
-        "history.html", devices=devices, selected=selected, range_key=range_key,
-        points=points, stats=stats, gnuplot_error=GNUPLOT_ERROR,
+        "history.html", devices=devices, selected_devices=selected_devices, range_key=range_key,
+        series=series, gnuplot_error=GNUPLOT_ERROR,
         resettable_sensors=resettable_sensors, history_notice=history_notice,
     )
 
@@ -1684,18 +1699,22 @@ def reset_sensor_history():
 @app.get("/history/chart.svg")
 def history_chart() -> Response:
     devices = load_history_devices()
-    requested_id = request.args.get("device", type=int)
-    selected = next((item for item in devices if item["id"] == requested_id), None)
-    if selected is None:
+    requested_ids = list(dict.fromkeys(request.args.getlist("device", type=int)))
+    selected_devices = [item for item in devices if item["id"] in requested_ids]
+    if not selected_devices:
         abort(404)
     range_key = request.args.get("range", "24h")
     if range_key not in HISTORY_RANGES:
         abort(400)
-    points = load_temperature_history(selected["id"], HISTORY_RANGES[range_key])
-    if not points:
+    series = [
+        (device["name"], load_temperature_history(device["id"], HISTORY_RANGES[range_key]))
+        for device in selected_devices
+    ]
+    series = [(name, points) for name, points in series if points]
+    if not series:
         abort(404)
     try:
-        svg = render_temperature_svg(points, f"{selected['name']} – hőmérséklet")
+        svg = render_temperature_svg(series, "Hőmérsékletek összehasonlítása")
     except (RuntimeError, OSError, subprocess.SubprocessError):
         abort(503)
     response = Response(svg, mimetype="image/svg+xml")

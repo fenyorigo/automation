@@ -23,13 +23,9 @@
     <section class="history-panel">
       {% if devices %}
       <form class="history-controls" method="get">
-        <label>Eszköz
-          <select name="device">
-            {% for device in devices %}
-            <option value="{{ device.id }}" {{ 'selected' if device.id == selected.id }}>{{ device.name }}</option>
-            {% endfor %}
-          </select>
-        </label>
+        <fieldset class="history-device-picker"><legend>Eszközök</legend><small>Tetszőleges számú görbe kijelölhető</small><div>
+          {% for device in devices %}<label><input type="checkbox" name="device" value="{{ device.id }}" {{ 'checked' if device in selected_devices }}><span>{{ device.name }}</span></label>{% endfor %}
+        </div></fieldset>
         <label>Időtáv
           <select name="range">
             <option value="24h" {{ 'selected' if range_key == '24h' }}>24 óra</option>
@@ -42,16 +38,18 @@
 
       {% if gnuplot_error %}
       <p class="chart-error">{{ gnuplot_error }}</p>
-      {% elif points %}
+      {% elif series|selectattr('points')|list %}
       <div class="chart-frame">
-        <img src="{{ url_for('history_chart', device=selected.id, range=range_key) }}" alt="{{ selected.name }} hőmérsékleti grafikonja">
+        <img src="{{ url_for('history_chart', device=selected_devices|map(attribute='id')|list, range=range_key) }}" alt="A kiválasztott eszközök összehasonlító hőmérsékleti grafikonja">
       </div>
-      <dl class="history-stats">
-        <div><dt>Minimum</dt><dd>{{ stats.minimum|temperature }} °C</dd></div>
-        <div><dt>Átlag</dt><dd>{{ stats.average|temperature }} °C</dd></div>
-        <div><dt>Maximum</dt><dd>{{ stats.maximum|temperature }} °C</dd></div>
-        <div><dt>Mérések</dt><dd>{{ points|length }}</dd></div>
-      </dl>
+      <div class="history-series-stats">
+      {% for item in series if item.stats %}<section><h3>{{ item.device.name }}</h3><dl class="history-stats">
+        <div><dt>Minimum</dt><dd>{{ item.stats.minimum|temperature }} °C</dd></div>
+        <div><dt>Átlag</dt><dd>{{ item.stats.average|temperature }} °C</dd></div>
+        <div><dt>Maximum</dt><dd>{{ item.stats.maximum|temperature }} °C</dd></div>
+        <div><dt>Mérések</dt><dd>{{ item.points|length }}</dd></div>
+      </dl></section>{% endfor %}
+      </div>
       {% else %}
       <p class="chart-empty">A kiválasztott időszakban nincs eltárolt hőmérsékleti adat.</p>
       {% endif %}

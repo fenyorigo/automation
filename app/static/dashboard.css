@@ -107,12 +107,23 @@ dd.power-on { color: #d05a16; }
 .history-controls { display: flex; align-items: end; gap: 12px; margin-bottom: 20px; }
 .history-controls label { flex: 1 1 220px; color: var(--muted); font-size: .72rem; font-weight: 700; }
 .history-controls select { display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 8px 34px 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
+.history-device-picker { flex: 2 1 440px; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.history-device-picker legend { padding: 0 5px; color: var(--muted); font-size: .72rem; font-weight: 700; }
+.history-device-picker > small { display: block; margin: 0 0 8px; color: var(--muted); font-size: .68rem; }
+.history-device-picker > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; max-height: 210px; overflow-y: auto; }
+.history-device-picker label { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 7px 9px; border-radius: 8px; background: var(--paper); color: var(--ink); cursor: pointer; }
+.history-device-picker input { flex: 0 0 auto; width: 17px; height: 17px; accent-color: var(--green); }
+.history-device-picker span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-controls button { min-height: 44px; padding: 0 20px; border: 0; border-radius: 10px; background: var(--ink); color: white; font: inherit; font-weight: 800; }
 .chart-frame { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: white; }
 .chart-frame img { display: block; width: 100%; height: auto; }
 .history-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0 0; }
 .history-stats div { padding: 13px; border-radius: 11px; background: var(--paper); }
 .history-stats dd { margin-top: 4px; font-size: 1.05rem; }
+.history-series-stats { display: grid; gap: 12px; margin-top: 16px; }
+.history-series-stats section { padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.history-series-stats h3 { margin: 0 0 10px; }
+.history-series-stats .history-stats { margin: 0; }
 .chart-error, .chart-empty { padding: 28px; border-radius: 12px; background: var(--red-soft); color: var(--red); text-align: center; }
 .sensor-reset-panel h2 { margin-top: 4px; }
 .reset-explanation { margin: 10px 0 16px; color: var(--muted); font-size: .82rem; line-height: 1.5; }
@@ -273,6 +284,8 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .date-fields { grid-template-columns: 1fr; }
   .history-controls { align-items: stretch; flex-direction: column; }
   .history-controls label, .history-controls button { width: 100%; flex-basis: auto; }
+  .history-device-picker { width: 100%; box-sizing: border-box; flex-basis: auto; }
+  .history-device-picker > div { grid-template-columns: 1fr; }
   .history-stats { grid-template-columns: 1fr 1fr; }
   .sensor-reset-list { grid-template-columns: 1fr; }
   .setting-context, .form-grid { grid-template-columns: 1fr; }
