@@ -902,12 +902,15 @@ def login():
                 session.permanent = True
                 session["user_id"] = int(row[0])
                 try:
-                    successful, stored = asyncio.run(
+                    successful, stored, total = asyncio.run(
                         run_cycle(float(os.getenv("POLL_TIMEOUT_SECONDS", "5")))
                     )
                     session["poll_notice"] = {
                         "kind": "success",
-                        "message": f"Bejelentkezési lekérdezés kész: {successful} sikeres, {stored} mentve.",
+                        "message": (
+                            f"Bejelentkezési lekérdezés kész: {successful}/{total} sikeres, "
+                            f"{stored}/{total} mentve."
+                        ),
                     }
                 except PollCycleBusy:
                     session["poll_notice"] = {
@@ -1174,8 +1177,7 @@ def poll_now():
         return redirect(url_for("dashboard"))
     try:
         timeout = float(os.getenv("POLL_TIMEOUT_SECONDS", "5"))
-        successful, stored = asyncio.run(run_cycle(timeout))
-        monitored_count = len(load_devices(DEFAULT_CONFIG))
+        successful, stored, monitored_count = asyncio.run(run_cycle(timeout))
         kind = "success" if successful == monitored_count and stored == monitored_count else "warning"
         session["poll_notice"] = {
             "kind": kind,

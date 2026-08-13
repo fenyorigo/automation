@@ -15,7 +15,7 @@ from polling_lock import PollCycleBusy, polling_cycle_lock
 from outdoor_weather import poll_active_outdoor_sources
 
 
-async def run_cycle(timeout: float) -> tuple[int, int]:
+async def run_cycle(timeout: float) -> tuple[int, int, int]:
     with polling_cycle_lock():
         devices = load_devices(DEFAULT_CONFIG)
         configs = {(item.source_system, item.device_id): item for item in devices}
@@ -45,7 +45,7 @@ async def run_cycle(timeout: float) -> tuple[int, int]:
                 flush=True,
             )
         successful = sum(1 for item in results if item.success)
-        return successful, stored
+        return successful, stored, len(devices)
 
 
 async def main() -> None:
@@ -66,10 +66,10 @@ async def main() -> None:
     while True:
         started = asyncio.get_running_loop().time()
         try:
-            successful, stored = await run_cycle(args.timeout)
+            successful, stored, total = await run_cycle(args.timeout)
             print(
                 f"{datetime.now().isoformat(timespec='seconds')} "
-                f"poll complete: {successful}/8 successful, {stored}/8 stored",
+                f"poll complete: {successful}/{total} successful, {stored}/{total} stored",
                 flush=True,
             )
         except PollCycleBusy:
