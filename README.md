@@ -30,7 +30,8 @@ cp config/devices.example.json config/devices.json
 Fill `.env` and `config/devices.json` with local values. Both files containing
 real credentials or device identities are excluded from Git.
 
-See [polling documentation](docs/polling.md) and
+See the [Hungarian user guide](docs/hasznalati-utasitas.md),
+[polling documentation](docs/polling.md) and
 [ESP32 documentation](docs/esp32.md) for details.
 
 ## Safety model
