@@ -36,9 +36,14 @@ enyhén meghúzva ellenőrizzük.
 
 | Panel tüskéje | Jumper vezeték | ESP32 csatlakozója | Funkció |
 |---|---|---|---|
-| `GND` | fehér | `GND` | közös föld |
-| `VCC` | szürke | `3.3V` | a DS18B20 tápellátása |
-| `DAT` | lila | `IO16` / `GPIO16` | 1-Wire adat |
+| `GND` | tetszőleges szín | `GND` | közös föld |
+| `VCC` | tetszőleges szín | `3.3V` | a DS18B20 tápellátása |
+| `DAT` | tetszőleges szín | `IO16` / `GPIO16` | 1-Wire adat |
+
+A panelhez adott jumperkábelek színe nem szabványos, csomagonként eltérhet. A
+képen látható fehér–szürke–lila színkiosztás csak a lefényképezett példányra
+érvényes. A panel `GND`, `VCC` és `DAT` jelölését kell konzisztensen végigvinni
+az ESP32 megfelelő csatlakozójáig.
 
 ![A GND, VCC és DAT jelölésű csatlakozópanel](../images/ESP32-panel.jpeg)
 
@@ -69,6 +74,70 @@ Az első bekapcsolás után a soros monitoron a `Sensor found at address:` üzen
 majd a hőmérsékletértékek megjelenése igazolja a DS18B20 felismerését. A
 `sensor_not_found` vagy `sensor_read_failed` hiba esetén először a táp-, föld-
 és adatvezeték sorrendjét, majd a csavaros kötések szilárdságát ellenőrizzük.
+
+## Új ESP32 első üzembe helyezése
+
+Az új ESP32-n még nincs rajta az automation projekt firmware-e. Emiatt a soros
+monitorban értelmezhetetlen karakterek jelenhetnek meg, és a `configure`
+parancsnak nincs hatása. A Wi-Fi-konfigurálás előtt minden új ESP32-re külön fel
+kell tölteni a firmware-t.
+
+Egyszerre csak **egy új ESP32** legyen a Mac USB-portjára csatlakoztatva. A
+panelek CP2102 USB–soros átalakítója azonos sorozatszámmal jelentkezhet be, ezért
+több azonos panel egyidejű csatlakoztatása esetén a portok nem feltétlenül
+különböztethetők meg megbízhatóan.
+
+### 1. A soros port ellenőrzése
+
+```sh
+~/.platformio/penv/bin/pio device list
+```
+
+A jelenlegi panelek tipikusan ezen a porton jelennek meg:
+
+```text
+/dev/cu.usbserial-0001
+```
+
+Mindig a `pio device list` által ténylegesen kijelzett portot használjuk.
+
+### 2. A firmware feltöltése
+
+```sh
+cd ~/Projects/automation/esp32/poc-ds18b20
+~/.platformio/penv/bin/pio run \
+  --target upload \
+  --upload-port /dev/cu.usbserial-0001
+```
+
+A sikeres feltöltés végén a PlatformIO hard resetet végez. Ez normális és
+szükséges: az ESP32 ekkor indul újra az imént feltöltött firmware-rel.
+
+### 3. A soros monitor megnyitása
+
+Csak a sikeres feltöltés és hard reset után indítsuk el a soros monitort:
+
+```sh
+~/.platformio/penv/bin/pio device monitor \
+  --port /dev/cu.usbserial-0001 \
+  --baud 115200
+```
+
+A saját firmware indulását az alábbi fejléc jelzi:
+
+```text
+ESP32 DS18B20 PoC
+================
+```
+
+Ezután már használható a `configure` parancs. Ha továbbra is csak
+értelmezhetetlen karakterek látszanak, ellenőrizzük, hogy a monitor 115200 baudon
+fut-e, a megfelelő portot nyitottuk-e meg, és a feltöltés valóban sikeresen
+befejeződött-e.
+
+Az első ESP32 beállítása után zárjuk be a soros monitort `Ctrl+C`-vel, húzzuk ki
+az eszközt, és csak ezután csatlakoztassuk a következőt. Ugyanezt a feltöltési és
+konfigurálási folyamatot minden új ESP32-n külön végre kell hajtani.
 
 ## Wi-Fi konfigurálása USB-n keresztül
 
