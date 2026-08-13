@@ -10,6 +10,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from database import Database
+from database_backup import create_scheduled_database_backup, scheduled_backup_due
 from poll_devices import DEFAULT_CONFIG, load_devices, poll_all
 from polling_lock import PollCycleBusy, polling_cycle_lock
 from outdoor_weather import poll_active_outdoor_sources
@@ -85,6 +86,23 @@ async def main() -> None:
             )
         if args.once:
             return
+        try:
+            if scheduled_backup_due():
+                backup_path, removed = await asyncio.to_thread(
+                    create_scheduled_database_backup
+                )
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} "
+                    f"database backup complete: {backup_path} "
+                    f"({len(removed)} old automatic backup(s) removed)",
+                    flush=True,
+                )
+        except Exception as error:
+            print(
+                f"{datetime.now().isoformat(timespec='seconds')} "
+                f"database backup failed: {error}",
+                flush=True,
+            )
         elapsed = asyncio.get_running_loop().time() - started
         await asyncio.sleep(max(0, args.interval - elapsed))
 

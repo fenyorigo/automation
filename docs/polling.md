@@ -41,6 +41,18 @@ Az időköz másodpercben a `.env` fájl `POLL_INTERVAL_SECONDS` értékével va
 `--interval` kapcsolóval módosítható. A folyamat `Ctrl-C`-vel állítható le. Egy
 eszköz hibája nem szakítja meg a többi lekérdezését vagy a későbbi köröket.
 
+Ugyanez a folyamat készíti a napi automatikus adatbázismentést. A `.env`
+beállításai:
+
+- `DATABASE_BACKUP_DIR`: a mentések könyvtára;
+- `DATABASE_BACKUP_TIME`: a napi mentés helyi idő szerint, `HH:MM` alakban;
+- `DATABASE_BACKUP_KEEP`: ennyi automatikus mentést őriz meg.
+
+Ha a gép a beállított időpontban alszik vagy ki van kapcsolva, a poller az
+ébredés/indulás utáni első ciklus végén pótolja az aznapi mentést. A mentés a
+lekérdezésekkel közös zárolást használ. A megőrzési korlát csak az automatikus,
+`home_automation_auto_...` nevű mentésekre vonatkozik, a kézi exportokra nem.
+
 A műszerfal a Klímaáttekintő cím alatt a legutóbbi adatbázisba mentett
 pollingkör dátumát és idejét mutatja. Az oldal frissítése továbbra sem indít
 pollingot.

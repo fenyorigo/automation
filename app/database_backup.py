@@ -5,7 +5,7 @@ import getpass
 import os
 import shutil
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 from pathlib import Path
 
 from polling_lock import polling_cycle_lock
@@ -16,7 +16,13 @@ DEFAULT_EXPORT_DIR = ROOT / "exports"
 
 
 def export_directory() -> Path:
-    return Path(os.getenv("DATABASE_EXPORT_DIR", str(DEFAULT_EXPORT_DIR))).resolve()
+    configured = (
+        os.getenv("DATABASE_BACKUP_DIR")
+        or os.getenv("DATABASE_EXPORT_DIR")
+        or str(DEFAULT_EXPORT_DIR)
+    )
+    path = Path(configured).expanduser()
+    return (path if path.is_absolute() else ROOT / path).resolve()
 
 
 def list_database_exports() -> list[dict[str, object]]:
@@ -34,7 +40,7 @@ def list_database_exports() -> list[dict[str, object]]:
     return sorted(exports, key=lambda item: str(item["name"]), reverse=True)
 
 
-def create_database_export() -> Path:
+def create_database_export(*, filename_prefix: str = "home_automation") -> Path:
     dump_binary = os.getenv("MARIADB_DUMP_BIN") or shutil.which("mariadb-dump")
     if dump_binary is None and Path("/opt/homebrew/bin/mariadb-dump").is_file():
         dump_binary = "/opt/homebrew/bin/mariadb-dump"
@@ -45,7 +51,7 @@ def create_database_export() -> Path:
     directory = export_directory()
     directory.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    final_path = directory / f"home_automation_{timestamp}.sql.gz"
+    final_path = directory / f"{filename_prefix}_{timestamp}.sql.gz"
     temporary_path = directory / f".{final_path.name}.{os.getpid()}.tmp"
     command = [
         dump_binary,
@@ -100,3 +106,49 @@ def create_database_export() -> Path:
     except Exception:
         temporary_path.unlink(missing_ok=True)
         raise
+
+
+def _scheduled_backup_time() -> time:
+    raw_value = os.getenv("DATABASE_BACKUP_TIME", "03:00").strip()
+    try:
+        return datetime.strptime(raw_value, "%H:%M").time()
+    except ValueError as error:
+        raise RuntimeError(
+            "A DATABASE_BACKUP_TIME értéke HH:MM formátumú legyen."
+        ) from error
+
+
+def scheduled_backup_due(now: datetime | None = None) -> bool:
+    """Return whether today's automatic backup is due in local time."""
+    now = now or datetime.now().astimezone()
+    scheduled_at = datetime.combine(now.date(), _scheduled_backup_time(), now.tzinfo)
+    if now < scheduled_at:
+        return False
+    directory = export_directory()
+    return not any(
+        datetime.fromtimestamp(path.stat().st_mtime, now.tzinfo) >= scheduled_at
+        for path in directory.glob("home_automation_auto_*.sql.gz")
+    ) if directory.exists() else True
+
+
+def prune_scheduled_backups() -> list[Path]:
+    try:
+        keep = int(os.getenv("DATABASE_BACKUP_KEEP", "30"))
+    except ValueError as error:
+        raise RuntimeError("A DATABASE_BACKUP_KEEP egész szám legyen.") from error
+    if keep < 1:
+        raise RuntimeError("A DATABASE_BACKUP_KEEP legalább 1 legyen.")
+    paths = sorted(
+        export_directory().glob("home_automation_auto_*.sql.gz"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    removed = paths[keep:]
+    for path in removed:
+        path.unlink()
+    return removed
+
+
+def create_scheduled_database_backup() -> tuple[Path, list[Path]]:
+    path = create_database_export(filename_prefix="home_automation_auto")
+    return path, prune_scheduled_backups()
