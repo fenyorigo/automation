@@ -112,6 +112,14 @@ class Database:
         measurement: dict[str, Any],
     ) -> int:
         sensor_id = str(measurement["sensor_id"])
+        if config.source_system == "esp32":
+            cursor.execute(
+                """UPDATE sensors
+                   SET is_active = 0
+                   WHERE device_id = ? AND source_system = ?
+                     AND source_sensor_id <> ? AND is_active = 1""",
+                (device_id, config.source_system, sensor_id),
+            )
         cursor.execute(
             """
             INSERT INTO sensors (
