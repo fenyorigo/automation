@@ -14,6 +14,7 @@ from database_backup import create_scheduled_database_backup, scheduled_backup_d
 from poll_devices import DEFAULT_CONFIG, load_devices, poll_all
 from polling_lock import PollCycleBusy, polling_cycle_lock
 from outdoor_weather import poll_active_outdoor_sources
+from scheduled_climate import process_due_climate_schedules
 
 
 async def run_cycle(timeout: float) -> tuple[int, int, int]:
@@ -64,28 +65,44 @@ async def main() -> None:
     if args.interval < 10:
         parser.error("--interval must be at least 10 seconds")
 
+    loop = asyncio.get_running_loop()
+    next_poll = loop.time()
     while True:
-        started = asyncio.get_running_loop().time()
-        try:
-            successful, stored, total = await run_cycle(args.timeout)
-            print(
-                f"{datetime.now().isoformat(timespec='seconds')} "
-                f"poll complete: {successful}/{total} successful, {stored}/{total} stored",
-                flush=True,
-            )
-        except PollCycleBusy:
-            print(
-                f"{datetime.now().isoformat(timespec='seconds')} "
-                "poll skipped: another polling cycle is already running",
-                flush=True,
-            )
-        except Exception as error:
-            print(
-                f"{datetime.now().isoformat(timespec='seconds')} polling cycle failed: {error}",
-                flush=True,
-            )
+        if loop.time() >= next_poll:
+            started = loop.time()
+            try:
+                successful, stored, total = await run_cycle(args.timeout)
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} "
+                    f"poll complete: {successful}/{total} successful, {stored}/{total} stored",
+                    flush=True,
+                )
+            except PollCycleBusy:
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} "
+                    "poll skipped: another polling cycle is already running",
+                    flush=True,
+                )
+            except Exception as error:
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} polling cycle failed: {error}",
+                    flush=True,
+                )
+            next_poll = started + args.interval
         if args.once:
             return
+        try:
+            processed = await process_due_climate_schedules()
+            if processed:
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} "
+                    f"scheduled climate commands complete: {processed}", flush=True,
+                )
+        except Exception as error:
+            print(
+                f"{datetime.now().isoformat(timespec='seconds')} "
+                f"scheduled climate command failed: {error}", flush=True,
+            )
         try:
             if scheduled_backup_due():
                 backup_path, removed = await asyncio.to_thread(
@@ -103,8 +120,7 @@ async def main() -> None:
                 f"database backup failed: {error}",
                 flush=True,
             )
-        elapsed = asyncio.get_running_loop().time() - started
-        await asyncio.sleep(max(0, args.interval - elapsed))
+        await asyncio.sleep(max(1, min(10, next_poll - loop.time())))
 
 
 if __name__ == "__main__":

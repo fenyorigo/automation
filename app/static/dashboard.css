@@ -248,6 +248,8 @@ dd.power-on { color: #d05a16; }
 .climate-start-form label small { display:block; margin-top:4px; font-weight:400; }
 .climate-start-form button { min-height:42px; border:0; border-radius:9px; padding:0 16px; background:var(--ink); color:white; font-weight:800; }
 .climate-control-form { grid-template-columns:1fr 1fr 1fr auto; }
+.climate-schedule-form { grid-template-columns:repeat(4,1fr) auto; }
+.climate-schedule-list { margin-top:18px; }
 .manual-climate-form { grid-template-columns:1fr 1fr 2fr auto; }
 .climate-control-actions { display:flex; align-items:end; }
 .climate-control-actions button[hidden] { display:none; }
@@ -301,6 +303,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .account-menu { width:100%; justify-content:space-between; border-radius:14px; }
   .user-create-form,.user-list form { grid-template-columns:1fr; }
   .analysis-status { grid-template-columns:1fr; }
+  .climate-start-form,.climate-control-form,.climate-schedule-form,.manual-climate-form { grid-template-columns:1fr; }
   .outdoor-source-list article { grid-template-columns:1fr; }
   .energy-meter-grid,.energy-reading-form { grid-template-columns:1fr; }
   .backup-list article { align-items:flex-start; flex-direction:column; }

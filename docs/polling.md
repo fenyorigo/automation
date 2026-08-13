@@ -304,3 +304,16 @@ A kazán kézi állapotváltozásai és a szervizesemények külön naplózódna
 Azonos kazánállapot ismételt mentése nem hoz létre hamis állapotváltozást. A
 szerviz külön űrlapon menthető, ezért a szerelői próba és az azt követő kézi
 kikapcsolás egymástól független esemény marad.
+
+## Időzített klímafutás
+
+A Klíma oldalon megadható a kezdési idő, a futásidő és a célhőmérséklet. Az
+időzítés adatbázisban marad, a poller pedig legfeljebb körülbelül 10 másodperces
+ellenőrzési időközzel indítja és állítja le az eszközt. Mindkét parancs
+ConnectLife-visszaolvasással ellenőrzött, bekerül a vezérlési auditba és a
+klímaesemény-naplóba is.
+
+Ha a gép alszik az induláskor, de ébredéskor a megadott futási ablak még tart,
+a futás késve elindul, és a tényleges indulástól számított futásidő után áll le.
+Ha a teljes ablak alvás közben lejárt, a rendszer nem kapcsolja be utólag a
+klímát, hanem hibásként jelöli az időzítést.

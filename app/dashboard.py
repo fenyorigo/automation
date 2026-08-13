@@ -732,7 +732,7 @@ def load_ventilation_log() -> tuple[list[dict[str, Any]], list[dict[str, Any]], 
         connection.close()
 
 
-def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     connection = connect_database()
     cursor = connection.cursor()
     try:
@@ -769,7 +769,16 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
                JOIN app_users u ON u.id=a.requested_by
                ORDER BY a.requested_at DESC,a.id DESC LIMIT 30"""
         )
-        return devices, events, rows_as_dicts(cursor)
+        attempts = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT s.id,s.starts_at,s.runtime_minutes,s.target_temperature_c,s.status,
+                      s.actual_started_at,s.actual_ended_at,s.error_message,
+                      d.name AS device_name,r.name AS room_name,u.username
+               FROM climate_control_schedules s JOIN devices d ON d.id=s.device_id
+               JOIN rooms r ON r.id=d.room_id JOIN app_users u ON u.id=s.created_by
+               ORDER BY s.starts_at DESC,s.id DESC LIMIT 50"""
+        )
+        return devices, events, attempts, rows_as_dicts(cursor)
     finally:
         cursor.close()
         connection.close()
@@ -1374,9 +1383,9 @@ def finish_ventilation(event_id: int):
 
 @app.get("/climate-log")
 def climate_log() -> str:
-    devices, events, attempts = load_climate_operation_log()
+    devices, events, attempts, schedules = load_climate_operation_log()
     return render_template(
-        "climate_log.html", devices=devices, events=events, attempts=attempts,
+        "climate_log.html", devices=devices, events=events, attempts=attempts, schedules=schedules,
         now_local=datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M"),
         notice=session.pop("climate_log_notice", None),
     )
@@ -1538,6 +1547,73 @@ def control_climate_from_ui():
         session["climate_log_notice"] = {
             "kind": "error", "message": f"A klímaparancs sikertelen: {result.error_message}"
         }
+    return redirect(url_for("climate_log"))
+
+
+@app.post("/climate-log/schedules")
+def create_climate_schedule():
+    validate_csrf()
+    try:
+        device_id = int(request.form["device_id"])
+        temperature = int(request.form["temperature_c"])
+        runtime = int(request.form["runtime_minutes"])
+        starts_at = parse_local_datetime(request.form["starts_at"])
+        starts = datetime.fromisoformat(starts_at)
+    except (KeyError, TypeError, ValueError):
+        abort(400)
+    now = datetime.now(UTC).replace(tzinfo=None)
+    if not 25 <= temperature <= 30 or not 1 <= runtime <= 1440 or starts < now - timedelta(minutes=5):
+        abort(400)
+    if starts < now:
+        starts = now
+        starts_at = starts.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    connection=connect_database(); cursor=connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT 1 FROM devices WHERE id=? AND is_active=1
+               AND source_system='connectlife' AND room_id IS NOT NULL AND source_puid IS NOT NULL""",
+            (device_id,),
+        )
+        if cursor.fetchone() is None: abort(404)
+        cursor.execute(
+            """SELECT 1 FROM climate_control_schedules
+               WHERE device_id=? AND status IN ('scheduled','starting','running','stopping')
+               FOR UPDATE""", (device_id,),
+        )
+        if cursor.fetchone() is not None:
+            connection.rollback()
+            session["climate_log_notice"]={"kind":"warning","message":"Ehhez a klímához már tartozik függő vagy futó időzítés."}
+            return redirect(url_for("climate_log"))
+        cursor.execute(
+            """INSERT INTO climate_control_schedules
+               (device_id,starts_at,runtime_minutes,target_temperature_c,created_by)
+               VALUES (?,?,?,?,?)""",
+            (device_id,starts_at,runtime,temperature,g.current_user["id"]),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback(); raise
+    finally: cursor.close(); connection.close()
+    session["climate_log_notice"]={"kind":"success","message":"A klímafutás időzítését elmentettük."}
+    return redirect(url_for("climate_log"))
+
+
+@app.post("/climate-log/schedules/<int:schedule_id>/cancel")
+def cancel_climate_schedule(schedule_id: int):
+    validate_csrf(); connection=connect_database(); cursor=connection.cursor()
+    try:
+        cursor.execute(
+            """UPDATE climate_control_schedules SET status='cancelled'
+               WHERE id=? AND status='scheduled'""", (schedule_id,),
+        )
+        changed=cursor.rowcount; connection.commit()
+    except Exception:
+        connection.rollback(); raise
+    finally: cursor.close(); connection.close()
+    session["climate_log_notice"]={
+        "kind":"success" if changed else "warning",
+        "message":"Az időzítést töröltük." if changed else "Az időzítés már nem törölhető.",
+    }
     return redirect(url_for("climate_log"))
 
 

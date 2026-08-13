@@ -40,6 +40,24 @@
 </section>
 
 <section class="history-panel">
+  <p class="eyebrow">Automatikus leállítás</p><h2>Időzített klímafutás</h2>
+  <p class="reset-explanation">A háttérfolyamat a megadott időben bekapcsolja, majd a futásidő végén kikapcsolja a klímát. A két művelet ugyanúgy visszaolvasással ellenőrzött és naplózott, mint a közvetlen UI-vezérlés.</p>
+  <form class="climate-start-form climate-schedule-form" method="post" action="{{ url_for('create_climate_schedule') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Helyiség<select name="device_id" required>{% for device in devices %}<option value="{{ device.id }}">{{ device.room_name }}</option>{% endfor %}</select></label>
+    <label>Kezdés<input type="datetime-local" name="starts_at" value="{{ now_local }}" required></label>
+    <label>Futásidő (perc)<input type="number" name="runtime_minutes" min="1" max="1440" value="40" required></label>
+    <label>Célhőmérséklet<input type="number" name="temperature_c" min="25" max="30" step="1" value="25" required></label>
+    <button type="submit">Futás időzítése</button>
+  </form>
+  {% if schedules %}<div class="table-wrap climate-schedule-list"><table><thead><tr><th>Kezdés</th><th>Klíma</th><th>Beállítás</th><th>Állapot</th><th></th></tr></thead><tbody>{% for item in schedules %}<tr>
+    <td>{{ item.starts_at|local_time }}</td><td>{{ item.room_name }}</td><td>{{ item.target_temperature_c|temperature }} °C · {{ item.runtime_minutes }} perc</td>
+    <td><span class="badge {{ 'online' if item.status=='running' else 'offline' if item.status=='failed' else 'manual' }}">{{ {'scheduled':'ütemezve','starting':'indítás','running':'fut','stopping':'leállítás','completed':'befejezve','cancelled':'törölve','failed':'hiba'}.get(item.status,item.status) }}</span>{% if item.error_message %}<small>{{ item.error_message }}</small>{% endif %}</td>
+    <td>{% if item.status=='scheduled' %}<form method="post" action="{{ url_for('cancel_climate_schedule',schedule_id=item.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="danger-button">Törlés</button></form>{% endif %}</td>
+  </tr>{% endfor %}</tbody></table></div>{% endif %}
+</section>
+
+<section class="history-panel">
   <p class="eyebrow">Távirányító</p><h2>Kézi esemény rögzítése</h2>
   <p class="reset-explanation">A rendszer a következő lekérdezéskor automatikusan felismeri a távirányítós vagy ConnectLife-kapcsolást. Ez a kézi űrlap csak korrekcióhoz használható, és nem vezérli az eszközt.</p>
   <form class="climate-start-form manual-climate-form" method="post" action="{{ url_for('start_climate_operation') }}">

@@ -78,6 +78,10 @@ MIGRATIONS = (
         "v1_18_energy_and_detected_climate_events",
         ROOT / "SQL" / "migrations" / "018_home_automation_v1.17_to_v1.18.sql",
     ),
+    (
+        "v1_19_scheduled_climate_runs",
+        ROOT / "SQL" / "migrations" / "019_home_automation_v1.18_to_v1.19.sql",
+    ),
 )
 
 
