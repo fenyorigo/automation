@@ -17,11 +17,12 @@
         <a class="history-link" href="{{ url_for('history') }}">Mérési előzmények</a>
         <a class="history-link" href="{{ url_for('settings') }}">Kért beállítások</a>
         <a class="history-link" href="{{ url_for('schedules') }}">Időprofilok</a>
-        <a class="history-link" href="{{ url_for('locations') }}">Helyiségek</a>
+        <a class="history-link" href="{{ url_for('locations') }}">Nyilvántartás</a>
         <a class="history-link" href="{{ url_for('analysis') }}">Elemzések</a>
         <a class="history-link" href="{{ url_for('outdoor_sources') }}">Külső hőmérséklet</a>
         <a class="history-link" href="{{ url_for('energy') }}">Energia</a>
         {% if can_write %}<a class="history-link" href="{{ url_for('backups') }}">Adatmentés</a>{% endif %}
+        {% if can_write %}<a class="history-link" href="{{ url_for('global_settings') }}">Globális beállítások</a>{% endif %}
         <a class="history-link" href="{{ url_for('ventilation') }}">Szellőztetés</a>
         <a class="history-link" href="{{ url_for('climate_log') }}">Klíma</a>
         {% if can_write %}<a class="history-link" href="{{ url_for('users') }}">Felhasználók</a>{% endif %}

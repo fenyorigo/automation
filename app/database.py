@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import replace
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -45,6 +46,52 @@ class Database:
     def close(self) -> None:
         self.connection.close()
 
+    def polling_configs(
+        self, configs: list[DeviceConfig], *, due_only: bool
+    ) -> list[DeviceConfig]:
+        """Return configured integrations enabled in the registry and, optionally, due now."""
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT d.source_system,d.source_device_id,d.polling_enabled,
+                       d.poll_interval_seconds,MAX(pa.completed_at) AS last_poll,
+                       (MAX(pa.completed_at) IS NULL OR
+                        TIMESTAMPADD(SECOND,d.poll_interval_seconds,MAX(pa.completed_at))
+                          <= UTC_TIMESTAMP(3)) AS is_due,
+                       d.hostname,d.expected_ip,d.mac_address
+                FROM devices d
+                LEFT JOIN poll_attempts pa ON pa.device_id=d.id
+                GROUP BY d.id,d.source_system,d.source_device_id,d.polling_enabled,
+                         d.poll_interval_seconds,d.hostname,d.expected_ip,d.mac_address
+                """
+            )
+            registry = {
+                (str(row[0]), str(row[1])): {
+                    "enabled": bool(row[2]), "interval": int(row[3]), "last": row[4],
+                    "due": bool(row[5]), "hostname": row[6], "expected_ip": row[7],
+                    "mac_address": row[8]
+                }
+                for row in cursor.fetchall()
+            }
+            selected = []
+            for config in configs:
+                entry = registry.get((config.source_system, config.device_id))
+                if entry is None:  # A config-file-only device is admitted for its first upsert.
+                    selected.append(config)
+                elif entry["enabled"] and (
+                    not due_only or entry["due"]
+                ):
+                    selected.append(replace(
+                        config,
+                        hostname=entry["hostname"] or config.hostname,
+                        expected_ip=entry["expected_ip"] or "",
+                        mac_address=entry["mac_address"] or "",
+                    ))
+            return selected
+        finally:
+            cursor.close()
+
     def persist(self, config: DeviceConfig, result: PollResult, duration_ms: int) -> None:
         cursor = self.connection.cursor()
         try:
@@ -78,10 +125,10 @@ class Database:
               mac_address, name, device_type, model, is_active
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON DUPLICATE KEY UPDATE
-              source_puid = VALUES(source_puid), hostname = VALUES(hostname),
-              expected_ip = VALUES(expected_ip), mac_address = VALUES(mac_address),
-              name = VALUES(name), device_type = VALUES(device_type),
-              model = VALUES(model), is_active = 1
+              source_puid = COALESCE(VALUES(source_puid),source_puid),
+              hostname = COALESCE(hostname,VALUES(hostname)),
+              expected_ip = COALESCE(expected_ip,VALUES(expected_ip)),
+              mac_address = COALESCE(mac_address,VALUES(mac_address))
             """,
             (
                 config.source_system,

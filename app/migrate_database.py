@@ -82,6 +82,18 @@ MIGRATIONS = (
         "v1_19_scheduled_climate_runs",
         ROOT / "SQL" / "migrations" / "019_home_automation_v1.18_to_v1.19.sql",
     ),
+    (
+        "v1_20_device_registry",
+        ROOT / "SQL" / "migrations" / "020_home_automation_v1.19_to_v1.20.sql",
+    ),
+    (
+        "v1_21_device_features",
+        ROOT / "SQL" / "migrations" / "021_home_automation_v1.20_to_v1.21.sql",
+    ),
+    (
+        "v1_22_ai_analysis_experiments",
+        ROOT / "SQL" / "migrations" / "022_home_automation_v1.21_to_v1.22.sql",
+    ),
 )
 
 

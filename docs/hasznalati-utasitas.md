@@ -76,8 +76,10 @@ megjelenik. Ez lehet később kültéri ESP32, illetve időjárási szolgáltat�
 Ezen az oldalon a hőmérsékleti idősorok vizsgálhatók.
 
 1. Jelölj ki egy vagy több eszközt.
-2. Válassz időtávot: **24 óra**, **7 nap** vagy **30 nap**.
-3. Nyomd meg a **Megjelenítés** gombot.
+2. Válassz időtávot: **1, 2, 6, 12 vagy 24 óra**, illetve **7 vagy 30 nap**.
+3. Szükség esetén adj meg kezdő időpontot. Ilyenkor a kiválasztott hosszúságú
+   időablak ettől az időponttól indul; üresen hagyva az időtáv a jelenig tart.
+4. Nyomd meg a **Megjelenítés** gombot.
 
 A kijelölt eszközök közös időtengelyen, külön színű görbékkel jelennek meg. A
 jelmagyarázat azonosítja a görbéket, alattuk pedig eszközönként látható:
@@ -143,28 +145,55 @@ A lap megmutatja a mai, feloldott napi tervet is.
 **Fontos:** az időprofil jelenleg tervet és kívánt állapotot készít; még nem
 küld automatikusan parancsot a fizikai eszközöknek.
 
-## 6. Helyiségek
+## 6. Nyilvántartás
 
-A felső rész felsorolja az emeleti, földszinti és zónán kívüli helyiségeket.
-Az alsó részben látható az eszköz–helyiség hozzárendelés.
+Ez az oldal kezeli a zónákat, helyiségeket, eszköztípusokat, gyártókat és az
+eszközök műszaki adatait.
 
-Az ESP32 és Computherm eszközök helye szerkesztőként módosítható, mert ezek
-mozgathatók. A Hisense klímák helye kötött. A módosítás időbélyeges
-helytörténetet hoz létre, így később megállapítható, hogy egy mérés idején hol
-volt az eszköz.
+- A zónák felvehetők, átnevezhetők és archiválhatók.
+- A helyiségek felvehetők, átnevezhetők, archiválhatók és másik zónához
+  rendelhetők.
+- Új eszköztípus és gyártó vehető fel.
+- Új eszköz helyiséghez vagy – helyiség nélkül – közvetlenül zónához
+  rendelhető. Helyiség választásakor a zóna automatikusan követi a helyiséget.
+- Nyilvántartható az elérési mód, a képesség, a hálózati címzés, az integrációs
+  szerep, a támogatott üzemmódok, ventilátorfokozatok és kiegészítő programok.
+- Az automatikus lekérdezés és az automatikus vezérlés külön engedélyezhető.
+- A lekérdezési gyakoriság eszközönként 1–1440 perc között állítható. A közös
+  gomb minden aktívan, hálózaton lekérdezett eszközt visszaállít 10 percre.
+
+Az áthelyezés időbélyeges helytörténetet hoz létre. Korábbi mérésekkel
+rendelkező eszközt törlés helyett archiválni kell, így a történeti adatok
+megmaradnak.
+
+Az UI-ban felvett eszköz csak akkor kérdezhető le ténylegesen, ha a program
+támogatja a választott lekérdező illesztőt, és annak technikai konfigurációja
+is rendelkezésre áll.
+
+### Globális beállítások
+
+A szerkesztők a főmenü **Globális beállítások** oldalán módosíthatják a
+rendszerszintű működési értékeket: az alap lekérdezési időt, az időkorlátot,
+az adatmentés paramétereit, a gnuplot elérési útját, valamint az
+előkészített hűtési és fűtési biztonsági határokat. A mentés közvetlenül, de
+atomikusan frissíti a projekt `.env` fájlját.
+
+Az adatbázis és a ConnectLife felhasználónevei, jelszavai, illetve más titkok
+nem jelennek meg és nem szerkeszthetők ezen a felületen.
 
 ## 7. Elemzések
 
-Az oldal a determinisztikus elemzési és lokális AI-réteg állapotát mutatja:
+Az oldal a determinisztikus elemzési réteg állapotát mutatja:
 
-- Ollama konfigurációja és elérhetősége;
+- a szöveges AI, az Ollama és a modell kikapcsolt állapota;
 - elemzési futások;
 - felismert anomáliák;
 - napi összefoglalók.
 
-A számításokat determinisztikus Python-folyamat végzi. Az Ollama feladata csak
-az ellenőrzött adatok természetes nyelvű megfogalmazása. A nyelvi modell
-**soha nem vezérelhet eszközt**.
+A számításokat determinisztikus Python-folyamat végzi. A korábban kipróbált
+Llama 3.2 1B nem adott elég megbízható, validálható válaszokat, ezért töröltük.
+Az Ollama az UI-ból nem kapcsolható be, de a Python-alapú ténycsomag továbbra is
+elkészíthető. Egy későbbi nyelvi modell **soha nem vezérelhet eszközt**.
 
 ## 8. Külső hőmérséklet
 
@@ -374,4 +403,3 @@ szerkesztői hozzáférés véletlen megszüntetését.
   felszabadulását.
 - Rendszerszintű diagnosztikához a projekt `logs` könyvtárában találhatók a
   dashboard és a poller naplói.
-

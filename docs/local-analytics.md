@@ -1,11 +1,11 @@
-# Determinisztikus napi elemzés és lokális AI
+# Determinisztikus elemzés és a lokális AI-kísérlet tapasztalatai
 
 ## Alapelv
 
-A fűtési és hűtési vezérlés determinisztikus marad. A lokális nyelvi modell
-nem kap közvetlen hozzáférést az eszközökhöz és nem módosíthat célértéket,
-időprofilt vagy biztonsági korlátot. Feladata kizárólag az előre kiszámított,
-strukturált tények emberileg olvasható megfogalmazása.
+A fűtési és hűtési vezérlés determinisztikus marad. Nyelvi modell nem kaphat
+közvetlen hozzáférést az eszközökhöz, és nem módosíthat célértéket, időprofilt
+vagy biztonsági korlátot. Egy későbbi, alkalmas modell feladata is legfeljebb az
+előre kiszámított, strukturált tények emberileg olvasható megfogalmazása lehet.
 
 Egy kis modell használata csökkenti az erőforrásigényt, de önmagában nem zárja
 ki a hallucinációt. A későbbi megvalósítás ezért minden számszerű és eszközre
@@ -20,7 +20,7 @@ ellenőrzés esetén a modell válasza `rejected`, és sablonalapú `fallback`
 3. Szenzoronkénti napi statisztikák és változási sebességek számítása.
 4. Lokalizált z-pontszámú és szabályalapú anomáliák létrehozása.
 5. Ellenőrzött, strukturált ténycsomag előállítása.
-6. Opcionális Ollama-hívás kizárólag a ténycsomaggal.
+6. Opcionális, jelenleg kikapcsolt szövegmodell-hívás kizárólag a ténycsomaggal.
 7. A válasz állításainak validálása; szükség esetén determinisztikus tartalék.
 8. Az eredmény megjelenítése, emberi döntésre bízva minden javaslatot.
 
@@ -42,16 +42,54 @@ Az Ollama alapértelmezetten ki van kapcsolva:
 ```text
 OLLAMA_ENABLED=false
 OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=llama3.2:1b
+OLLAMA_MODEL=
 OLLAMA_TIMEOUT_SECONDS=60
 ```
 
-Az `/analysis` oldal ettől függetlenül, két másodperces időkorláttal lekéri az
-Ollama `/api/tags` végpontját. Külön jelzi a szolgáltatás tényleges
-elérhetőségét és azt, hogy a konfigurált modell szerepel-e a telepített
-modellek között.
+Az első modellalkalmassági vizsgálat után a Llama 3.2 1B modellt eltávolítottuk.
+Az `/analysis` oldal jelzi, hogy az Ollama ki van kapcsolva és nincs telepített
+szövegmodell. Az Ollama az UI-ból nem engedélyezhető; az elemzési ténycsomagot
+a determinisztikus Python-folyamat továbbra is el tudja készíteni.
 
-A modell engedélyezése előtt még implementálandó a determinisztikus napi
-pipeline, a validátor, az ütemezés, a hibakezelés és a Fedora-szolgáltatás.
-Ollama telepítése vagy modell letöltése ebben az előkészítő fázisban nem
-történik.
+## Kézi bizonyítékcsomag-kísérlet
+
+Az `/analysis` oldalon szerkesztői jogosultsággal tetszőleges, legfeljebb hét
+napos időablak elemezhető. A Python csak olvasási lekérdezésekkel kapcsolja
+össze a méréseket, szellőztetést, klímaeseményeket és külső hőmérsékletet.
+A teljes ténycsomag auditálásra megmarad. Jelenleg nem kerül szövegmodellhez;
+SQL-t csak az alkalmazás olvasási folyamata futtat, eszközvezérlés nem történik.
+
+A korábbi kísérleteknél a prompt, a kézi megfigyelés, a nyers modellválasz és a validálási eredmény az
+`ai_analysis_experiments` táblába kerül. A validátor ellenőrzi a JSON-sémát,
+a bizonyítékhivatkozásokat, az üres és ismétlődő állításokat, továbbá megtiltja,
+hogy a kézi megfigyelés bizonyított műszeres tényként szerepeljen.
+
+## A Llama 3.2 1B kísérlet eredménye
+
+A modellt szándékosan szűk feladattal próbáltuk: nem nyers adatbázis-hozzáférést
+kapott, hanem Pythonból előállított, strukturált bizonyítékcsomagot, kiegészítve
+egy elkülönítetten jelölt emberi megfigyeléssel. A választ kötött JSON-séma és
+bizonyítékhivatkozások alapján ellenőriztük.
+
+A próbák során a modell:
+
+- összekeverte a mért tényt a valószínű értelmezéssel;
+- ismételt vagy egymást átfedő állításokat adott;
+- nem mindig emelte ki a több érzékelőn egyszerre megjelenő, fontos eseményt;
+- a kötött szerkezet ellenére sem adott megbízhatóan validálható választ.
+
+Ezért a válaszok `rejected` állapotúak lettek. A tapasztalat szerint az egymilliárd
+paraméteres modell erre a feladatra nem alkalmas; a validáció lazítása csak
+elfedné a hibát. A `llama3.2:1b` modellt töröltük, az Ollamát programból
+kényszerítetten kikapcsoltuk, és az UI-ból nem engedélyezhető.
+
+## Jelenlegi működés és továbblépési feltétel
+
+A modell eltávolítása nem érinti az adatgyűjtést, a statisztikai számításokat,
+az anomáliaészlelést vagy a bizonyítékcsomag elkészítését; ezeket Python végzi.
+Az Elemzések oldal kifejezetten jelzi, hogy nincs telepített szövegmodell.
+
+Új modell csak külön alkalmassági vizsgálat után kerülhet használatba. Ugyanazt
+a rögzített ténycsomagot, sémát és szigorú validátort kell teljesítenie. A modell
+akkor sem válhat döntési vagy vezérlési komponenssé: hibás válasz esetén az
+alkalmazás determinisztikus, sablonalapú összefoglalóra tér vissza.

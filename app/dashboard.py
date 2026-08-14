@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import unicodedata
 import urllib.error
 import urllib.request
 from datetime import UTC, date, datetime, timedelta
@@ -29,6 +30,8 @@ from poll_scheduler import run_cycle
 from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_active
 from climate_control import ClimateControlResult, control_climate
 from database_backup import create_database_export, export_directory, list_database_exports
+from global_settings import SETTINGS as GLOBAL_SETTINGS, save as save_global_settings, values as global_setting_values
+from analysis_experiment import PROMPT_VERSION, build_evidence, call_ollama, prompt_for
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,14 +85,29 @@ COMPUTHERM_LOCATION = {
     "iot-computherm-foldszint": "földszint",
 }
 
-HISTORY_RANGES = {"24h": 24, "7d": 24 * 7, "30d": 24 * 30}
+HISTORY_RANGES = {
+    "1h": 1,
+    "2h": 2,
+    "6h": 6,
+    "12h": 12,
+    "24h": 24,
+    "7d": 24 * 7,
+    "30d": 24 * 30,
+}
 WEEKDAYS = ["Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat", "Vasárnap"]
-OLLAMA_ENABLED = os.getenv("OLLAMA_ENABLED", "false").strip().lower() in {"1", "true", "yes"}
+OLLAMA_ENABLED = False
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
 
 
 def check_ollama() -> dict[str, Any]:
+    if not OLLAMA_ENABLED:
+        return {
+            "reachable": False,
+            "models": [],
+            "model_available": False,
+            "error": None,
+        }
     url = f"{OLLAMA_BASE_URL}/api/tags"
     try:
         with urllib.request.urlopen(url, timeout=2.0) as response:
@@ -288,13 +306,24 @@ def load_analysis_overview() -> dict[str, Any]:
                FROM daily_ai_summaries ORDER BY summary_date DESC,id DESC LIMIT 10"""
         )
         summaries = rows_as_dicts(cursor)
-        return {"runs": runs, "anomalies": anomalies, "summaries": summaries}
+        cursor.execute("""SELECT id,window_started_at,window_ended_at,model,facts_json,
+          operator_observation,raw_response,parsed_response,validation_status,generation_ms,error_message,created_at
+          FROM ai_analysis_experiments ORDER BY id DESC LIMIT 10""")
+        experiments=rows_as_dicts(cursor)
+        for item in experiments:
+            item["facts"]=json.loads(item.pop("facts_json"))
+            parsed=item.pop("parsed_response")
+            item["result"]=json.loads(parsed) if parsed and item["validation_status"]=="structurally_valid" else None
+        return {"runs": runs, "anomalies": anomalies, "summaries": summaries,
+                "experiments":experiments}
     finally:
         cursor.close()
         connection.close()
 
 
-def load_temperature_history(device_id: int, hours: int) -> list[tuple[datetime, float]]:
+def load_temperature_history(
+    device_id: int, started_at: datetime, ended_at: datetime
+) -> list[tuple[datetime, float]]:
     connection = connect_database()
     cursor = connection.cursor()
     try:
@@ -305,10 +334,10 @@ def load_temperature_history(device_id: int, hours: int) -> list[tuple[datetime,
             JOIN sensors s ON s.id = sr.sensor_id
             WHERE s.device_id = ? AND s.sensor_type = 'temperature'
               AND sr.quality IN ('good', 'valid') AND sr.value IS NOT NULL
-              AND sr.observed_at >= UTC_TIMESTAMP(3) - INTERVAL ? HOUR
+              AND sr.observed_at >= ? AND sr.observed_at < ?
             ORDER BY sr.observed_at
             """,
-            (device_id, hours),
+            (device_id, started_at, ended_at),
         )
         return [(row[0], float(row[1])) for row in cursor.fetchall()]
     finally:
@@ -436,15 +465,53 @@ def resolve_daily_plan(device_id: int, plan_date: date, persist: bool = True) ->
         cursor.close(); connection.close()
 
 
-def load_locations() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def load_registry() -> dict[str, list[dict[str, Any]]]:
     connection=connect_database(); cursor=connection.cursor()
     try:
-        cursor.execute("""SELECT r.id,r.name,z.name zone_name FROM rooms r LEFT JOIN zones z ON z.id=r.zone_id ORDER BY FIELD(z.name,'Emelet','Földszint'),z.name,r.name""")
+        cursor.execute("SELECT id,name,is_active FROM zones ORDER BY FIELD(name,'Emelet','Földszint','Zónán kívüli'),name")
+        zones=rows_as_dicts(cursor)
+        cursor.execute("""SELECT r.id,r.name,r.zone_id,r.is_active,z.name zone_name FROM rooms r LEFT JOIN zones z ON z.id=r.zone_id ORDER BY FIELD(z.name,'Emelet','Földszint','Zónán kívüli'),z.name,r.name""")
         rooms=rows_as_dicts(cursor)
-        cursor.execute("""SELECT d.id,d.name,d.source_system,d.room_id,r.name room_name,z.name zone_name,(d.source_system IN ('esp32','computherm')) movable FROM devices d LEFT JOIN rooms r ON r.id=d.room_id LEFT JOIN zones z ON z.id=r.zone_id WHERE d.is_active=1 ORDER BY FIELD(d.source_system,'esp32','computherm','connectlife','manual'),d.name""")
+        cursor.execute("SELECT id,code,name,is_active FROM device_types ORDER BY name")
+        device_types=rows_as_dicts(cursor)
+        cursor.execute("SELECT id,code,name,is_active FROM manufacturers ORDER BY name")
+        manufacturers=rows_as_dicts(cursor)
+        cursor.execute("""SELECT d.*,r.name room_name,COALESCE(r.zone_id,d.zone_id) effective_zone_id,
+            z.name zone_name,dt.name device_type_name,m.name manufacturer_name
+          FROM devices d LEFT JOIN rooms r ON r.id=d.room_id
+          LEFT JOIN zones z ON z.id=COALESCE(r.zone_id,d.zone_id)
+          LEFT JOIN device_types dt ON dt.id=d.device_type_id
+          LEFT JOIN manufacturers m ON m.id=d.manufacturer_id
+          ORDER BY d.is_active DESC,FIELD(d.source_system,'esp32','computherm','connectlife','manual'),d.name""")
         devices=rows_as_dicts(cursor)
+        for device in devices:
+            cursor.execute("SELECT mode_code,display_name FROM device_supported_modes WHERE device_id=? ORDER BY display_name",(device["id"],))
+            device["modes"]=rows_as_dicts(cursor)
+            cursor.execute("SELECT speed_code,display_name FROM device_supported_fan_speeds WHERE device_id=? ORDER BY display_name",(device["id"],))
+            device["fan_speeds"]=rows_as_dicts(cursor)
+            cursor.execute("SELECT feature_code,display_name FROM device_supported_features WHERE device_id=? ORDER BY display_name",(device["id"],))
+            device["features"]=rows_as_dicts(cursor)
     finally: cursor.close(); connection.close()
-    return rooms,devices
+    return {"zones":zones,"rooms":rooms,"device_types":device_types,
+            "manufacturers":manufacturers,"devices":devices}
+
+
+def audit_registry(cursor, entity_type: str, entity_id: int, action: str, changes: dict[str, Any]):
+    cursor.execute(
+        "INSERT INTO registry_audit_log (entity_type,entity_id,action,changes_json,changed_by) VALUES (?,?,?,?,?)",
+        (entity_type,entity_id,action,json.dumps(changes,ensure_ascii=False),g.current_user["id"]),
+    )
+
+
+def optional_int(value: str | None) -> int | None:
+    return int(value) if value and value.strip() else None
+
+
+def registry_code(value: str) -> str:
+    normalized=unicodedata.normalize("NFKD",value.strip()).encode("ascii","ignore").decode()
+    code=re.sub(r"[^a-z0-9]+","_",normalized.lower()).strip("_")
+    if not code: raise ValueError("Érvénytelen kód")
+    return code
 
 
 def gnuplot_quote(value: str) -> str:
@@ -512,7 +579,7 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
             SELECT
               d.id, d.name, d.hostname, d.source_system, d.device_type,
               d.room_id, r.name AS room_name, z.name AS zone_name,
-              d.managed_manually, d.manual_power_state,
+              d.managed_manually, d.manual_power_state, d.polling_enabled,
               d.last_service_date, d.next_service_due,
               (SELECT mse.changed_at FROM manual_state_events mse
                WHERE mse.device_id = d.id
@@ -525,7 +592,7 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
               pa.duration_ms, pa.error_code, pa.error_message
             FROM devices d
             LEFT JOIN rooms r ON r.id = d.room_id
-            LEFT JOIN zones z ON z.id = r.zone_id
+            LEFT JOIN zones z ON z.id = COALESCE(r.zone_id,d.zone_id)
             LEFT JOIN sensors s
               ON s.device_id = d.id AND s.is_active = 1
             LEFT JOIN sensor_readings sr
@@ -790,6 +857,15 @@ def parse_local_datetime(value: str) -> str:
         parsed = parsed.astimezone()
     parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+
+def history_window(range_key: str, local_start: str) -> tuple[datetime, datetime]:
+    hours = HISTORY_RANGES[range_key]
+    if local_start:
+        started_at = datetime.fromisoformat(parse_local_datetime(local_start))
+        return started_at, started_at + timedelta(hours=hours)
+    ended_at = datetime.now(UTC).replace(tzinfo=None)
+    return ended_at - timedelta(hours=hours), ended_at
 
 
 def load_energy_readings() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -1064,7 +1140,7 @@ def dashboard() -> str:
         session["dashboard_view"] = requested_view
     view_mode = session.get("dashboard_view", "device")
     successful = sum(1 for item in devices if item["online"])
-    monitored_count = sum(1 for item in devices if not item["managed_manually"])
+    monitored_count = sum(1 for item in devices if item["polling_enabled"])
     latest_poll = max(
         (item["last_poll_at"] for item in devices if item["last_poll_at"]),
         default=None,
@@ -1119,6 +1195,25 @@ def backups() -> str:
         "backups.html", exports=list_database_exports(),
         notice=session.pop("backup_notice", None),
     )
+
+
+@app.route("/global-settings", methods=["GET", "POST"])
+@editor_required
+def global_settings() -> str:
+    if request.method == "POST":
+        validate_csrf()
+        try:
+            save_global_settings(dict(request.form))
+            global OLLAMA_ENABLED, OLLAMA_BASE_URL, OLLAMA_MODEL, GNUPLOT_BIN, GNUPLOT_ERROR
+            OLLAMA_ENABLED = False
+            OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
+            OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
+            GNUPLOT_BIN, GNUPLOT_ERROR = find_gnuplot()
+            session["global_settings_notice"] = {"kind":"success","message":"A globális beállításokat elmentettük a .env fájlba."}
+        except ValueError as error:
+            session["global_settings_notice"] = {"kind":"error","message":str(error)}
+        return redirect(url_for("global_settings"))
+    return render_template("global_settings.html",settings=GLOBAL_SETTINGS,values=global_setting_values(),notice=session.pop("global_settings_notice",None))
 
 
 @app.post("/backups")
@@ -1228,7 +1323,7 @@ def history() -> str:
     history_notice = session.pop("history_notice", None)
     if not devices:
         return render_template(
-            "history.html", devices=[], selected_devices=[], range_key="24h", series=[],
+            "history.html", devices=[], selected_devices=[], range_key="24h", history_start="", series=[],
             gnuplot_error=GNUPLOT_ERROR, resettable_sensors=resettable_sensors,
             history_notice=history_notice,
         )
@@ -1239,9 +1334,14 @@ def history() -> str:
     range_key = request.args.get("range", "24h")
     if range_key not in HISTORY_RANGES:
         range_key = "24h"
+    history_start = request.args.get("start", "").strip()
+    try:
+        started_at, ended_at = history_window(range_key, history_start)
+    except ValueError:
+        abort(400, "Érvénytelen kezdő időpont.")
     series = []
     for device in selected_devices:
-        points = load_temperature_history(device["id"], HISTORY_RANGES[range_key])
+        points = load_temperature_history(device["id"], started_at, ended_at)
         values = [item[1] for item in points]
         stats = None
         if values:
@@ -1249,6 +1349,7 @@ def history() -> str:
         series.append({"device": device, "points": points, "stats": stats})
     return render_template(
         "history.html", devices=devices, selected_devices=selected_devices, range_key=range_key,
+        history_start=history_start,
         series=series, gnuplot_error=GNUPLOT_ERROR,
         resettable_sensors=resettable_sensors, history_notice=history_notice,
     )
@@ -1263,7 +1364,45 @@ def analysis() -> str:
         ollama_base_url=OLLAMA_BASE_URL,
         ollama_model=OLLAMA_MODEL,
         ollama_status=check_ollama(),
+        now_local=datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M"),
+        default_analysis_start=datetime.now().astimezone().replace(hour=3,minute=30,second=0,microsecond=0).strftime("%Y-%m-%dT%H:%M"),
+        analysis_notice=session.pop("analysis_notice",None),
     )
+
+
+@app.post("/analysis/experiments")
+@editor_required
+def create_analysis_experiment():
+    validate_csrf()
+    try:
+        started_at=datetime.fromisoformat(parse_local_datetime(request.form["started_at"]))
+        ended_at=datetime.fromisoformat(parse_local_datetime(request.form["ended_at"]))
+        if ended_at <= started_at or ended_at-started_at > timedelta(days=7): raise ValueError
+    except (KeyError,ValueError): abort(400)
+    observation=request.form.get("operator_observation","").strip() or None
+    should_run=OLLAMA_ENABLED and request.form.get("run_ollama")=="1"
+    connection=connect_database(); cursor=connection.cursor()
+    try:
+        facts=build_evidence(cursor,started_at,ended_at,observation); prompt=prompt_for(facts)
+        raw=parsed=None; generation_ms=None; error_message=None; status="not_run"
+        if should_run:
+            try:
+                raw,parsed,generation_ms,valid,error_message=call_ollama(prompt)
+                status="structurally_valid" if valid else "rejected"
+            except Exception as error:
+                status="failed"; error_message=str(error)
+        cursor.execute("""INSERT INTO ai_analysis_experiments
+          (window_started_at,window_ended_at,prompt_version,model,facts_json,operator_observation,
+           prompt_text,raw_response,parsed_response,validation_status,generation_ms,error_message,created_by)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",(started_at,ended_at,PROMPT_VERSION,
+          os.getenv("OLLAMA_MODEL","llama3.2:1b"),json.dumps(facts,ensure_ascii=False,default=str),
+          observation,prompt,raw,json.dumps(parsed,ensure_ascii=False) if parsed else None,status,
+          generation_ms,error_message,g.current_user["id"])); connection.commit()
+        session["analysis_notice"]={"kind":"success" if status in {"not_run","structurally_valid"} else "warning",
+          "message":"A bizonyítékcsomag elkészült." + (" Az Ollama válaszát is eltároltuk." if status=="structurally_valid" else (f" Az Ollama-hívás sikertelen: {error_message}" if status=="failed" else ""))}
+    except Exception: connection.rollback(); raise
+    finally: cursor.close(); connection.close()
+    return redirect(url_for("analysis"))
 
 
 @app.get("/ventilation")
@@ -1782,8 +1921,13 @@ def history_chart() -> Response:
     range_key = request.args.get("range", "24h")
     if range_key not in HISTORY_RANGES:
         abort(400)
+    local_start = request.args.get("start", "").strip()
+    try:
+        started_at, ended_at = history_window(range_key, local_start)
+    except ValueError:
+        abort(400)
     series = [
-        (device["name"], load_temperature_history(device["id"], HISTORY_RANGES[range_key]))
+        (device["name"], load_temperature_history(device["id"], started_at, ended_at))
         for device in selected_devices
     ]
     series = [(name, points) for name, points in series if points]
@@ -1867,31 +2011,178 @@ def schedules() -> str:
 
 @app.get("/locations")
 def locations() -> str:
-    rooms,devices=load_locations()
-    return render_template("locations.html",rooms=rooms,devices=devices)
+    return render_template("locations.html",**load_registry(),notice=session.pop("registry_notice",None))
 
 
-@app.post("/locations/<int:device_id>")
-def save_location(device_id: int):
+@app.post("/registry/zones")
+def create_zone():
+    validate_csrf(); name=request.form.get("name","").strip()
+    if not name: abort(400)
+    connection=connect_database(); cursor=connection.cursor()
+    try:
+        cursor.execute("INSERT INTO zones (name) VALUES (?)",(name,)); audit_registry(cursor,"zone",cursor.lastrowid,"created",{"name":name}); connection.commit()
+    except mariadb.IntegrityError: connection.rollback(); session["registry_notice"]={"kind":"warning","message":"Ez a zóna már létezik."}
+    finally: cursor.close(); connection.close()
+    return redirect(url_for("locations"))
+
+
+@app.post("/registry/rooms")
+def create_room():
+    validate_csrf(); name=request.form.get("name","").strip()
+    try: zone_id=int(request.form["zone_id"])
+    except (KeyError,ValueError): abort(400)
+    if not name: abort(400)
+    connection=connect_database(); cursor=connection.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM zones WHERE id=? AND is_active=1",(zone_id,))
+        if cursor.fetchone() is None: abort(400)
+        cursor.execute("INSERT INTO rooms (zone_id,name) VALUES (?,?)",(zone_id,name)); audit_registry(cursor,"room",cursor.lastrowid,"created",{"name":name,"zone_id":zone_id}); connection.commit()
+    except mariadb.IntegrityError: connection.rollback(); session["registry_notice"]={"kind":"warning","message":"Ez a helyiség már létezik."}
+    finally: cursor.close(); connection.close()
+    return redirect(url_for("locations"))
+
+
+@app.post("/registry/zones/<int:zone_id>")
+def save_zone(zone_id: int):
+    validate_csrf(); name=request.form.get("name","").strip()
+    if not name: abort(400)
+    connection=connect_database(); cursor=connection.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM zones WHERE id=?",(zone_id,))
+        if cursor.fetchone() is None: abort(404)
+        cursor.execute("UPDATE zones SET name=?,is_active=? WHERE id=?",(name,int(request.form.get("is_active")=="1"),zone_id))
+        audit_registry(cursor,"zone",zone_id,"updated",{"name":name,"is_active":request.form.get("is_active")=="1"}); connection.commit()
+    except Exception: connection.rollback(); raise
+    finally: cursor.close(); connection.close()
+    return redirect(url_for("locations"))
+
+
+@app.post("/registry/rooms/<int:room_id>")
+def save_room(room_id: int):
+    validate_csrf(); name=request.form.get("name","").strip()
+    try: zone_id=int(request.form["zone_id"])
+    except (KeyError,ValueError): abort(400)
+    if not name: abort(400)
+    connection=connect_database(); cursor=connection.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM rooms WHERE id=?",(room_id,))
+        if cursor.fetchone() is None: abort(404)
+        cursor.execute("UPDATE rooms SET name=?,zone_id=?,is_active=? WHERE id=?",(name,zone_id,int(request.form.get("is_active")=="1"),room_id))
+        cursor.execute("UPDATE devices SET zone_id=? WHERE room_id=?",(zone_id,room_id))
+        audit_registry(cursor,"room",room_id,"updated",{"name":name,"zone_id":zone_id,"is_active":request.form.get("is_active")=="1"}); connection.commit()
+    except Exception: connection.rollback(); raise
+    finally: cursor.close(); connection.close()
+    return redirect(url_for("locations"))
+
+
+@app.post("/registry/device-types")
+def create_device_type():
+    return create_registry_lookup("device_types","device_type")
+
+
+@app.post("/registry/manufacturers")
+def create_manufacturer():
+    return create_registry_lookup("manufacturers","manufacturer")
+
+
+def create_registry_lookup(table: str, entity_type: str):
+    validate_csrf(); name=request.form.get("name","").strip()
+    if not name: abort(400)
+    code=registry_code(name); connection=connect_database(); cursor=connection.cursor()
+    try:
+        cursor.execute(f"INSERT INTO {table} (code,name) VALUES (?,?)",(code,name)); audit_registry(cursor,entity_type,cursor.lastrowid,"created",{"code":code,"name":name}); connection.commit()
+    except mariadb.IntegrityError: connection.rollback(); session["registry_notice"]={"kind":"warning","message":"Ez a törzsadat már létezik."}
+    finally: cursor.close(); connection.close()
+    return redirect(url_for("locations"))
+
+
+def device_form_values() -> dict[str, Any]:
+    room_id=optional_int(request.form.get("room_id")); zone_id=optional_int(request.form.get("zone_id"))
+    interval=int(request.form.get("poll_interval_minutes","10"))*60
+    if not 60 <= interval <= 86400: raise ValueError
+    return {
+      "name":request.form["name"].strip(),"source_system":request.form["source_system"],
+      "source_device_id":request.form["source_device_id"].strip(),"room_id":room_id,"zone_id":zone_id,
+      "device_type_id":int(request.form["device_type_id"]),"manufacturer_id":int(request.form["manufacturer_id"]),
+      "access_mode":request.form["access_mode"],"capability_mode":request.form["capability_mode"],
+      "integration_role":request.form["integration_role"],
+      "hostname":request.form.get("hostname","").strip() or None,"expected_ip":request.form.get("expected_ip","").strip() or None,
+      "mac_address":request.form.get("mac_address","").strip().lower() or None,"ip_assignment":request.form["ip_assignment"],
+      "polling_enabled":int(request.form.get("polling_enabled")=="1"),"control_enabled":int(request.form.get("control_enabled")=="1"),
+      "poll_interval_seconds":interval,"min_target":request.form.get("min_target","").strip() or None,
+      "max_target":request.form.get("max_target","").strip() or None,"is_active":int(request.form.get("is_active")=="1"),
+    }
+
+
+def save_device_capabilities(cursor, device_id: int):
+    cursor.execute("DELETE FROM device_supported_modes WHERE device_id=?",(device_id,))
+    cursor.execute("DELETE FROM device_supported_fan_speeds WHERE device_id=?",(device_id,))
+    cursor.execute("DELETE FROM device_supported_features WHERE device_id=?",(device_id,))
+    for code,label in (("cool","Hűtés"),("heat","Fűtés"),("dry","Szárítás"),("fan","Ventilátor"),("auto","Automata")):
+        if code in request.form.getlist("modes"): cursor.execute("INSERT INTO device_supported_modes VALUES (?,?,?)",(device_id,code,label))
+    for code,label in (("auto","Automata"),("low","Alacsony"),("medium_low","Közepesen alacsony"),("medium","Közepes"),("medium_high","Középmagas"),("high","Magas")):
+        if code in request.form.getlist("fan_speeds"): cursor.execute("INSERT INTO device_supported_fan_speeds VALUES (?,?,?)",(device_id,code,label))
+    for code,label in (("swing","Hinta"),("super","Gyors üzem"),("quiet","Csendes"),("sleep","Alvás")):
+        if code in request.form.getlist("features"): cursor.execute("INSERT INTO device_supported_features VALUES (?,?,?)",(device_id,code,label))
+
+
+@app.post("/registry/devices")
+def create_device():
     validate_csrf()
-    try: room_id=int(request.form["room_id"])
+    try: values=device_form_values()
+    except (KeyError,ValueError): abort(400)
+    if not values["name"] or not values["source_device_id"]: abort(400)
+    connection=connect_database(); cursor=connection.cursor()
+    try:
+        if values["room_id"]:
+            cursor.execute("SELECT zone_id FROM rooms WHERE id=? AND is_active=1",(values["room_id"],)); row=cursor.fetchone()
+            if row is None: abort(400)
+            values["zone_id"]=row[0]
+        cursor.execute("""INSERT INTO devices (room_id,zone_id,source_system,source_device_id,hostname,expected_ip,mac_address,name,device_type,device_type_id,manufacturer_id,access_mode,capability_mode,integration_role,ip_assignment,polling_enabled,control_enabled,poll_interval_seconds,min_target_temperature_c,max_target_temperature_c,is_active)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(values["room_id"],values["zone_id"],values["source_system"],values["source_device_id"],values["hostname"],values["expected_ip"],values["mac_address"],values["name"],"other",values["device_type_id"],values["manufacturer_id"],values["access_mode"],values["capability_mode"],values["integration_role"],values["ip_assignment"],values["polling_enabled"],values["control_enabled"],values["poll_interval_seconds"],values["min_target"],values["max_target"],values["is_active"])); device_id=cursor.lastrowid
+        save_device_capabilities(cursor,device_id); audit_registry(cursor,"device",device_id,"created",values); connection.commit()
+    except mariadb.IntegrityError as error: connection.rollback(); session["registry_notice"]={"kind":"error","message":f"Az eszköz nem vehető fel: {error}"}
+    finally: cursor.close(); connection.close()
+    return redirect(url_for("locations"))
+
+
+@app.post("/registry/devices/<int:device_id>")
+def save_device(device_id: int):
+    validate_csrf()
+    try: values=device_form_values()
     except (KeyError,ValueError): abort(400)
     connection=connect_database(); cursor=connection.cursor()
     try:
-        cursor.execute("SELECT room_id FROM devices WHERE id=? AND is_active=1 AND source_system IN ('esp32','computherm') FOR UPDATE",(device_id,)); row=cursor.fetchone()
+        cursor.execute("SELECT room_id FROM devices WHERE id=? FOR UPDATE",(device_id,)); row=cursor.fetchone()
         if row is None: abort(404)
-        cursor.execute("SELECT 1 FROM rooms WHERE id=?",(room_id,))
-        if cursor.fetchone() is None: abort(400)
-        old_room=row[0]
-        if old_room != room_id:
+        if values["room_id"]:
+            cursor.execute("SELECT zone_id FROM rooms WHERE id=? AND is_active=1",(values["room_id"],)); room=cursor.fetchone()
+            if room is None: abort(400)
+            values["zone_id"]=room[0]
+        if row[0] != values["room_id"]:
             cursor.execute("UPDATE device_room_history SET valid_to=CURRENT_TIMESTAMP(3) WHERE device_id=? AND valid_to IS NULL",(device_id,))
-            cursor.execute("UPDATE devices SET room_id=? WHERE id=?",(room_id,device_id))
-            cursor.execute("UPDATE sensors SET room_id=? WHERE device_id=?",(room_id,device_id))
-            cursor.execute("INSERT INTO device_room_history (device_id,room_id,change_reason) VALUES (?,?,?)",(device_id,room_id,request.form.get("reason") or 'Kézi áthelyezés'))
+            cursor.execute("UPDATE sensors SET room_id=? WHERE device_id=?",(values["room_id"],device_id))
+            if values["room_id"]: cursor.execute("INSERT INTO device_room_history (device_id,room_id,change_reason) VALUES (?,?,?)",(device_id,values["room_id"],request.form.get("reason") or 'Nyilvántartási módosítás'))
+        cursor.execute("""UPDATE devices SET room_id=?,zone_id=?,name=?,source_system=?,source_device_id=?,device_type_id=?,manufacturer_id=?,access_mode=?,capability_mode=?,integration_role=?,hostname=?,expected_ip=?,mac_address=?,ip_assignment=?,polling_enabled=?,control_enabled=?,poll_interval_seconds=?,min_target_temperature_c=?,max_target_temperature_c=?,is_active=? WHERE id=?""",(values["room_id"],values["zone_id"],values["name"],values["source_system"],values["source_device_id"],values["device_type_id"],values["manufacturer_id"],values["access_mode"],values["capability_mode"],values["integration_role"],values["hostname"],values["expected_ip"],values["mac_address"],values["ip_assignment"],values["polling_enabled"],values["control_enabled"],values["poll_interval_seconds"],values["min_target"],values["max_target"],values["is_active"],device_id))
+        save_device_capabilities(cursor,device_id); audit_registry(cursor,"device",device_id,"updated",values)
         connection.commit()
     except Exception: connection.rollback(); raise
     finally: cursor.close(); connection.close()
-    return redirect(url_for("locations",saved="yes"))
+    session["registry_notice"]={"kind":"success","message":f"{values['name']} adatai elmentve."}
+    return redirect(url_for("locations"))
+
+
+@app.post("/registry/reset-poll-intervals")
+def reset_poll_intervals():
+    validate_csrf(); connection=connect_database(); cursor=connection.cursor()
+    try:
+        default_seconds=int(os.getenv("DEFAULT_POLL_INTERVAL_MINUTES","10"))*60
+        cursor.execute("UPDATE devices SET poll_interval_seconds=? WHERE polling_enabled=1 AND access_mode='network'",(default_seconds,))
+        audit_registry(cursor,"device",0,"poll_intervals_reset",{"seconds":default_seconds,"affected":cursor.rowcount}); connection.commit()
+    except Exception: connection.rollback(); raise
+    finally: cursor.close(); connection.close()
+    session["registry_notice"]={"kind":"success","message":f"Minden hálózaton lekérdezett eszköz alapértéke ismét {default_seconds//60} perc."}
+    return redirect(url_for("locations"))
 
 
 @app.post("/schedules/<int:device_id>/profiles/<int:profile_id>")

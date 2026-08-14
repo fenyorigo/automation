@@ -17,9 +17,18 @@ from outdoor_weather import poll_active_outdoor_sources
 from scheduled_climate import process_due_climate_schedules
 
 
-async def run_cycle(timeout: float) -> tuple[int, int, int]:
+async def run_cycle(
+    timeout: float, *, due_only: bool = False, poll_outdoor: bool = True
+) -> tuple[int, int, int]:
     with polling_cycle_lock():
-        devices = load_devices(DEFAULT_CONFIG)
+        configured = load_devices(DEFAULT_CONFIG)
+        selector = Database()
+        try:
+            devices = selector.polling_configs(configured, due_only=due_only)
+        finally:
+            selector.close()
+        if not devices and not poll_outdoor:
+            return 0, 0, 0
         configs = {(item.source_system, item.device_id): item for item in devices}
         results = await poll_all(devices, timeout)
         database = Database()
@@ -37,9 +46,11 @@ async def run_cycle(timeout: float) -> tuple[int, int, int]:
                     )
         finally:
             database.close()
-        outdoor_successful, outdoor_attempted = await asyncio.to_thread(
-            poll_active_outdoor_sources, timeout
-        )
+        outdoor_successful, outdoor_attempted = (0, 0)
+        if poll_outdoor:
+            outdoor_successful, outdoor_attempted = await asyncio.to_thread(
+                poll_active_outdoor_sources, timeout
+            )
         if outdoor_attempted:
             print(
                 f"{datetime.now().isoformat(timespec='seconds')} "
@@ -67,16 +78,26 @@ async def main() -> None:
 
     loop = asyncio.get_running_loop()
     next_poll = loop.time()
+    next_outdoor_poll = loop.time()
     while True:
+        load_dotenv(DEFAULT_CONFIG.parents[1] / ".env", override=True)
+        configured_interval = max(10, int(os.getenv("POLL_INTERVAL_SECONDS", str(args.interval))))
+        configured_timeout = float(os.getenv("POLL_TIMEOUT_SECONDS", str(args.timeout)))
         if loop.time() >= next_poll:
             started = loop.time()
             try:
-                successful, stored, total = await run_cycle(args.timeout)
-                print(
-                    f"{datetime.now().isoformat(timespec='seconds')} "
-                    f"poll complete: {successful}/{total} successful, {stored}/{total} stored",
-                    flush=True,
+                include_outdoor = loop.time() >= next_outdoor_poll
+                successful, stored, total = await run_cycle(
+                    configured_timeout, due_only=True, poll_outdoor=include_outdoor
                 )
+                if include_outdoor:
+                    next_outdoor_poll = started + configured_interval
+                if total:
+                    print(
+                        f"{datetime.now().isoformat(timespec='seconds')} "
+                        f"poll complete: {successful}/{total} successful, {stored}/{total} stored",
+                        flush=True,
+                    )
             except PollCycleBusy:
                 print(
                     f"{datetime.now().isoformat(timespec='seconds')} "
@@ -88,7 +109,8 @@ async def main() -> None:
                     f"{datetime.now().isoformat(timespec='seconds')} polling cycle failed: {error}",
                     flush=True,
                 )
-            next_poll = started + args.interval
+            # Wake frequently; each device's own interval determines whether it is due.
+            next_poll = started + min(configured_interval, 10)
         if args.once:
             return
         try:

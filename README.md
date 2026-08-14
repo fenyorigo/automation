@@ -14,7 +14,8 @@ The project currently provides:
 - configurable outdoor-temperature sources;
 - schema migrations and macOS/Fedora service definitions;
 - an ESP32 firmware prototype with Wi-Fi provisioning and HTTP measurement API;
-- scaffolding for deterministic analytics and local Ollama summaries.
+- deterministic analytics scaffolding with an optional, currently disabled
+  and strictly non-controlling text-generation layer.
 
 ## Setup
 
@@ -36,9 +37,10 @@ See the [Hungarian user guide](docs/hasznalati-utasitas.md),
 
 ## Safety model
 
-The local language model never controls devices. All device actions are
-deterministic, authenticated, audited, checked against current state before
-execution, and verified by reading the affected device afterward.
+No language model controls devices. The first tested local 1B model was removed
+after failing strict output validation. All device actions are deterministic,
+authenticated, audited, checked against current state before execution, and
+verified by reading the affected device afterward.
 
 ## Energy reading import
 

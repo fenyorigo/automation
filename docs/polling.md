@@ -254,9 +254,10 @@ Az áttekintő tartalma:
 A Bosch 7000i a földszinti zóna **Kazánház** helyiségéhez tartozik.
 
 Az **Elemzések** oldal elő van készítve a determinisztikus napi statisztikák,
-anomáliák és a későbbi lokális Ollama-összefoglalók számára. Az Ollama
-alapértelmezetten ki van kapcsolva, nem kap vezérlési jogosultságot, és ebben a
-fázisban nincs telepítve vagy meghívva. A részletes terv a
+anomáliák és egy esetleges későbbi, validált szöveges összefoglaló számára. Az
+elsőként kipróbált Llama 3.2 1B modell alkalmatlannak bizonyult és törölve lett.
+Az Ollama kikapcsolt, az UI-ból nem engedélyezhető, és nem kap vezérlési
+jogosultságot. A részletes tapasztalat a
 `docs/local-analytics.md` dokumentumban található.
 
 A **Mérési előzmények** oldal karbantartási részében jelölőnégyzetekkel

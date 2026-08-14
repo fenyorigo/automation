@@ -28,10 +28,18 @@
         </div></fieldset>
         <label>Időtáv
           <select name="range">
+            <option value="1h" {{ 'selected' if range_key == '1h' }}>1 óra</option>
+            <option value="2h" {{ 'selected' if range_key == '2h' }}>2 óra</option>
+            <option value="6h" {{ 'selected' if range_key == '6h' }}>6 óra</option>
+            <option value="12h" {{ 'selected' if range_key == '12h' }}>12 óra</option>
             <option value="24h" {{ 'selected' if range_key == '24h' }}>24 óra</option>
             <option value="7d" {{ 'selected' if range_key == '7d' }}>7 nap</option>
             <option value="30d" {{ 'selected' if range_key == '30d' }}>30 nap</option>
           </select>
+        </label>
+        <label>Kezdő időpont
+          <input type="datetime-local" name="start" value="{{ history_start }}">
+          <small>Üresen a kiválasztott időtáv a jelenlegi időpontig tart.</small>
         </label>
         <button type="submit">Megjelenítés</button>
       </form>
@@ -40,7 +48,7 @@
       <p class="chart-error">{{ gnuplot_error }}</p>
       {% elif series|selectattr('points')|list %}
       <div class="chart-frame">
-        <img src="{{ url_for('history_chart', device=selected_devices|map(attribute='id')|list, range=range_key) }}" alt="A kiválasztott eszközök összehasonlító hőmérsékleti grafikonja">
+        <img src="{{ url_for('history_chart', device=selected_devices|map(attribute='id')|list, range=range_key, start=history_start) }}" alt="A kiválasztott eszközök összehasonlító hőmérsékleti grafikonja">
       </div>
       <div class="history-series-stats">
       {% for item in series if item.stats %}<section><h3>{{ item.device.name }}</h3><dl class="history-stats">
