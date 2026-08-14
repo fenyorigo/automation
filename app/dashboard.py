@@ -580,6 +580,7 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
               d.id, d.name, d.hostname, d.source_system, d.device_type,
               d.room_id, r.name AS room_name, z.name AS zone_name,
               d.managed_manually, d.manual_power_state, d.polling_enabled,
+              d.poll_interval_seconds,
               d.last_service_date, d.next_service_due,
               (SELECT mse.changed_at FROM manual_state_events mse
                WHERE mse.device_id = d.id
@@ -1157,6 +1158,50 @@ def dashboard() -> str:
         view_mode=view_mode,
         device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_temperature),
+    )
+
+
+def load_polling_settings() -> tuple[list[dict[str, Any]], int]:
+    default_seconds = int(os.getenv("DEFAULT_POLL_INTERVAL_MINUTES", "10")) * 60
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT d.id,d.name,d.hostname,d.source_system,d.polling_enabled,
+                   d.poll_interval_seconds,d.is_active,r.name AS room_name,
+                   z.name AS zone_name
+            FROM devices d
+            LEFT JOIN rooms r ON r.id=d.room_id
+            LEFT JOIN zones z ON z.id=COALESCE(r.zone_id,d.zone_id)
+            ORDER BY
+              (d.polling_enabled=1 AND d.poll_interval_seconds <> ?) DESC,
+              d.polling_enabled DESC,d.poll_interval_seconds,d.name
+            """,
+            (default_seconds,),
+        )
+        devices = rows_as_dicts(cursor)
+    finally:
+        cursor.close()
+        connection.close()
+    for device in devices:
+        device["is_custom_interval"] = bool(device["polling_enabled"]) and (
+            device["poll_interval_seconds"] != default_seconds
+        )
+        device["source_label"] = SOURCE_LABELS.get(
+            device["source_system"], device["source_system"]
+        )
+    return devices, default_seconds
+
+
+@app.get("/polling-settings")
+def polling_settings() -> str:
+    devices, default_seconds = load_polling_settings()
+    return render_template(
+        "polling_settings.html",
+        devices=devices,
+        custom_devices=[item for item in devices if item["is_custom_interval"]],
+        default_minutes=default_seconds // 60,
     )
 
 
@@ -2011,7 +2056,11 @@ def schedules() -> str:
 
 @app.get("/locations")
 def locations() -> str:
-    return render_template("locations.html",**load_registry(),notice=session.pop("registry_notice",None))
+    return render_template(
+        "locations.html", **load_registry(),
+        default_poll_minutes=int(os.getenv("DEFAULT_POLL_INTERVAL_MINUTES", "10")),
+        notice=session.pop("registry_notice",None),
+    )
 
 
 @app.post("/registry/zones")

@@ -5,6 +5,7 @@
       {{ 'Kézi állapot' if device.managed_manually else ('Elérhető' if device.online else 'Nem elérhető') }}
     </span>
   </div>
+  <p class="device-poll-interval">Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}</p>
   {% if device.managed_manually %}
   <div class="manual-state {{ 'powered' if device.manual_power_state else 'stopped' }}">
     <span class="manual-state-label">Kazán</span><strong>{{ 'Bekapcsolva' if device.manual_power_state else 'Kikapcsolva' }}</strong>

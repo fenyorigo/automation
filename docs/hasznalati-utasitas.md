@@ -5,6 +5,9 @@ menüpontok sorrendjében. Az alkalmazás ESP32/DS18B20 hőmérőket, Computherm
 termosztátokat, Hisense/ConnectLife klímákat, külső hőmérsékleti forrásokat,
 valamint kézzel rögzített üzemeltetési és energiaadatokat kezel.
 
+A későbbi automatikus fűtési és hűtési vezérlés elkülönített követelményeit a
+[`docs/dontesi-logika.md`](dontesi-logika.md) dokumentum tartalmazza.
+
 ## 1. Elérés és bejelentkezés
 
 Macen az alkalmazás címe:
@@ -160,7 +163,10 @@ eszközök műszaki adatait.
   szerep, a támogatott üzemmódok, ventilátorfokozatok és kiegészítő programok.
 - Az automatikus lekérdezés és az automatikus vezérlés külön engedélyezhető.
 - A lekérdezési gyakoriság eszközönként 1–1440 perc között állítható. A közös
-  gomb minden aktívan, hálózaton lekérdezett eszközt visszaállít 10 percre.
+  gomb minden aktívan, hálózaton lekérdezett eszközt visszaállít a globális
+  alapértékre (jelenleg 10 percre).
+- Az eszköz összecsukott fejlécében is látható a beállított lekérdezési idő,
+  ezért ellenőrzéséhez nem kell megnyitni az eszköz teljes adatlapját.
 
 Az áthelyezés időbélyeges helytörténetet hoz létre. Korábbi mérésekkel
 rendelkező eszközt törlés helyett archiválni kell, így a történeti adatok
@@ -169,6 +175,15 @@ megmaradnak.
 Az UI-ban felvett eszköz csak akkor kérdezhető le ténylegesen, ha a program
 támogatja a választott lekérdező illesztőt, és annak technikai konfigurációja
 is rendelkezésre áll.
+
+### Lekérdezési idők
+
+A kezdőlapi eszközkártyákon minden eszköznél látszik a beállított gyakoriság,
+vagy az, hogy az automatikus lekérdezés ki van kapcsolva. A főmenü
+**Lekérdezési idők** oldala egy helyen felsorolja az összes eszközt. A globális
+alapértéktől eltérő, automatikusan lekérdezett eszközök a lista elejére kerülnek
+és **Egyedi** jelölést kapnak. A **Módosítás** hivatkozás a Nyilvántartás
+megfelelő eszközéhez vezet.
 
 ### Globális beállítások
 
