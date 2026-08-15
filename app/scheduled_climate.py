@@ -33,7 +33,7 @@ def _claim_due() -> dict[str, object] | None:
         )
         cursor.execute(
             """SELECT s.id,s.device_id,s.starts_at,s.runtime_minutes,
-                      s.target_temperature_c,s.status,s.created_by,d.room_id,d.source_puid
+                      s.target_temperature_c,s.fan_speed,s.status,s.created_by,d.room_id,d.source_puid
                FROM climate_control_schedules s JOIN devices d ON d.id=s.device_id
                WHERE (s.status='scheduled' AND s.starts_at<=UTC_TIMESTAMP(3))
                   OR (s.status='running' AND
@@ -43,7 +43,7 @@ def _claim_due() -> dict[str, object] | None:
         row = cursor.fetchone()
         if row is None:
             connection.commit(); return None
-        keys = ("id","device_id","starts_at","runtime_minutes","target","status","created_by","room_id","source_puid")
+        keys = ("id","device_id","starts_at","runtime_minutes","target","fan_speed","status","created_by","room_id","source_puid")
         item = dict(zip(keys, row))
         if item["status"] == "scheduled" and now >= item["starts_at"] + timedelta(minutes=int(item["runtime_minutes"])):
             cursor.execute(
@@ -66,9 +66,11 @@ def _begin_attempt(item: dict[str, object], power: bool) -> int:
     try:
         cursor.execute(
             """INSERT INTO climate_control_attempts
-               (device_id,requested_by,requested_power,requested_temperature_c,status)
-               VALUES (?,?,?,?,'requested')""",
-            (item["device_id"],item["created_by"],power,item["target"] if power else None),
+               (device_id,requested_by,requested_power,requested_temperature_c,
+                requested_fan_speed,status)
+               VALUES (?,?,?,?,?,'requested')""",
+            (item["device_id"],item["created_by"],power,
+             item["target"] if power else None,item["fan_speed"] if power else None),
         )
         attempt=int(cursor.lastrowid); connection.commit(); return attempt
     except Exception:
@@ -108,11 +110,11 @@ def _persist(item: dict[str, object], attempt_id: int, power: bool, result: Clim
             event_token=now.strftime("%Y%m%dT%H%M%S%f")
             cursor.execute(
                 """INSERT INTO device_states
-                   (device_id,observed_at,power,mode,target_temperature_c,online,
+                   (device_id,observed_at,power,mode,target_temperature_c,fan_speed,online,
                     source_system,source_event_id,raw_state)
-                   VALUES (?,?,?,?,?,1,'connectlife',?,?)""",
+                   VALUES (?,?,?,?,?,?,1,'connectlife',?,?)""",
                 (item["device_id"],now,verified["power"],str(verified.get("mode")),
-                 verified.get("target_temperature_c"),
+                 verified.get("target_temperature_c"),verified.get("fan_speed"),
                  f"connectlife:scheduled-control:{item['device_id']}:{event_token}",
                  json.dumps(verified["raw"],ensure_ascii=False,default=str)),
             )
@@ -126,18 +128,20 @@ def _persist(item: dict[str, object], attempt_id: int, power: bool, result: Clim
                 cursor.execute(
                     """INSERT INTO climate_operation_events
                        (device_id,room_id,started_at,open_device_id,started_target_temperature_c,
-                        note,event_origin,created_by) VALUES (?,?,?,?,?,'Időzített UI-vezérlés','ui_control',?)""",
-                    (item["device_id"],item["room_id"],now,item["device_id"],verified.get("target_temperature_c"),item["created_by"]),
+                        started_fan_speed,note,event_origin,created_by)
+                       VALUES (?,?,?,?,?,?,'Időzített UI-vezérlés','ui_control',?)""",
+                    (item["device_id"],item["room_id"],now,item["device_id"],
+                     verified.get("target_temperature_c"),verified.get("fan_speed"),item["created_by"]),
                 )
         else:
             event_token=now.strftime("%Y%m%dT%H%M%S%f")
             cursor.execute(
                 """INSERT INTO device_states
-                   (device_id,observed_at,power,mode,target_temperature_c,online,
+                   (device_id,observed_at,power,mode,target_temperature_c,fan_speed,online,
                     source_system,source_event_id,raw_state)
-                   VALUES (?,?,?,?,?,1,'connectlife',?,?)""",
+                   VALUES (?,?,?,?,?,?,1,'connectlife',?,?)""",
                 (item["device_id"],now,verified["power"],str(verified.get("mode")),
-                 verified.get("target_temperature_c"),
+                 verified.get("target_temperature_c"),verified.get("fan_speed"),
                  f"connectlife:scheduled-control:{item['device_id']}:{event_token}",
                  json.dumps(verified["raw"],ensure_ascii=False,default=str)),
             )
@@ -148,8 +152,10 @@ def _persist(item: dict[str, object], attempt_id: int, power: bool, result: Clim
             )
             cursor.execute(
                 """UPDATE climate_operation_events SET ended_at=?,open_device_id=NULL,
-                          ended_target_temperature_c=? WHERE device_id=? AND ended_at IS NULL""",
-                (now,verified.get("target_temperature_c"),item["device_id"]),
+                          ended_target_temperature_c=?,ended_fan_speed=?
+                          WHERE device_id=? AND ended_at IS NULL""",
+                (now,verified.get("target_temperature_c"),result.preflight.get("fan_speed"),
+                 item["device_id"]),
             )
         connection.commit()
     except Exception:
@@ -166,7 +172,11 @@ async def process_due_climate_schedules() -> int:
         try:
             with polling_cycle_lock(operation="scheduled_climate_control"):
                 attempt = await asyncio.to_thread(_begin_attempt,item,power)
-                result = await control_climate(str(item["source_puid"]),power,int(item["target"]) if power else None)
+                result = await control_climate(
+                    str(item["source_puid"]), power,
+                    int(item["target"]) if power else None,
+                    str(item["fan_speed"]) if power else None,
+                )
                 await asyncio.to_thread(_persist,item,attempt,power,result)
             processed += 1
         except PollCycleBusy:

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>Kézi mérések – Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='dashboard.css') }}">
+</head>
+<body class="{{ 'read-only' if not can_write }}">
+<header class="topbar history-topbar"><div><p class="eyebrow">Alkalmi ellenőrző adatok</p><h1>Kézi mérések</h1></div><a class="back-link" href="{{ url_for('dashboard') }}">Vissza az áttekintőhöz</a>{% include '_account_menu.html' %}</header>
+<main>
+  {% if notice %}<p class="poll-notice {{ notice.kind }}">{{ notice.message }}</p>{% endif %}
+  {% if can_write %}
+  <section class="history-panel">
+    <p class="eyebrow">Kézi felvitel</p><h2>Hőmérséklet rögzítése</h2>
+    {% if devices %}
+    <form class="energy-reading-form" method="post" action="{{ url_for('create_manual_measurement') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Eszköz<select name="device_id" required>{% for device in devices %}<option value="{{ device.id }}">{{ device.name }}{% if device.room_name %} – {{ device.room_name }}{% elif device.zone_name %} – {{ device.zone_name }}{% endif %}</option>{% endfor %}</select></label>
+      <label>Mérés időpontja<input type="datetime-local" name="observed_at" value="{{ now_local }}" required></label>
+      <label>Hőmérséklet (°C)<input type="text" inputmode="decimal" name="temperature_c" required></label>
+      <label>Megjegyzés<input type="text" name="note" maxlength="500" placeholder="Opcionális körülmény vagy megfigyelés"></label>
+      <button class="primary-button" type="submit">Mérés rögzítése</button>
+    </form>
+    <p class="reset-explanation">Csak a Nyilvántartásban kézi/vizuális, kézzel leolvasható hőmérőként felvett eszközök választhatók. A mérés ellenőrző adat; önmagában nem indít vezérlést.</p>
+    {% else %}<p class="chart-empty">Még nincs kézzel leolvasható hőmérő a Nyilvántartásban.</p>{% endif %}
+  </section>
+  {% endif %}
+  <section class="history-panel">
+    <p class="eyebrow">Idősor</p><h2>Legutóbbi kézi mérések</h2>
+    {% if readings %}<div class="table-wrap"><table><thead><tr><th>Mérés időpontja</th><th>Eszköz</th><th>Helyiség</th><th>Hőmérséklet</th><th>Megjegyzés</th><th>Rögzítette</th></tr></thead><tbody>{% for item in readings %}<tr><td>{{ item.observed_at|local_time }}</td><td><strong>{{ item.device_name }}</strong></td><td>{{ item.room_name or '—' }}</td><td>{{ item.value }} °C</td><td>{{ item.note or '—' }}</td><td>{{ item.recorded_by_name or '—' }}<small>felvitel: {{ item.ingested_at|local_time }}</small></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="chart-empty">Még nincs kézzel rögzített mérés.</p>{% endif %}
+  </section>
+</main>
+</body>
+</html>

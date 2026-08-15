@@ -21,8 +21,22 @@
     <p class="poll-notice {{ history_notice.kind }}" role="status">{{ history_notice.message }}</p>
     {% endif %}
     <section class="history-panel">
+      {% if presets %}
+      <div class="history-presets">
+        <div><p class="eyebrow">Mentett összeállítások</p><h2>Kedvencek</h2></div>
+        <div class="history-preset-list">
+          {% for preset in presets %}
+          <div class="history-preset-item">
+            <a href="{{ url_for('history', preset=preset.id) }}"><strong>{{ preset.name }}</strong><small>{{ preset.device_ids|length }} eszköz · {{ {'1h':'1 óra','2h':'2 óra','6h':'6 óra','12h':'12 óra','24h':'24 óra','7d':'7 nap','30d':'30 nap'}.get(preset.range_key,preset.range_key) }}</small></a>
+            {% if can_write %}<form method="post" action="{{ url_for('delete_history_preset',preset_id=preset.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" aria-label="{{ preset.name }} törlése">Törlés</button></form>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
       {% if devices %}
       <form class="history-controls" method="get">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <fieldset class="history-device-picker"><legend>Eszközök</legend><small>Tetszőleges számú görbe kijelölhető</small><div>
           {% for device in devices %}<label><input type="checkbox" name="device" value="{{ device.id }}" {{ 'checked' if device in selected_devices }}><span>{{ device.name }}</span></label>{% endfor %}
         </div></fieldset>
@@ -41,7 +55,9 @@
           <input type="datetime-local" name="start" value="{{ history_start }}">
           <small>Üresen a kiválasztott időtáv a jelenlegi időpontig tart.</small>
         </label>
-        <button type="submit">Megjelenítés</button>
+        <button type="submit" formnovalidate>Megjelenítés</button>
+        <button type="submit" formnovalidate formaction="{{ url_for('export_history_csv') }}">CSV letöltése</button>
+        {% if can_write %}<label>Kedvenc neve<input type="text" name="preset_name" maxlength="80" required placeholder="Például: Öt ESP – 6 óra"></label><button type="submit" formmethod="post" formaction="{{ url_for('save_history_preset') }}">Kedvenc mentése</button>{% endif %}
       </form>
 
       {% if gnuplot_error %}

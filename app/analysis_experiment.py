@@ -52,9 +52,14 @@ def build_evidence(cursor, started_at: datetime, ended_at: datetime, observation
       WHERE COALESCE(v.ended_at,'9999-12-31')>=? AND v.started_at<=? ORDER BY v.started_at,r.name""",(started_at,ended_at))
     ventilation=[{"room":r,"started_at":_stamp(s),"ended_at":_stamp(e),"start_outdoor_c":float(st) if st is not None else None,"end_outdoor_c":float(et) if et is not None else None} for r,s,e,st,et in cursor.fetchall()]
     cursor.execute("""SELECT d.name,e.started_at,e.ended_at,e.started_target_temperature_c,
-      e.ended_target_temperature_c,e.event_origin FROM climate_operation_events e JOIN devices d ON d.id=e.device_id
+      e.ended_target_temperature_c,e.started_fan_speed,e.ended_fan_speed,e.event_origin
+      FROM climate_operation_events e JOIN devices d ON d.id=e.device_id
       WHERE COALESCE(e.ended_at,'9999-12-31')>=? AND e.started_at<=? ORDER BY e.started_at""",(started_at,ended_at))
-    climate=[{"device":d,"started_at":_stamp(s),"ended_at":_stamp(e),"start_target_c":float(st) if st is not None else None,"end_target_c":float(et) if et is not None else None,"origin":origin} for d,s,e,st,et,origin in cursor.fetchall()]
+    climate=[{"device":d,"started_at":_stamp(s),"ended_at":_stamp(e),
+      "start_target_c":float(st) if st is not None else None,
+      "end_target_c":float(et) if et is not None else None,
+      "start_fan_speed":sf,"end_fan_speed":ef,"origin":origin}
+      for d,s,e,st,et,sf,ef,origin in cursor.fetchall()]
     cursor.execute("""SELECT o.observed_at,o.temperature_c,s.display_name FROM outdoor_temperature_observations o
       JOIN outdoor_temperature_sources s ON s.id=o.source_id WHERE o.observed_at BETWEEN ? AND ? ORDER BY o.observed_at""",(started_at,ended_at))
     outdoor=[{"at":_stamp(at),"temperature_c":float(temp),"source":source} for at,temp,source in cursor.fetchall()]

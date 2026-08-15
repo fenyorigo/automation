@@ -8,6 +8,17 @@ from typing import Any
 from connectlife.api import ConnectLifeApi
 
 
+FAN_SPEED_VALUES = {
+    "auto": "0",
+    "low": "5",
+    "medium_low": "6",
+    "medium": "7",
+    "medium_high": "8",
+    "high": "9",
+}
+FAN_SPEED_CODES = {value: key for key, value in FAN_SPEED_VALUES.items()}
+
+
 @dataclass
 class ClimateControlResult:
     status: str
@@ -23,6 +34,7 @@ def state_of(appliance: Any) -> dict[str, Any]:
         "power": bool(status.get("t_power")),
         "target_temperature_c": status.get("t_temp"),
         "mode": status.get("t_work_mode"),
+        "fan_speed": FAN_SPEED_CODES.get(str(status.get("t_fan_speed")), str(status.get("t_fan_speed"))),
         "raw": status,
     }
 
@@ -42,7 +54,8 @@ def find_appliance(appliances: Any, wifi_id: str) -> Any:
 
 
 async def control_climate(
-    wifi_id: str, desired_power: bool, temperature_c: int | None
+    wifi_id: str, desired_power: bool, temperature_c: int | None,
+    fan_speed: str | None = None,
 ) -> ClimateControlResult:
     username = os.getenv("CONNECTLIFE_USERNAME")
     password = os.getenv("CONNECTLIFE_PASSWORD")
@@ -62,7 +75,13 @@ async def control_climate(
 
         properties = {"t_power": "1" if desired_power else "0"}
         if desired_power:
+            if fan_speed not in FAN_SPEED_VALUES:
+                return ClimateControlResult(
+                    "rejected", preflight, error_code="invalid_fan_speed",
+                    error_message="Érvénytelen ventilátorfokozat.",
+                )
             properties["t_temp"] = str(temperature_c)
+            properties["t_fan_speed"] = FAN_SPEED_VALUES[fan_speed]
         await api.update_appliance(appliance.puid, properties)
 
         verified = None
@@ -75,7 +94,8 @@ async def control_climate(
                 not desired_power
                 or float(verified["target_temperature_c"]) == float(temperature_c)
             )
-            if power_ok and temperature_ok:
+            fan_speed_ok = not desired_power or verified["fan_speed"] == fan_speed
+            if power_ok and temperature_ok and fan_speed_ok:
                 return ClimateControlResult("verified", preflight, verified)
         return ClimateControlResult(
             "failed", preflight, verified, "verification_failed",

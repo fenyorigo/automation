@@ -94,6 +94,14 @@ MIGRATIONS = (
         "v1_22_ai_analysis_experiments",
         ROOT / "SQL" / "migrations" / "022_home_automation_v1.21_to_v1.22.sql",
     ),
+    (
+        "v1_23_climate_fan_speed_control",
+        ROOT / "SQL" / "migrations" / "023_home_automation_v1.22_to_v1.23.sql",
+    ),
+    (
+        "v1_24_history_presets",
+        ROOT / "SQL" / "migrations" / "024_home_automation_v1.23_to_v1.24.sql",
+    ),
 )
 
 

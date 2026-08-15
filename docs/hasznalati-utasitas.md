@@ -96,6 +96,26 @@ Ez a nézet használható például több ESP32 kalibrációjának, egy ESP32 é
 Computherm dinamikájának, illetve klíma- és szellőztetési események hatásának
 összehasonlítására.
 
+### CSV-export
+
+A kijelölt eszközök és a megadott időablak a **CSV letöltése** gombbal széles
+formátumban exportálható: az első oszlop a budapesti helyi idő, a további
+oszlopok egy-egy kiválasztott eszköz mért hőmérsékletei. Az egy lekérdezési
+körön belül legfeljebb 45 másodperc eltéréssel érkező eszközadatok közös sorba
+kerülnek. Hiányzó mérés esetén a cella üres; a rendszer nem interpolál és nem
+viszi tovább a korábbi értéket.
+
+### Mérési kedvencek
+
+Legfeljebb négy, felhasználónként külön tárolt kedvenc menthető. A kedvenc a
+kiválasztott eszközöket és a relatív időtávot (1, 2, 6, 12 vagy 24 óra, illetve
+7 vagy 30 nap) őrzi meg. Kezdő időpontot nem tárol: visszatöltéskor az időablak
+mindig a jelenlegi időpontig tart. A kedvenc ugyanúgy használható grafikonhoz és
+CSV-exporthoz, és szükség esetén törölhető vagy azonos néven felülírható.
+Mentés előtt nevet kell adni az összeállításnak. Ha ez elmarad, az oldal
+figyelmeztetést ad; a grafikon megjelenítéséhez és a CSV letöltéséhez viszont
+nem kötelező kedvencnevet kitölteni.
+
 ### Szenzormérések nullázása
 
 Szerkesztőként a lap alján jelölőnégyzetekkel kiválaszthatók a törlendő
@@ -245,6 +265,19 @@ Az oldal a villany- és gázóra kumulatív állását kezeli.
 A rendszer az egymást követő óraállások különbségéből számítja a fogyasztást.
 A havi gázadatokhoz egységesen 09:00 használható.
 
+### Kézi hőmérsékletmérések
+
+A **Kézi mérések** oldalon alkalmi ellenőrző hőmérsékletek vihetők fel. A
+választható műszert előbb a Nyilvántartásban hőmérőként, kézi/vizuális eléréssel
+és kézzel leolvasható képességgel kell felvenni. A méréshez megadható az eszköz,
+a tényleges mérési időpont, a hőmérséklet és egy opcionális megjegyzés.
+
+A kézi adat ugyanabba a hőmérsékleti idősorba kerül, de alkalmi jellege miatt
+nem jelenik meg a Mérési előzmények grafikonján. A Kézi mérések naplójában és az
+eszköz kezdőlapi kártyáján látható. Ellenőrző adatként használható, de önmagában
+nem indít automatikus vezérlést. A kezdőlapon az egy óránál régebbi legutolsó
+mérési érték piros, félkövér jelzést kap.
+
 ## 10. Adatmentés
 
 Ez a menüpont csak szerkesztőként látható.
@@ -289,7 +322,8 @@ auditot is tartalmaz.
 
 1. Válaszd ki a helyiséget.
 2. Ellenőrizd a legutóbb lekérdezett állapotot és annak időpontját.
-3. Kikapcsolt eszköznél add meg a célhőmérsékletet és válaszd a
+3. Kikapcsolt eszköznél add meg a célhőmérsékletet és válaszd ki a
+   ventilátorsebességet, majd válaszd a
    **Klíma bekapcsolása** gombot.
 4. Bekapcsolt eszköznél a **Klíma kikapcsolása** gomb jelenik meg.
 
@@ -298,9 +332,10 @@ küld. A parancs előtt és után ConnectLife-lekérdezés történik. Az igazol
 eredmény rögtön bekerül az állapot- és klímaesemény-naplóba, ezért nem kell
 megvárni a következő tízperces pollt.
 
-Bekapcsoláskor csak a bekapcsolási állapot és a célhőmérséklet változik. Az
-üzemmódot, ventilátorsebességet és kiegészítő programokat ez a funkció nem
-módosítja.
+Bekapcsoláskor a bekapcsolási állapot, a célhőmérséklet és a kiválasztott
+ventilátorsebesség változik. Az üzemmódot és a kiegészítő programokat ez a
+funkció nem módosítja. A sikeres visszaellenőrzéshez a ventilátorfokozatnak is
+egyeznie kell a kéréssel.
 
 ### 12.2 Időzített klímafutás
 
@@ -311,7 +346,8 @@ Az időzítő kontrollált, automatikusan lezáruló futást készít.
    gyakorlatilag azonnali.
 3. Add meg a futásidőt percben.
 4. Add meg a célhőmérsékletet (jelenleg 25–30 °C).
-5. Nyomd meg a **Futás időzítése** gombot.
+5. Válassz automata vagy rögzített ventilátorfokozatot.
+6. Nyomd meg a **Futás időzítése** gombot.
 
 Az időzítés adatbázisban marad, ezért az oldal bezárható. A poller körülbelül
 10 másodpercenként ellenőrzi az esedékes műveleteket. Az indítás és leállítás
@@ -393,7 +429,8 @@ szerkesztői hozzáférés véletlen megszüntetését.
 
 ## 15. Fontos biztonsági és értelmezési szabályok
 
-- Az UI-ban látható időpontok helyi idő szerint jelennek meg; az adatbázis UTC
+- Az UI-ban és a grafikonokon látható időpontok `Europe/Budapest` helyi idő
+  szerint jelennek meg (télen CET, nyáron CEST); az adatbázis UTC
   időt tárol.
 - A nyers DS18B20-adat gyors légáramra erősebben reagálhat, mint a burkolt
   Computherm. A nyers értékeket megőrizzük; a vezérlési szűrés külön feladat.

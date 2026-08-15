@@ -32,6 +32,12 @@
       <input id="control-target" type="number" name="temperature_c" min="16" max="30" step="1" required>
       <small id="control-target-time"></small>
     </label>
+    <label>Ventilátorsebesség
+      <select id="control-fan-speed" name="fan_speed" required>
+        <option value="" selected disabled>Válassz fokozatot</option>
+        {% for value,label in [('auto','Automata'),('low','Alacsony'),('medium_low','Közepesen alacsony'),('medium','Közepes'),('medium_high','Középmagas'),('high','Magas')] %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </label>
     <div class="climate-control-actions">
       <button id="control-on" type="submit" name="action" value="on">Klíma bekapcsolása</button>
       <button id="control-off" type="submit" name="action" value="off">Klíma kikapcsolása</button>
@@ -48,10 +54,11 @@
     <label>Kezdés<input type="datetime-local" name="starts_at" value="{{ now_local }}" required></label>
     <label>Futásidő (perc)<input type="number" name="runtime_minutes" min="1" max="1440" value="40" required></label>
     <label>Célhőmérséklet<input type="number" name="temperature_c" min="25" max="30" step="1" value="25" required></label>
+    <label>Ventilátorsebesség<select name="fan_speed" required><option value="" selected disabled>Válassz fokozatot</option>{% for value,label in [('auto','Automata'),('low','Alacsony'),('medium_low','Közepesen alacsony'),('medium','Közepes'),('medium_high','Középmagas'),('high','Magas')] %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
     <button type="submit">Futás időzítése</button>
   </form>
   {% if schedules %}<div class="table-wrap climate-schedule-list"><table><thead><tr><th>Kezdés</th><th>Klíma</th><th>Beállítás</th><th>Állapot</th><th></th></tr></thead><tbody>{% for item in schedules %}<tr>
-    <td>{{ item.starts_at|local_time }}</td><td>{{ item.room_name }}</td><td>{{ item.target_temperature_c|temperature }} °C · {{ item.runtime_minutes }} perc</td>
+    <td>{{ item.starts_at|local_time }}</td><td>{{ item.room_name }}</td><td>{{ item.target_temperature_c|temperature }} °C · {{ {'auto':'Automata','low':'Alacsony','medium_low':'Közepesen alacsony','medium':'Közepes','medium_high':'Középmagas','high':'Magas'}.get(item.fan_speed,item.fan_speed) }} · {{ item.runtime_minutes }} perc</td>
     <td><span class="badge {{ 'online' if item.status=='running' else 'offline' if item.status=='failed' else 'manual' }}">{{ {'scheduled':'ütemezve','starting':'indítás','running':'fut','stopping':'leállítás','completed':'befejezve','cancelled':'törölve','failed':'hiba'}.get(item.status,item.status) }}</span>{% if item.error_message %}<small>{{ item.error_message }}</small>{% endif %}</td>
     <td>{% if item.status=='scheduled' %}<form method="post" action="{{ url_for('cancel_climate_schedule',schedule_id=item.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="danger-button">Törlés</button></form>{% endif %}</td>
   </tr>{% endfor %}</tbody></table></div>{% endif %}
@@ -77,7 +84,9 @@
     <strong>{{ event.room_name }}{% if not event.ended_at %} <span class="badge online">Aktív</span>{% endif %}</strong>
     <small>{{ event.started_at|local_time }} – {{ event.ended_at|local_time if event.ended_at else 'folyamatban' }}</small>
     <small>Indítási célérték: {% if event.started_target_temperature_c is not none %}{{ event.started_target_temperature_c|temperature }} °C{% else %}nincs adat{% endif %}</small>
+    <small>Indítási ventilátor: {{ {'auto':'Automata','low':'Alacsony','medium_low':'Közepesen alacsony','medium':'Közepes','medium_high':'Középmagas','high':'Magas'}.get(event.started_fan_speed,event.started_fan_speed or 'nincs adat') }}</small>
     {% if event.ended_at %}<small>Leállítási célérték: {% if event.ended_target_temperature_c is not none %}{{ event.ended_target_temperature_c|temperature }} °C{% else %}nincs adat{% endif %}</small>{% endif %}
+    {% if event.ended_at %}<small>Leállításkori ventilátor: {{ {'auto':'Automata','low':'Alacsony','medium_low':'Közepesen alacsony','medium':'Közepes','medium_high':'Középmagas','high':'Magas'}.get(event.ended_fan_speed,event.ended_fan_speed or 'nincs adat') }}</small>{% endif %}
     <small>{{ event.device_name }} · {{ event.created_by_name }}{% if event.event_origin == 'state_detection' %} · észlelés időpontja{% endif %}</small>{% if event.note %}<p>{{ event.note }}</p>{% endif %}
   </div>{% if not event.ended_at and can_write %}<form method="post" action="{{ url_for('finish_climate_operation',event_id=event.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -91,7 +100,7 @@
   <p class="eyebrow">Audit</p><h2>Vezérlési kísérletek</h2>
   {% if attempts %}<div class="table-wrap"><table><thead><tr><th>Időpont</th><th>Klíma</th><th>Parancs</th><th>Eredmény</th><th>Felhasználó</th></tr></thead><tbody>{% for item in attempts %}<tr>
     <td>{{ item.requested_at|local_time }}</td><td>{{ item.device_name }}</td>
-    <td>{{ 'Bekapcsolás' if item.requested_power else 'Kikapcsolás' }}{% if item.requested_temperature_c is not none %}<small>{{ item.requested_temperature_c|temperature }} °C</small>{% endif %}</td>
+    <td>{{ 'Bekapcsolás' if item.requested_power else 'Kikapcsolás' }}{% if item.requested_temperature_c is not none %}<small>{{ item.requested_temperature_c|temperature }} °C</small>{% endif %}{% if item.requested_fan_speed %}<small>{{ {'auto':'Automata','low':'Alacsony','medium_low':'Közepesen alacsony','medium':'Közepes','medium_high':'Középmagas','high':'Magas'}.get(item.requested_fan_speed,item.requested_fan_speed) }}</small>{% endif %}</td>
     <td><span class="badge {{ 'online' if item.status=='verified' else 'offline' if item.status=='failed' else 'manual' }}">{{ item.status }}</span>{% if item.error_message %}<small>{{ item.error_message }}</small>{% endif %}</td><td>{{ item.username }}</td>
   </tr>{% endfor %}</tbody></table></div>{% else %}<p class="chart-empty">Még nem történt UI-ból indított klímaparancs.</p>{% endif %}
 </section>
@@ -100,6 +109,7 @@
 const device=document.getElementById('control-device');
 const state=document.getElementById('control-state');
 const target=document.getElementById('control-target');
+const fanSpeed=document.getElementById('control-fan-speed');
 const targetTime=document.getElementById('control-target-time');
 const onButton=document.getElementById('control-on');
 const offButton=document.getElementById('control-off');
@@ -111,6 +121,8 @@ function updateControl(){
   target.value=option.dataset.target||'';
   target.required=!powered;
   target.disabled=powered;
+  fanSpeed.required=!powered;
+  fanSpeed.disabled=powered;
   targetTime.textContent='Utolsó lekérdezés: '+option.dataset.observed;
   onButton.hidden=powered;
   offButton.hidden=!powered;

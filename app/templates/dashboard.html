@@ -22,6 +22,7 @@
         <a class="history-link" href="{{ url_for('analysis') }}">Elemzések</a>
         <a class="history-link" href="{{ url_for('outdoor_sources') }}">Külső hőmérséklet</a>
         <a class="history-link" href="{{ url_for('energy') }}">Energia</a>
+        <a class="history-link" href="{{ url_for('manual_measurements') }}">Kézi mérések</a>
         {% if can_write %}<a class="history-link" href="{{ url_for('backups') }}">Adatmentés</a>{% endif %}
         {% if can_write %}<a class="history-link" href="{{ url_for('global_settings') }}">Globális beállítások</a>{% endif %}
         <a class="history-link" href="{{ url_for('ventilation') }}">Szellőztetés</a>
@@ -59,6 +60,21 @@
       </div>
 
       {% if view_mode == 'device' %}
+      {% if outdoor_temperature %}
+      <section class="device-type-group outdoor-summary-group">
+        <div class="device-type-heading">
+          <div><p class="eyebrow">Zónán kívüli</p><h2>Külső hőmérséklet</h2></div>
+          <span>aktuális szolgáltatói adat</span>
+        </div>
+        <div class="device-grid">
+          <article class="outdoor-temperature-card">
+            <div><p class="source">Külső hőmérséklet</p><h3>{{ outdoor_temperature.display_name }}</h3></div>
+            <div class="temperature"><span class="temperature-value">{{ outdoor_temperature.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
+            <footer class="card-footer"><span>Szolgáltatói mérés</span><time>{{ outdoor_temperature.observed_at|local_time }}</time></footer>
+          </article>
+        </div>
+      </section>
+      {% endif %}
       <div class="device-type-groups">
         {% for group in device_groups %}
         <section class="device-type-group">
@@ -127,8 +143,33 @@
   (() => {
     const knownPoll = {{ poll_marker|tojson }};
     let checking = false;
+    let hasUnsavedChanges = false;
+    let submitting = false;
+
+    const isEditableField = (element) => element && element.matches(
+      'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea'
+    );
+
+    const editingInProgress = () => (
+      submitting || hasUnsavedChanges || isEditableField(document.activeElement)
+    );
+
+    document.addEventListener('input', (event) => {
+      if (isEditableField(event.target) && event.target.closest('form')) {
+        hasUnsavedChanges = true;
+      }
+    });
+    document.addEventListener('change', (event) => {
+      if (isEditableField(event.target) && event.target.closest('form')) {
+        hasUnsavedChanges = true;
+      }
+    });
+    document.addEventListener('submit', () => {
+      submitting = true;
+    });
+
     async function refreshAfterCompletedPoll() {
-      if (checking || document.hidden) return;
+      if (checking || document.hidden || editingInProgress()) return;
       checking = true;
       try {
         const response = await fetch({{ url_for('poll_status')|tojson }}, {
@@ -136,7 +177,8 @@
         });
         if (!response.ok) return;
         const status = await response.json();
-        if (!status.busy && status.latest_poll && status.latest_poll !== knownPoll) {
+        if (!status.busy && status.latest_poll && status.latest_poll !== knownPoll
+            && !editingInProgress()) {
           window.location.reload();
         }
       } catch (_) {

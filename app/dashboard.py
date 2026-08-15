@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 from functools import wraps
+import io
 import os
 import json
 import re
@@ -19,6 +21,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import mariadb
 from dotenv import load_dotenv
@@ -28,7 +31,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from poll_devices import DEFAULT_CONFIG, load_devices
 from poll_scheduler import run_cycle
 from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_active
-from climate_control import ClimateControlResult, control_climate
+from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import SETTINGS as GLOBAL_SETTINGS, save as save_global_settings, values as global_setting_values
 from analysis_experiment import PROMPT_VERSION, build_evidence, call_ollama, prompt_for
@@ -36,6 +39,12 @@ from analysis_experiment import PROMPT_VERSION, build_evidence, call_ollama, pro
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
+LOCAL_TIMEZONE_NAME = os.getenv("APP_TIMEZONE", "Europe/Budapest")
+LOCAL_TIMEZONE = ZoneInfo(LOCAL_TIMEZONE_NAME)
+
+
+def local_now() -> datetime:
+    return datetime.now(LOCAL_TIMEZONE)
 
 def dashboard_secret_key() -> str:
     configured = os.getenv("DASHBOARD_SECRET_KEY")
@@ -248,10 +257,30 @@ def load_history_devices() -> list[dict[str, Any]]:
             FROM devices d
             JOIN sensors s ON s.device_id = d.id AND s.is_active = 1
             WHERE d.is_active = 1 AND s.sensor_type = 'temperature'
+              AND d.source_system <> 'manual'
             ORDER BY FIELD(d.source_system, 'esp32', 'computherm', 'connectlife'), d.name
             """
         )
         return rows_as_dicts(cursor)
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def load_history_presets(user_id: int) -> list[dict[str, Any]]:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT id,name,device_ids,range_key,updated_at
+               FROM history_presets WHERE user_id=? ORDER BY id""",
+            (user_id,),
+        )
+        presets = rows_as_dicts(cursor)
+        for preset in presets:
+            stored = preset["device_ids"]
+            preset["device_ids"] = json.loads(stored) if isinstance(stored, str) else stored
+        return presets
     finally:
         cursor.close()
         connection.close()
@@ -340,6 +369,114 @@ def load_temperature_history(
             (device_id, started_at, ended_at),
         )
         return [(row[0], float(row[1])) for row in cursor.fetchall()]
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def load_temperature_export_rows(
+    devices: list[dict[str, Any]], started_at: datetime, ended_at: datetime
+) -> list[list[Any]]:
+    if not devices:
+        return []
+    device_ids = [int(device["id"]) for device in devices]
+    placeholders = ",".join("?" for _ in device_ids)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            f"""
+            SELECT d.id, sr.observed_at, sr.value
+            FROM sensor_readings sr
+            JOIN sensors s ON s.id = sr.sensor_id
+            JOIN devices d ON d.id = s.device_id
+            WHERE d.id IN ({placeholders})
+              AND s.sensor_type = 'temperature'
+              AND sr.quality IN ('good', 'valid') AND sr.value IS NOT NULL
+              AND sr.observed_at >= ? AND sr.observed_at < ?
+            ORDER BY sr.observed_at, sr.id
+            """,
+            (*device_ids, started_at, ended_at),
+        )
+        measurements = [
+            (int(row[0]), row[1], float(row[2])) for row in cursor.fetchall()
+        ]
+    finally:
+        cursor.close()
+        connection.close()
+
+    rows: list[list[Any]] = []
+    cluster: dict[int, float] = {}
+    cluster_times: list[datetime] = []
+    last_time: datetime | None = None
+
+    def finish_cluster() -> None:
+        if not cluster_times:
+            return
+        ordered = sorted(cluster_times)
+        representative = ordered[len(ordered) // 2]
+        rows.append(
+            [representative]
+            + [cluster.get(device_id) for device_id in device_ids]
+        )
+
+    for device_id, observed_at, value in measurements:
+        starts_new_cluster = bool(
+            cluster_times
+            and (
+                device_id in cluster
+                or (last_time is not None and observed_at - last_time > timedelta(seconds=45))
+            )
+        )
+        if starts_new_cluster:
+            finish_cluster()
+            cluster = {}
+            cluster_times = []
+        cluster[device_id] = value
+        cluster_times.append(observed_at)
+        last_time = observed_at
+    finish_cluster()
+    return rows
+
+
+def load_manual_temperature_devices() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT d.id, d.name, r.name AS room_name, z.name AS zone_name
+            FROM devices d
+            LEFT JOIN rooms r ON r.id = d.room_id
+            LEFT JOIN zones z ON z.id = COALESCE(r.zone_id, d.zone_id)
+            LEFT JOIN device_types dt ON dt.id = d.device_type_id
+            WHERE d.is_active = 1
+              AND d.access_mode = 'manual_visual'
+              AND d.capability_mode = 'manual_read'
+              AND (dt.code = 'temperature_sensor' OR d.device_type = 'temperature_sensor')
+            ORDER BY z.name, r.name, d.name
+            """
+        )
+        devices = rows_as_dicts(cursor)
+        cursor.execute(
+            """
+            SELECT sr.observed_at, sr.value, sr.ingested_at,
+                   d.name AS device_name, r.name AS room_name,
+                   u.username AS recorded_by_name,
+                   JSON_UNQUOTE(JSON_EXTRACT(sr.raw_payload, '$.note')) AS note
+            FROM sensor_readings sr
+            JOIN sensors s ON s.id = sr.sensor_id
+            JOIN devices d ON d.id = s.device_id
+            LEFT JOIN rooms r ON r.id = d.room_id
+            LEFT JOIN app_users u
+              ON u.id = JSON_UNQUOTE(JSON_EXTRACT(sr.raw_payload, '$.recorded_by'))
+            WHERE sr.source_system = 'manual'
+              AND s.sensor_type = 'temperature'
+            ORDER BY sr.observed_at DESC, sr.id DESC
+            LIMIT 100
+            """
+        )
+        return devices, rows_as_dicts(cursor)
     finally:
         cursor.close()
         connection.close()
@@ -532,7 +669,7 @@ def render_temperature_svg(
             data_path = directory / f"temperature-{index}.dat"
             data_path.write_text(
                 "".join(
-                    f"{int(moment.replace(tzinfo=UTC).timestamp())} {value:.4f}\n"
+                    f"{moment.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M:%S')} {value:.4f}\n"
                     for moment, value in points
                 ),
                 encoding="utf-8",
@@ -551,7 +688,7 @@ def render_temperature_svg(
                     'set encoding utf8',
                     f'set title "{gnuplot_quote(title)}" textcolor rgb "#14251f"',
                     'set xdata time',
-                    'set timefmt "%s"',
+                    'set timefmt "%Y-%m-%dT%H:%M:%S"',
                     'set format x "%m.%d\\n%H:%M" timedate',
                     'set ylabel "Hőmérséklet (°C)"',
                     'set grid xtics ytics lc rgb "#dcd9ce"',
@@ -579,7 +716,8 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
             SELECT
               d.id, d.name, d.hostname, d.source_system, d.device_type,
               d.room_id, r.name AS room_name, z.name AS zone_name,
-              d.managed_manually, d.manual_power_state, d.polling_enabled,
+              d.managed_manually, d.manual_power_state, d.access_mode,
+              d.capability_mode, d.polling_enabled,
               d.poll_interval_seconds,
               d.last_service_date, d.next_service_due,
               (SELECT mse.changed_at FROM manual_state_events mse
@@ -640,8 +778,14 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         device["source_label"] = SOURCE_LABELS.get(
             device["source_system"], device["source_system"]
         )
+        device["is_manual_visual"] = device["access_mode"] == "manual_visual"
         device["online"] = (
-            None if device["managed_manually"] else bool(device["poll_success"])
+            None if device["is_manual_visual"] else bool(device["poll_success"])
+        )
+        device["measurement_is_stale"] = bool(
+            device["measurement_at"]
+            and datetime.now(UTC).replace(tzinfo=None) - device["measurement_at"]
+            > timedelta(hours=1)
         )
 
     computherm_targets = [
@@ -806,7 +950,8 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
     try:
         cursor.execute(
             """SELECT d.id,d.name,r.name AS room_name,d.source_puid,
-                      s.power,s.target_temperature_c,s.observed_at AS state_observed_at
+                      s.power,s.target_temperature_c,s.fan_speed,
+                      s.observed_at AS state_observed_at
                FROM devices d JOIN rooms r ON r.id=d.room_id
                LEFT JOIN device_states s ON s.id=(
                  SELECT s2.id FROM device_states s2 WHERE s2.device_id=d.id
@@ -819,7 +964,8 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
         cursor.execute(
             """SELECT e.id,e.device_id,d.name AS device_name,r.name AS room_name,
                       e.started_at,e.ended_at,e.started_target_temperature_c,
-                      e.ended_target_temperature_c,e.note,e.event_origin,
+                      e.started_fan_speed,e.ended_target_temperature_c,
+                      e.ended_fan_speed,e.note,e.event_origin,
                       COALESCE(u.username,'Automatikus észlelés') AS created_by_name
                FROM climate_operation_events e
                JOIN devices d ON d.id=e.device_id
@@ -830,7 +976,8 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
         events = rows_as_dicts(cursor)
         cursor.execute(
             """SELECT a.requested_at,a.completed_at,a.requested_power,
-                      a.requested_temperature_c,a.status,a.error_message,
+                      a.requested_temperature_c,a.requested_fan_speed,
+                      a.status,a.error_message,
                       d.name AS device_name,u.username
                FROM climate_control_attempts a
                JOIN devices d ON d.id=a.device_id
@@ -839,7 +986,7 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
         )
         attempts = rows_as_dicts(cursor)
         cursor.execute(
-            """SELECT s.id,s.starts_at,s.runtime_minutes,s.target_temperature_c,s.status,
+            """SELECT s.id,s.starts_at,s.runtime_minutes,s.target_temperature_c,s.fan_speed,s.status,
                       s.actual_started_at,s.actual_ended_at,s.error_message,
                       d.name AS device_name,r.name AS room_name,u.username
                FROM climate_control_schedules s JOIN devices d ON d.id=s.device_id
@@ -855,7 +1002,7 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
 def parse_local_datetime(value: str) -> str:
     parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
-        parsed = parsed.astimezone()
+        parsed = parsed.replace(tzinfo=LOCAL_TIMEZONE)
     parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
@@ -925,7 +1072,7 @@ def format_local_time(value: datetime | None) -> str:
     if value is None:
         return "nincs adat"
     utc_value = value.replace(tzinfo=UTC)
-    return utc_value.astimezone().strftime("%Y. %m. %d. %H:%M:%S")
+    return utc_value.astimezone(LOCAL_TIMEZONE).strftime("%Y. %m. %d. %H:%M:%S")
 
 
 @app.route("/setup", methods=["GET", "POST"])
@@ -1156,6 +1303,7 @@ def dashboard() -> str:
         poll_marker=latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
         poll_notice=session.pop("poll_notice", None),
         view_mode=view_mode,
+        outdoor_temperature=outdoor_temperature,
         device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_temperature),
     )
@@ -1228,9 +1376,99 @@ def energy() -> str:
     meters, readings = load_energy_readings()
     return render_template(
         "energy.html", meters=meters, readings=readings,
-        now_local=datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M"),
+        now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
         notice=session.pop("energy_notice", None),
     )
+
+
+@app.get("/manual-measurements")
+def manual_measurements() -> str:
+    devices, readings = load_manual_temperature_devices()
+    return render_template(
+        "manual_measurements.html",
+        devices=devices,
+        readings=readings,
+        now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
+        notice=session.pop("manual_measurement_notice", None),
+    )
+
+
+@app.post("/manual-measurements")
+@editor_required
+def create_manual_measurement():
+    validate_csrf()
+    try:
+        device_id = int(request.form["device_id"])
+        observed_at = parse_local_datetime(request.form["observed_at"])
+        value = Decimal(request.form["temperature_c"].replace(",", "."))
+        if value < Decimal("-55") or value > Decimal("125"):
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT d.name, d.room_id
+            FROM devices d
+            LEFT JOIN device_types dt ON dt.id = d.device_type_id
+            WHERE d.id = ? AND d.is_active = 1
+              AND d.access_mode = 'manual_visual'
+              AND d.capability_mode = 'manual_read'
+              AND (dt.code = 'temperature_sensor' OR d.device_type = 'temperature_sensor')
+            FOR UPDATE
+            """,
+            (device_id,),
+        )
+        device = cursor.fetchone()
+        if device is None:
+            abort(400)
+        source_sensor_id = f"device-{device_id}-temperature"
+        cursor.execute(
+            """
+            INSERT INTO sensors
+              (room_id,device_id,source_system,source_sensor_id,name,sensor_type,unit,is_active)
+            VALUES (?,?,'manual',?,?,'temperature','celsius',1)
+            ON DUPLICATE KEY UPDATE device_id=VALUES(device_id),room_id=VALUES(room_id),
+              name=VALUES(name),unit='celsius',is_active=1
+            """,
+            (device[1], device_id, source_sensor_id, f"{device[0]} temperature"),
+        )
+        cursor.execute(
+            "SELECT id FROM sensors WHERE source_system='manual' AND source_sensor_id=?",
+            (source_sensor_id,),
+        )
+        sensor_id = cursor.fetchone()[0]
+        event_id = f"manual:{source_sensor_id}:{secrets.token_hex(12)}"
+        raw_payload = json.dumps(
+            {
+                "entry_source": "manual",
+                "recorded_by": int(g.current_user["id"]),
+                "note": request.form.get("note", "").strip() or None,
+            },
+            ensure_ascii=False,
+        )
+        cursor.execute(
+            """
+            INSERT INTO sensor_readings
+              (sensor_id,observed_at,value,quality,error_code,source_system,source_event_id,raw_payload)
+            VALUES (?,?,?,'valid',NULL,'manual',?,?)
+            """,
+            (sensor_id, observed_at, value, event_id, raw_payload),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["manual_measurement_notice"] = {
+        "kind": "success", "message": "A kézi hőmérsékletmérést rögzítettük."
+    }
+    return redirect(url_for("manual_measurements"))
 
 
 @app.get("/backups")
@@ -1364,19 +1602,27 @@ def poll_now():
 @app.get("/history")
 def history() -> str:
     devices = load_history_devices()
+    presets = load_history_presets(int(g.current_user["id"]))
     resettable_sensors = load_resettable_sensors()
     history_notice = session.pop("history_notice", None)
     if not devices:
         return render_template(
             "history.html", devices=[], selected_devices=[], range_key="24h", history_start="", series=[],
             gnuplot_error=GNUPLOT_ERROR, resettable_sensors=resettable_sensors,
-            history_notice=history_notice,
+            history_notice=history_notice, presets=presets,
         )
     requested_ids = list(dict.fromkeys(request.args.getlist("device", type=int)))
+    range_key = request.args.get("range", "24h")
+    preset_id = request.args.get("preset", type=int)
+    if preset_id is not None:
+        preset = next((item for item in presets if item["id"] == preset_id), None)
+        if preset is None:
+            abort(404)
+        requested_ids = [int(item) for item in preset["device_ids"]]
+        range_key = preset["range_key"]
     selected_devices = [item for item in devices if item["id"] in requested_ids]
     if not selected_devices:
         selected_devices = [devices[0]]
-    range_key = request.args.get("range", "24h")
     if range_key not in HISTORY_RANGES:
         range_key = "24h"
     history_start = request.args.get("start", "").strip()
@@ -1397,7 +1643,145 @@ def history() -> str:
         history_start=history_start,
         series=series, gnuplot_error=GNUPLOT_ERROR,
         resettable_sensors=resettable_sensors, history_notice=history_notice,
+        presets=presets,
     )
+
+
+@app.get("/history/export.csv")
+def export_history_csv() -> Response:
+    available = load_history_devices()
+    requested_ids = list(dict.fromkeys(request.args.getlist("device", type=int)))
+    selected = [device for device in available if device["id"] in requested_ids]
+    if not selected:
+        abort(400, "Legalább egy eszközt ki kell választani.")
+    range_key = request.args.get("range", "24h")
+    if range_key not in HISTORY_RANGES:
+        abort(400, "Érvénytelen időtáv.")
+    history_start = request.args.get("start", "").strip()
+    try:
+        started_at, ended_at = history_window(range_key, history_start)
+    except ValueError:
+        abort(400, "Érvénytelen kezdő időpont.")
+
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, lineterminator="\r\n")
+    writer.writerow(["idő", *[device["name"] for device in selected]])
+    for row in load_temperature_export_rows(selected, started_at, ended_at):
+        local_time = row[0].replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
+        writer.writerow(
+            [local_time.strftime("%Y-%m-%d %H:%M:%S")]
+            + ["" if value is None else f"{value:.4f}" for value in row[1:]]
+        )
+    filename = f"homerseklet_{local_now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response = Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8")
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.post("/history/presets")
+@editor_required
+def save_history_preset():
+    validate_csrf()
+    name = request.form.get("preset_name", "").strip()
+    requested_ids = list(dict.fromkeys(request.form.getlist("device", type=int)))
+    range_key = request.form.get("range", "")
+    if not name:
+        session["history_notice"] = {
+            "kind": "warning", "message": "A kedvenc mentéséhez adj nevet az összeállításnak."
+        }
+        return redirect(url_for("history"))
+    if len(name) > 80:
+        session["history_notice"] = {
+            "kind": "warning", "message": "A kedvenc neve legfeljebb 80 karakter lehet."
+        }
+        return redirect(url_for("history"))
+    if not requested_ids:
+        session["history_notice"] = {
+            "kind": "warning", "message": "A kedvenchez legalább egy eszközt válassz ki."
+        }
+        return redirect(url_for("history"))
+    if range_key not in HISTORY_RANGES:
+        session["history_notice"] = {
+            "kind": "warning", "message": "A kiválasztott időtáv nem érvényes."
+        }
+        return redirect(url_for("history"))
+    allowed_ids = {item["id"] for item in load_history_devices()}
+    if any(device_id not in allowed_ids for device_id in requested_ids):
+        session["history_notice"] = {
+            "kind": "warning", "message": "A kijelölés már nem elérhető eszközt tartalmaz."
+        }
+        return redirect(url_for("history"))
+
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            "SELECT id FROM history_presets WHERE user_id=? AND name=? FOR UPDATE",
+            (g.current_user["id"], name),
+        )
+        existing = cursor.fetchone()
+        if existing is None:
+            cursor.execute(
+                "SELECT COUNT(*) FROM history_presets WHERE user_id=? FOR UPDATE",
+                (g.current_user["id"],),
+            )
+            if int(cursor.fetchone()[0]) >= 4:
+                connection.rollback()
+                session["history_notice"] = {
+                    "kind": "warning",
+                    "message": "Legfeljebb négy mérési kedvenc menthető. Törölj egyet az új felvétele előtt.",
+                }
+                return redirect(url_for("history"))
+            cursor.execute(
+                """INSERT INTO history_presets (user_id,name,device_ids,range_key)
+                   VALUES (?,?,?,?)""",
+                (g.current_user["id"], name, json.dumps(requested_ids), range_key),
+            )
+            preset_id = int(cursor.lastrowid)
+        else:
+            preset_id = int(existing[0])
+            cursor.execute(
+                """UPDATE history_presets SET device_ids=?,range_key=?
+                   WHERE id=? AND user_id=?""",
+                (json.dumps(requested_ids), range_key, preset_id, g.current_user["id"]),
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["history_notice"] = {
+        "kind": "success", "message": f'A(z) „{name}” mérési kedvencet elmentettük.'
+    }
+    return redirect(url_for("history", preset=preset_id))
+
+
+@app.post("/history/presets/<int:preset_id>/delete")
+@editor_required
+def delete_history_preset(preset_id: int):
+    validate_csrf()
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            "DELETE FROM history_presets WHERE id=? AND user_id=?",
+            (preset_id, g.current_user["id"]),
+        )
+        changed = cursor.rowcount
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    if not changed:
+        abort(404)
+    session["history_notice"] = {"kind": "success", "message": "A mérési kedvencet töröltük."}
+    return redirect(url_for("history"))
 
 
 @app.get("/analysis")
@@ -1409,8 +1793,8 @@ def analysis() -> str:
         ollama_base_url=OLLAMA_BASE_URL,
         ollama_model=OLLAMA_MODEL,
         ollama_status=check_ollama(),
-        now_local=datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M"),
-        default_analysis_start=datetime.now().astimezone().replace(hour=3,minute=30,second=0,microsecond=0).strftime("%Y-%m-%dT%H:%M"),
+        now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
+        default_analysis_start=local_now().replace(hour=3,minute=30,second=0,microsecond=0).strftime("%Y-%m-%dT%H:%M"),
         analysis_notice=session.pop("analysis_notice",None),
     )
 
@@ -1457,7 +1841,7 @@ def ventilation() -> str:
     return render_template(
         "ventilation.html", rooms=rooms, sources=sources, events=events,
         selected_outdoor=selected_outdoor,
-        now_local=datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M"),
+        now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
         notice=session.pop("ventilation_notice", None),
     )
 
@@ -1570,22 +1954,25 @@ def climate_log() -> str:
     devices, events, attempts, schedules = load_climate_operation_log()
     return render_template(
         "climate_log.html", devices=devices, events=events, attempts=attempts, schedules=schedules,
-        now_local=datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M"),
+        now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
         notice=session.pop("climate_log_notice", None),
     )
 
 
 def begin_climate_control_attempt(
     device_id: int, requested_power: bool, requested_temperature: int | None,
+    requested_fan_speed: str | None,
 ) -> int:
     connection = connect_database()
     cursor = connection.cursor()
     try:
         cursor.execute(
             """INSERT INTO climate_control_attempts
-               (device_id,requested_by,requested_power,requested_temperature_c,status)
-               VALUES (?,?,?,?,'requested')""",
-            (device_id, g.current_user["id"], requested_power, requested_temperature),
+               (device_id,requested_by,requested_power,requested_temperature_c,
+                requested_fan_speed,status)
+               VALUES (?,?,?,?,?,'requested')""",
+            (device_id, g.current_user["id"], requested_power, requested_temperature,
+             requested_fan_speed),
         )
         attempt_id = int(cursor.lastrowid)
         connection.commit()
@@ -1601,6 +1988,7 @@ def begin_climate_control_attempt(
 def persist_climate_control(
     attempt_id: int, device_id: int, room_id: int, result: ClimateControlResult,
     requested_power: bool, requested_temperature: int | None,
+    requested_fan_speed: str | None,
 ) -> None:
     connection = connect_database()
     cursor = connection.cursor()
@@ -1621,11 +2009,11 @@ def persist_climate_control(
             event_token = now.strftime("%Y%m%dT%H%M%S%f")
             cursor.execute(
                 """INSERT INTO device_states
-                   (device_id,observed_at,power,mode,target_temperature_c,online,
+                   (device_id,observed_at,power,mode,target_temperature_c,fan_speed,online,
                     source_system,source_event_id,raw_state)
-                   VALUES (?,?,?,?,?,1,'connectlife',?,?)""",
+                   VALUES (?,?,?,?,?,?,1,'connectlife',?,?)""",
                 (device_id, now, verified["power"], str(verified.get("mode")),
-                 verified.get("target_temperature_c"),
+                 verified.get("target_temperature_c"), verified.get("fan_speed"),
                  f"connectlife:control:{device_id}:{event_token}",
                  json.dumps(verified["raw"], ensure_ascii=False, default=str)),
             )
@@ -1638,17 +2026,20 @@ def persist_climate_control(
                     cursor.execute(
                         """INSERT INTO climate_operation_events
                            (device_id,room_id,started_at,open_device_id,
-                            started_target_temperature_c,note,event_origin,created_by)
-                           VALUES (?,?,?,?,?,'UI-vezérlés','ui_control',?)""",
+                            started_target_temperature_c,started_fan_speed,
+                            note,event_origin,created_by)
+                           VALUES (?,?,?,?,?,?,'UI-vezérlés','ui_control',?)""",
                         (device_id, room_id, now, device_id,
-                         verified.get("target_temperature_c"), g.current_user["id"]),
+                         verified.get("target_temperature_c"), verified.get("fan_speed"),
+                         g.current_user["id"]),
                     )
             else:
                 cursor.execute(
                     """UPDATE climate_operation_events SET ended_at=?,open_device_id=NULL,
-                       ended_target_temperature_c=?
+                       ended_target_temperature_c=?,ended_fan_speed=?
                        WHERE device_id=? AND ended_at IS NULL""",
-                    (now, verified.get("target_temperature_c"), device_id),
+                    (now, verified.get("target_temperature_c"),
+                     result.preflight.get("fan_speed"), device_id),
                 )
         connection.commit()
     except Exception:
@@ -1673,8 +2064,12 @@ def control_climate_from_ui():
             if not temperature_value.is_integer() or not 16 <= temperature_value <= 30:
                 raise ValueError
             temperature = int(temperature_value)
+            fan_speed = request.form["fan_speed"]
+            if fan_speed not in FAN_SPEED_VALUES:
+                raise ValueError
         else:
             temperature = None
+            fan_speed = None
     except (KeyError, TypeError, ValueError):
         abort(400)
 
@@ -1695,11 +2090,16 @@ def control_climate_from_ui():
 
     try:
         with polling_cycle_lock():
-            attempt_id = begin_climate_control_attempt(device_id, desired_power, temperature)
-            result = asyncio.run(control_climate(str(row[1]), desired_power, temperature))
+            attempt_id = begin_climate_control_attempt(
+                device_id, desired_power, temperature, fan_speed
+            )
+            result = asyncio.run(
+                control_climate(str(row[1]), desired_power, temperature, fan_speed)
+            )
             try:
                 persist_climate_control(
-                    attempt_id, device_id, int(row[0]), result, desired_power, temperature
+                    attempt_id, device_id, int(row[0]), result, desired_power,
+                    temperature, fan_speed
                 )
             except Exception:
                 app.logger.exception(
@@ -1741,6 +2141,9 @@ def create_climate_schedule():
         device_id = int(request.form["device_id"])
         temperature = int(request.form["temperature_c"])
         runtime = int(request.form["runtime_minutes"])
+        fan_speed = request.form["fan_speed"]
+        if fan_speed not in FAN_SPEED_VALUES:
+            raise ValueError
         starts_at = parse_local_datetime(request.form["starts_at"])
         starts = datetime.fromisoformat(starts_at)
     except (KeyError, TypeError, ValueError):
@@ -1770,9 +2173,9 @@ def create_climate_schedule():
             return redirect(url_for("climate_log"))
         cursor.execute(
             """INSERT INTO climate_control_schedules
-               (device_id,starts_at,runtime_minutes,target_temperature_c,created_by)
-               VALUES (?,?,?,?,?)""",
-            (device_id,starts_at,runtime,temperature,g.current_user["id"]),
+               (device_id,starts_at,runtime_minutes,target_temperature_c,fan_speed,created_by)
+               VALUES (?,?,?,?,?,?)""",
+            (device_id,starts_at,runtime,temperature,fan_speed,g.current_user["id"]),
         )
         connection.commit()
     except Exception:
@@ -2048,7 +2451,7 @@ def schedules() -> str:
     context = load_schedule_context(request.args.get("device", type=int), request.args.get("profile", type=int))
     if context.get("device"):
         context["today_plan"] = resolve_daily_plan(
-            context["device"]["id"], datetime.now().astimezone().date(),
+            context["device"]["id"], local_now().date(),
             persist=g.current_user["role"] == "editor",
         )
     return render_template("schedules.html", weekdays=WEEKDAYS, **context)
@@ -2258,7 +2661,7 @@ def save_schedule_profile(device_id: int, profile_id: int):
         cursor.execute("UPDATE schedule_profiles SET version=version+1 WHERE id=? AND device_id=?",(profile_id,device_id)); connection.commit()
     except Exception: connection.rollback(); raise
     finally: cursor.close(); connection.close()
-    resolve_daily_plan(device_id, datetime.now().astimezone().date())
+    resolve_daily_plan(device_id, local_now().date())
     return redirect(url_for("schedules",device=device_id,profile=profile_id,saved="profile"))
 
 
@@ -2278,7 +2681,7 @@ def save_weekly_schedule(device_id: int):
         for day,pid in values: cursor.execute("UPDATE device_weekly_profile_assignments SET profile_id=? WHERE device_id=? AND weekday=?",(pid,device_id,day))
         connection.commit()
     finally: cursor.close(); connection.close()
-    resolve_daily_plan(device_id,datetime.now().astimezone().date())
+    resolve_daily_plan(device_id,local_now().date())
     return redirect(url_for("schedules",device=device_id,saved="weekly"))
 
 
@@ -2293,7 +2696,7 @@ def save_date_schedule(device_id: int):
     try:
         cursor.execute("""INSERT INTO device_date_profile_assignments (device_id,assignment_date,profile_id,note) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE profile_id=VALUES(profile_id),note=VALUES(note)""",(device_id,assignment_date,profile_id,request.form.get("note") or None)); connection.commit()
     finally: cursor.close(); connection.close()
-    if assignment_date==datetime.now().astimezone().date(): resolve_daily_plan(device_id,assignment_date)
+    if assignment_date==local_now().date(): resolve_daily_plan(device_id,assignment_date)
     return redirect(url_for("schedules",device=device_id,saved="date"))
 
 
@@ -2421,10 +2824,10 @@ def record_service(device_id: int):
     validate_csrf()
     try:
         serviced_on = date.fromisoformat(request.form["last_service_date"])
-        next_due_text = request.form.get("next_service_due", "")
-        next_due = date.fromisoformat(next_due_text) if next_due_text else None
     except (KeyError, ValueError):
         abort(400)
+
+    next_due = None
 
     connection = connect_database()
     cursor = connection.cursor()
@@ -2433,7 +2836,7 @@ def record_service(device_id: int):
             """
             SELECT 1 FROM devices
             WHERE id = ? AND is_active = 1
-              AND source_system IN ('connectlife', 'manual')
+              AND (source_system = 'connectlife' OR device_type = 'boiler')
             FOR UPDATE
             """,
             (device_id,),

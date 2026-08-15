@@ -9,9 +9,14 @@ The project currently provides:
 - MariaDB-backed measurement, state, event and audit history;
 - responsive Flask UI with viewer/editor authentication;
 - device and zone/room views;
-- audited Hisense power control with preflight and post-command verification;
+- audited Hisense power, target-temperature and fan-speed control with
+  preflight and post-command verification, including scheduled runs;
 - ventilation and climate-operation event logs;
+- manual temperature readings for visually read instruments;
+- multi-device temperature charts, wide CSV export and up to four per-user
+  measurement favorites;
 - configurable outdoor-temperature sources;
+- explicit Europe/Budapest display time while retaining UTC database storage;
 - schema migrations and macOS/Fedora service definitions;
 - an ESP32 firmware prototype with Wi-Fi provisioning and HTTP measurement API;
 - deterministic analytics scaffolding with an optional, currently disabled

@@ -59,6 +59,7 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .temperature { display: flex; align-items: start; margin: 25px 0 20px; font-variant-numeric: tabular-nums; }
 .temperature-value { font-size: clamp(3.1rem, 8vw, 4.6rem); font-weight: 700; line-height: .85; letter-spacing: -.075em; }
 .temperature-unit { padding: 2px 0 0 8px; color: var(--muted); font-size: 1rem; font-weight: 700; }
+.temperature .stale-measurement { color: #b42318; font-weight: 900; }
 .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; padding: 16px 0; border-block: 1px solid var(--line); }
 .state-grid div { min-width: 0; }
 dt { color: var(--muted); font-size: .7rem; }
@@ -103,12 +104,22 @@ dd.power-on { color: #d05a16; }
 .room-heading span { color:var(--muted); font-size:.72rem; }
 .room-empty { padding:18px; border-radius:12px; background:var(--paper); color:var(--muted); font-size:.8rem; }
 .outdoor-temperature-card { width:100%; max-width:calc((100% - 32px) / 3); min-width:0; padding:21px; border:1px solid var(--line); border-radius:20px; background:var(--card); box-shadow:var(--shadow); }
+.outdoor-summary-group .outdoor-temperature-card { max-width:none; }
+.outdoor-temperature-card h3 { overflow-wrap:anywhere; }
 .outdoor-temperature-card + .device-grid { margin-top:16px; }
 .read-only main form[method="post"] { display:none; }
 .history-panel { margin-bottom: 56px; padding: 22px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
 .history-controls { display: flex; align-items: end; gap: 12px; margin-bottom: 20px; }
 .history-controls label { flex: 1 1 220px; color: var(--muted); font-size: .72rem; font-weight: 700; }
 .history-controls select, .history-controls input[type="datetime-local"] { display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
+.history-controls input[type="text"] { display:block; width:100%; min-height:44px; margin-top:6px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:white; color:var(--ink); font:inherit; }
+.history-presets { margin-bottom:20px; padding-bottom:18px; border-bottom:1px solid var(--line); }
+.history-preset-list { display:flex; flex-wrap:wrap; gap:9px; margin-top:12px; }
+.history-preset-item { display:flex; align-items:stretch; overflow:hidden; border:1px solid var(--line); border-radius:12px; background:white; }
+.history-preset-item > a { display:grid; gap:2px; min-width:150px; padding:9px 12px; color:var(--ink); text-decoration:none; }
+.history-preset-item small { color:var(--muted); font-size:.68rem; }
+.history-preset-item form { display:flex; margin:0; border-left:1px solid var(--line); }
+.history-preset-item button { border:0; padding:0 10px; background:transparent; color:var(--red); font:inherit; font-size:.7rem; font-weight:800; cursor:pointer; }
 .history-controls select { padding-right: 34px; }
 .history-controls label > small { display: block; margin-top: 5px; font-weight: 500; line-height: 1.3; }
 .history-device-picker { flex: 2 1 440px; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
@@ -277,6 +288,8 @@ dd.power-on { color: #d05a16; }
 .ventilation-list form label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .ventilation-list button { min-height:42px; border:0; border-radius:9px; padding:0 13px; background:var(--ink); color:white; font-weight:800; }
 .climate-start-form { display:grid; grid-template-columns:1fr 1fr 1fr 2fr auto; align-items:end; gap:12px; margin-top:16px; }
+.climate-control-form { grid-template-columns:1fr 1fr 1fr 1fr 2fr; }
+.climate-schedule-form { grid-template-columns:1fr 1.25fr 1fr 1fr 1fr auto; }
 .climate-start-form label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .climate-start-form input,.climate-start-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
 .climate-start-form input[readonly] { background:var(--paper); font-weight:800; }

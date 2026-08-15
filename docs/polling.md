@@ -207,11 +207,11 @@ kezdési és befejezési állapotok expliciten, egymástól függetlenül megmar
 ### Közvetlen klímavezérlés
 
 A Klíma oldalon az öt Hisense eszköz ténylegesen ki- és bekapcsolható. A
-bekapcsoláskor kizárólag a célhőmérséklet és a bekapcsolási állapot kerül
-elküldésre; más üzemmód- vagy ventilátorparamétert a rendszer nem módosít.
+bekapcsoláskor a célhőmérséklet, a ventilátorfokozat és a bekapcsolási állapot
+kerül elküldésre; más üzemmódot vagy kiegészítő programot a rendszer nem módosít.
 Minden parancs előtt friss ConnectLife-lekérdezés ellenőrzi az előfeltételt:
 bekapcsolás csak kikapcsolt, kikapcsolás csak bekapcsolt klímán engedélyezett.
-A parancs után ismételt visszaolvasás igazolja az eredményt. Minden kérés,
+A parancs után ismételt visszaolvasás a ventilátorfokozatot is igazolja. Minden kérés,
 elutasítás, hiba és igazolt siker a `climate_control_attempts` táblába kerül.
 
 ## Jelenlegi állapot
@@ -291,16 +291,15 @@ javasolt külön tartós `DASHBOARD_SECRET_KEY` értéket megadni a környezetbe
 
 A Bosch 7000i kézzel kezelt eszköz: a műszerfalon állítható, hogy a kazán
 bekapcsolt vagy kikapcsolt állapotban van-e. A Hisense klímákhoz és a kazánhoz
-megadható az utolsó szerviz dátuma és a következő szerviz esedékessége. Ezek az
-adatok a MariaDB-ben maradnak meg. Az esedékesség előtti automatikus
-figyelmeztetés egy későbbi funkció.
+megadható az utolsó szerviz dátuma. Az adatok és a korábbi szervizek története a
+MariaDB-ben maradnak meg. A következő szerviz időpontja a szerelővel való
+egyeztetéstől függ, ezért azt a rendszer nem számítja és nem tartja nyilván.
 
 A kazán kézi állapotváltozásai és a szervizesemények külön naplózódnak:
 
 - a `manual_state_events` minden tényleges be-/kikapcsolást a régi és az új
   állapottal, valamint az adatbázis időbélyegével tárol;
-- a `service_events` a szerviz dátumát, a következő esedékességet és a rögzítés
-  időpontját tárolja.
+- a `service_events` a szerviz dátumát és a rögzítés időpontját tárolja.
 
 Azonos kazánállapot ismételt mentése nem hoz létre hamis állapotváltozást. A
 szerviz külön űrlapon menthető, ezért a szerelői próba és az azt követő kézi

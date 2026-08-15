@@ -23,6 +23,10 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "config" / "devices.json"
 CONNECTLIFE_MODE = {0: "fan", 1: "heat", 2: "cool", 3: "dry", 4: "auto"}
+CONNECTLIFE_FAN_SPEED = {
+    0: "auto", 5: "low", 6: "medium_low", 7: "medium",
+    8: "medium_high", 9: "high",
+}
 
 
 @dataclass(frozen=True)
@@ -207,7 +211,9 @@ async def poll_connectlife(configs: list[DeviceConfig]) -> list[PollResult]:
             "power": bool(status.get("t_power")),
             "mode": CONNECTLIFE_MODE.get(status.get("t_work_mode"), "unknown"),
             "target_temperature_c": status.get("t_temp"),
-            "fan_speed": status.get("t_fan_speed"),
+            "fan_speed": CONNECTLIFE_FAN_SPEED.get(
+                status.get("t_fan_speed"), str(status.get("t_fan_speed"))
+            ),
             "fan_mute": bool(status.get("t_fan_mute")),
             "eco": bool(status.get("t_eco")),
             "sleep": status.get("t_sleep"),
