@@ -1,7 +1,8 @@
 # Home Automation
 
-Local-first home climate monitoring and control for ESP32/DS18B20 sensors,
-Computherm thermostats and Hisense appliances through ConnectLife.
+Local-first home climate and energy monitoring and control for ESP32/DS18B20
+sensors, Computherm thermostats, Hisense appliances through ConnectLife and
+Nous/Tasmota power meters.
 
 The project currently provides:
 
@@ -16,11 +17,12 @@ The project currently provides:
 - multi-device temperature charts, wide CSV export and up to four per-user
   measurement favorites;
 - configurable outdoor-temperature sources;
+- read-only Nous/Tasmota power, voltage and cumulative-energy polling;
 - explicit Europe/Budapest display time while retaining UTC database storage;
 - schema migrations and macOS/Fedora service definitions;
 - an ESP32 firmware prototype with Wi-Fi provisioning and HTTP measurement API;
-- deterministic analytics scaffolding with an optional, currently disabled
-  and strictly non-controlling text-generation layer.
+- searchable, auditable deterministic reports generated entirely by Python
+  rules and templates, without a language model or device-control access.
 
 ## Setup
 
@@ -41,13 +43,17 @@ See the [Hungarian user guide](docs/hasznalati-utasitas.md),
 [ESP32 documentation](docs/esp32.md) for details. The planned deterministic
 heating and cooling rules are documented separately in the
 [decision-logic specification](docs/dontesi-logika.md).
+Nous power-meter setup and voltage calibration are described in the
+[Nous/Tasmota guide](docs/nous-tasmota.md).
+The ongoing ESP32/DS18B20 physical-response experiments are recorded in the
+[calibration measurement log](docs/esp32-ds18b20-kalibracios-meresek.md).
 
 ## Safety model
 
-No language model controls devices. The first tested local 1B model was removed
-after failing strict output validation. All device actions are deterministic,
-authenticated, audited, checked against current state before execution, and
-verified by reading the affected device afterward.
+Reports are generated entirely by versioned Python rules and fixed templates.
+They have read-only data access and cannot control devices. All actual device
+actions are deterministic, authenticated, audited, checked against current
+state before execution, and verified by reading the affected device afterward.
 
 ## Energy reading import
 

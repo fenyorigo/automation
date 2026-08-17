@@ -1,95 +1,61 @@
-# Determinisztikus elemzés és a lokális AI-kísérlet tapasztalatai
+# Determinisztikus elemzés és automatikus jelentések
 
 ## Alapelv
 
-A fűtési és hűtési vezérlés determinisztikus marad. Nyelvi modell nem kaphat
-közvetlen hozzáférést az eszközökhöz, és nem módosíthat célértéket, időprofilt
-vagy biztonsági korlátot. Egy későbbi, alkalmas modell feladata is legfeljebb az
-előre kiszámított, strukturált tények emberileg olvasható megfogalmazása lehet.
-
-Egy kis modell használata csökkenti az erőforrásigényt, de önmagában nem zárja
-ki a hallucinációt. A későbbi megvalósítás ezért minden számszerű és eszközre
-vonatkozó állítást visszaellenőriz a determinisztikus tényhalmaz ellen. Sikertelen
-ellenőrzés esetén a modell válasza `rejected`, és sablonalapú `fallback`
-összefoglaló készül.
+A számítás, minősítés és szövegalkotás Pythonban, verziózott szabályokkal
+történik. A rendszer nem használ nyelvi modellt, ezért minden mondat pontosan
+visszavezethető a felhasznált adatokra és a szabályra. A jelentéskészítő nem
+kap eszközvezérlési jogosultságot.
 
 ## Feldolgozási folyamat
 
-1. Az előző helyi nap nyers méréseinek és eszközállapotainak lezárása.
-2. Adatminőség-ellenőrzés: hiány, elavulás, beragadt érzékelő, érvénytelen adat.
-3. Szenzoronkénti napi statisztikák és változási sebességek számítása.
-4. Lokalizált z-pontszámú és szabályalapú anomáliák létrehozása.
-5. Ellenőrzött, strukturált ténycsomag előállítása.
-6. Opcionális, jelenleg kikapcsolt szövegmodell-hívás kizárólag a ténycsomaggal.
-7. A válasz állításainak validálása; szükség esetén determinisztikus tartalék.
-8. Az eredmény megjelenítése, emberi döntésre bízva minden javaslatot.
+1. A felhasználó kijelöl egy legfeljebb hét napos időablakot.
+2. Olvasási lekérdezések összegyűjtik a hőmérsékleteket, külső referenciákat,
+   klíma- és szellőztetési eseményeket.
+3. A Python szenzoronként kiszámítja a mérési darabszámot, minimumot,
+   maximumot, átlagot, nettó változást és a legerősebb csökkenést.
+4. Verziózott szabályok készítik el az állításokat és azok minősítését.
+5. Rögzített magyar sablonok állítják össze a jelentésszöveget.
+6. A jelentés, minden szabály bizonyítéka és az eredeti ténycsomag bekerül az
+   adatbázisba.
 
-## Előkészített táblák
+Az első generátorverzió: `deterministic-v1`.
 
-- `analysis_runs`: napi futások, verzió, állapot és hiba;
-- `daily_sensor_metrics`: determinisztikus napi szenzormutatók;
-- `anomaly_events`: típus, súlyosság, időablak, z-pontszám és bizonyíték;
-- `daily_ai_summaries`: modell, promptverzió, bemeneti tények, szöveg és
-  validációs állapot.
+## Adattárolás
 
-A `validated_facts` és az `evidence` JSON megmarad az AI-szöveg mellett, ezért
-az összefoglaló utólag auditálható és újragenerálható.
+A `deterministic_reports` tábla tárolja:
 
-## Konfiguráció
+- a jelentési időablakot;
+- a generátorverziót és az összesített `info`, `warning` vagy `critical`
+  minősítést;
+- a címet és a teljes jelentésszöveget;
+- a szabályonkénti `rule_id`, `severity`, `message` és `evidence` mezőket;
+- a teljes bemeneti ténycsomagot;
+- az opcionális kézi megfigyelést;
+- a készítő felhasználót és a létrehozási időbélyeget.
 
-Az Ollama alapértelmezetten ki van kapcsolva:
+Az Elemzések oldalon a jelentések szabad szöveggel, minősítéssel és
+létrehozási dátumtartománnyal kereshetők. A kézi megfigyelés kereshető, de
+bizonyítéktípusa mindig `manual`.
 
-```text
-OLLAMA_ENABLED=false
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=
-OLLAMA_TIMEOUT_SECONDS=60
-```
+## Első szabálykészlet
 
-Az első modellalkalmassági vizsgálat után a Llama 3.2 1B modellt eltávolítottuk.
-Az `/analysis` oldal jelzi, hogy az Ollama ki van kapcsolva és nincs telepített
-szövegmodell. Az Ollama az UI-ból nem engedélyezhető; az elemzési ténycsomagot
-a determinisztikus Python-folyamat továbbra is el tudja készíteni.
+- `temperature_coverage_v1`: értékelt szenzorok és mérési pontok száma;
+- `sensor_window_statistics_v1`: szenzoronkénti ablakstatisztika;
+- `outdoor_reference_v1`: a külső szolgáltatói adat kizárólag tájékoztató
+  referenciaként;
+- `environmental_events_v1`: átfedő klíma- és szellőztetési események;
+- `common_esp32_drop_v1`: legalább három ESP32 közös csökkenéseinek összegzése;
+- `operator_observation_v1`: elkülönített kézi megfigyelés.
 
-## Kézi bizonyítékcsomag-kísérlet
+Az első verzió óvatos: mérési eltérésből nem talál ki okot, és nem minősít
+hibának olyan változást, amelyet klíma, szellőztetés vagy más környezeti esemény
+is magyarázhat.
 
-Az `/analysis` oldalon szerkesztői jogosultsággal tetszőleges, legfeljebb hét
-napos időablak elemezhető. A Python csak olvasási lekérdezésekkel kapcsolja
-össze a méréseket, szellőztetést, klímaeseményeket és külső hőmérsékletet.
-A teljes ténycsomag auditálásra megmarad. Jelenleg nem kerül szövegmodellhez;
-SQL-t csak az alkalmazás olvasási folyamata futtat, eszközvezérlés nem történik.
+## Korábbi Llama-kísérlet
 
-A korábbi kísérleteknél a prompt, a kézi megfigyelés, a nyers modellválasz és a validálási eredmény az
-`ai_analysis_experiments` táblába kerül. A validátor ellenőrzi a JSON-sémát,
-a bizonyítékhivatkozásokat, az üres és ismétlődő állításokat, továbbá megtiltja,
-hogy a kézi megfigyelés bizonyított műszeres tényként szerepeljen.
-
-## A Llama 3.2 1B kísérlet eredménye
-
-A modellt szándékosan szűk feladattal próbáltuk: nem nyers adatbázis-hozzáférést
-kapott, hanem Pythonból előállított, strukturált bizonyítékcsomagot, kiegészítve
-egy elkülönítetten jelölt emberi megfigyeléssel. A választ kötött JSON-séma és
-bizonyítékhivatkozások alapján ellenőriztük.
-
-A próbák során a modell:
-
-- összekeverte a mért tényt a valószínű értelmezéssel;
-- ismételt vagy egymást átfedő állításokat adott;
-- nem mindig emelte ki a több érzékelőn egyszerre megjelenő, fontos eseményt;
-- a kötött szerkezet ellenére sem adott megbízhatóan validálható választ.
-
-Ezért a válaszok `rejected` állapotúak lettek. A tapasztalat szerint az egymilliárd
-paraméteres modell erre a feladatra nem alkalmas; a validáció lazítása csak
-elfedné a hibát. A `llama3.2:1b` modellt töröltük, az Ollamát programból
-kényszerítetten kikapcsoltuk, és az UI-ból nem engedélyezhető.
-
-## Jelenlegi működés és továbblépési feltétel
-
-A modell eltávolítása nem érinti az adatgyűjtést, a statisztikai számításokat,
-az anomáliaészlelést vagy a bizonyítékcsomag elkészítését; ezeket Python végzi.
-Az Elemzések oldal kifejezetten jelzi, hogy nincs telepített szövegmodell.
-
-Új modell csak külön alkalmassági vizsgálat után kerülhet használatba. Ugyanazt
-a rögzített ténycsomagot, sémát és szigorú validátort kell teljesítenie. A modell
-akkor sem válhat döntési vagy vezérlési komponenssé: hibás válasz esetén az
-alkalmazás determinisztikus, sablonalapú összefoglalóra tér vissza.
+A Llama 3.2 1B modellt korábban kötött JSON-sémával és validátorral próbáltuk.
+Nem különítette el kellő megbízhatósággal a bizonyított tényt és az értelmezést,
+ezért a modellt eltávolítottuk, az Ollama-integrációt pedig kivezettük. A régi
+`ai_analysis_experiments` rekordok auditcélból az adatbázisban maradhatnak, de
+az aktív alkalmazás nem használja őket.

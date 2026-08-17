@@ -102,6 +102,10 @@ MIGRATIONS = (
         "v1_24_history_presets",
         ROOT / "SQL" / "migrations" / "024_home_automation_v1.23_to_v1.24.sql",
     ),
+    (
+        "v1_25_deterministic_reports",
+        ROOT / "SQL" / "migrations" / "025_home_automation_v1.24_to_v1.25.sql",
+    ),
 )
 
 

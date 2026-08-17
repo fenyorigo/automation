@@ -168,6 +168,67 @@ def poll_computherm(config: DeviceConfig, timeout: float) -> PollResult:
         return failed(config, type(error).__name__, error)
 
 
+def poll_tasmota(config: DeviceConfig, timeout: float) -> PollResult:
+    """Read a Tasmota device without issuing any actuator command."""
+    started = time.monotonic()
+    url = f"http://{config.hostname}/cm?cmnd=Status%200"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            payload = json.load(response)
+        energy = payload["StatusSNS"]["ENERGY"]
+        status = payload.get("StatusSTS", {})
+        network = payload.get("StatusNET", {})
+        fields = (
+            ("power", "power", "Power", "watt"),
+            ("apparent_power", "apparent_power", "ApparentPower", "volt_ampere"),
+            ("reactive_power", "reactive_power", "ReactivePower", "var"),
+            ("power_factor", "factor", "Factor", "ratio"),
+            ("voltage", "voltage", "Voltage", "volt"),
+            ("current", "current", "Current", "ampere"),
+            ("energy_total", "total", "Total", "kilowatt_hour"),
+            ("energy_today", "today", "Today", "kilowatt_hour"),
+            ("energy_yesterday", "yesterday", "Yesterday", "kilowatt_hour"),
+        )
+        measurements = []
+        for sensor_type, key, api_key, unit in fields:
+            value = energy.get(api_key)
+            raw = {"property": key, "value": value}
+            if key == "total":
+                raw["total_start_time"] = energy.get("TotalStartTime")
+            measurements.append({
+                "sensor_id": f"tasmota:{config.device_id}:{key}",
+                "sensor_type": sensor_type,
+                "unit": unit,
+                "value": value,
+                "quality": "good" if value is not None else "invalid",
+                "error_code": None if value is not None else f"missing_{key}",
+                "raw": raw,
+            })
+        return PollResult(
+            source_system=config.source_system,
+            device_id=config.device_id,
+            hostname=config.hostname,
+            observed_at=utc_now(),
+            success=True,
+            duration_ms=round((time.monotonic() - started) * 1000),
+            measurements=measurements,
+            state={
+                "power": str(status.get("POWER", "")).upper() == "ON",
+                "online": True,
+                "active": float(energy.get("Power") or 0) > 0,
+                "raw": status,
+            },
+            identity={
+                "mac_address": network.get("Mac") or config.mac_address,
+                "firmware_version": payload.get("StatusFWR", {}).get("Version"),
+            },
+        )
+    except urllib.error.URLError as error:
+        return failed(config, "http_unreachable", error)
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return failed(config, "invalid_response", error)
+
+
 async def poll_connectlife(configs: list[DeviceConfig]) -> list[PollResult]:
     if not configs:
         return []
@@ -240,11 +301,15 @@ async def poll_connectlife(configs: list[DeviceConfig]) -> list[PollResult]:
 
 
 async def poll_all(devices: list[DeviceConfig], timeout: float) -> list[PollResult]:
-    local = [item for item in devices if item.source_system in {"esp32", "computherm"}]
+    local = [item for item in devices if item.source_system in {"esp32", "computherm", "tasmota"}]
     connectlife = [item for item in devices if item.source_system == "connectlife"]
     tasks = []
     for item in local:
-        function = poll_esp32 if item.source_system == "esp32" else poll_computherm
+        function = {
+            "esp32": poll_esp32,
+            "computherm": poll_computherm,
+            "tasmota": poll_tasmota,
+        }[item.source_system]
         tasks.append(asyncio.to_thread(function, item, timeout))
     local_results = await asyncio.gather(*tasks)
     cloud_results = await poll_connectlife(connectlife)

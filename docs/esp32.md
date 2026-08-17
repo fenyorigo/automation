@@ -260,8 +260,15 @@ az ESP32 nem blokkolja a szenzormérést, hanem az alábbi késleltetésekkel pr
 újra kapcsolódni:
 
 ```text
-1 perc, 1 perc, 2 perc, 3 perc, majd 5 percenként
+5 másodperc, 15 másodperc, 30 másodperc, 1 perc, 2 perc,
+majd 5 percenként
 ```
+
+Három egymást követő sikertelen kapcsolódási kísérlet után a firmware
+újrainicializálja a Wi-Fi-rádiót. Ha a kapcsolat 30 percen keresztül nem áll
+helyre, az ESP32 kontrolláltan újraindul, majd a tartós NVS-tárhelyen megőrzött
+konfigurációval folytatja a kapcsolódást. A folyamat nem törli az SSID-t,
+jelszót, eszköznevet vagy IP-beállításokat.
 
 A szenzormérés konfigurálás és kapcsolódási próba közben is folytatódik, de a
 hőmérsékleti sorok ilyenkor nem jelennek meg a soros monitoron, így nem zavarják

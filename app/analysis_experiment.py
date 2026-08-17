@@ -1,17 +1,9 @@
 from __future__ import annotations
 
-import json
-import os
-import re
-import time
-import urllib.request
 from collections import defaultdict
 from datetime import datetime
 from statistics import mean
 from typing import Any
-
-
-PROMPT_VERSION = "evidence-v1"
 
 
 def _stamp(value: datetime | None) -> str | None:
@@ -87,67 +79,3 @@ def build_evidence(cursor, started_at: datetime, ended_at: datetime, observation
       "common_esp32_drop_events":common_events,
       "operator_observation":observation or None,
       "constraints":{"database_access":False,"device_control":False,"raw_measurements_preserved":True}}
-
-
-def prompt_for(facts: dict[str, Any]) -> str:
-    model_input={key:facts.get(key) for key in (
-      "schema_version","timezone","window","deterministic_findings",
-      "common_esp32_drop_events","outdoor_summary","operator_observation",
-      "operator_observation_timezone","constraints")}
-    return """Te egy otthoni hőmérsékleti rendszer óvatos elemzője vagy. Kizárólag az alábbi JSON ténycsomagból dolgozz.
-Ne találj ki hiányzó körülményt. Különítsd el a bizonyított tényeket, a valószínű értelmezéseket és a nem eldönthető kérdéseket.
-Az operátori megfigyelést kézi megfigyelésként, ne műszeres tényként kezeld. Ne adj és ne hajts végre vezérlési utasítást.
-Kizárólag JSON objektummal válaszolj, pontosan ezekkel a tömbökkel: proven_facts, likely_interpretations, unknowns, data_quality_notes.
-Minden tömbelem objektum legyen: statement és evidence mezőkkel. Az evidence a ténycsomag konkrét mezőire hivatkozó szöveges lista legyen.
-Ne ismételj meg állítást. A proven_facts legfeljebb 8, a többi tömb legfeljebb 3 elemet tartalmazzon.
-Ha egy kategóriához nincs konkrét bizonyítékhivatkozással alátámasztható állítás, az adott tömb legyen üres. Üres evidence listát soha ne adj vissza.
-A proven_facts kizárólag a deterministic_findings elemeinek világos magyar átfogalmazása lehet. Időbélyeg önmagában nem állítás.
-A likely_interpretations nem lehet bizonyított tény, és hivatkozzon az operator_observation vagy más konkrét mező nevére.
-
-TÖMÖRÍTETT TÉNYCSOMAG:
-""" + json.dumps(model_input,ensure_ascii=False,separators=(",",":"),default=str)
-
-
-RESPONSE_SCHEMA = {"type":"object","properties":{
-  key:{"type":"array","items":{"type":"object","properties":{
-    "statement":{"type":"string"},"evidence":{"type":"array","items":{"type":"string"}}},
-    "required":["statement","evidence"]},"maxItems":maximum}
-  for key,maximum in (("proven_facts",8),("likely_interpretations",3),
-    ("unknowns",3),("data_quality_notes",3))},
-  "required":["proven_facts","likely_interpretations","unknowns","data_quality_notes"]}
-
-
-def call_ollama(prompt: str) -> tuple[str, dict[str, Any] | None, int, bool, str | None]:
-    base=os.getenv("OLLAMA_BASE_URL","http://127.0.0.1:11434").rstrip("/")
-    model=os.getenv("OLLAMA_MODEL","llama3.2:1b")
-    timeout=float(os.getenv("OLLAMA_TIMEOUT_SECONDS","60"))
-    payload=json.dumps({"model":model,"prompt":prompt,"stream":False,"format":RESPONSE_SCHEMA,
-      "options":{"temperature":0,"num_predict":700}}).encode()
-    request=urllib.request.Request(f"{base}/api/generate",data=payload,headers={"Content-Type":"application/json"},method="POST")
-    started=time.monotonic()
-    with urllib.request.urlopen(request,timeout=timeout) as response: envelope=json.load(response)
-    elapsed=round((time.monotonic()-started)*1000); raw=str(envelope.get("response", ""))
-    try: parsed=json.loads(raw)
-    except json.JSONDecodeError: return raw,None,elapsed,False,"A modell válasza nem érvényes JSON."
-    required={"proven_facts","likely_interpretations","unknowns","data_quality_notes"}
-    valid=set(parsed)==required and all(isinstance(parsed[key],list) for key in required)
-    if valid:
-        valid=all(isinstance(item,dict) and isinstance(item.get("statement"),str)
-          and isinstance(item.get("evidence"),list) for key in required for item in parsed[key])
-    if valid:
-        allowed_refs=("deterministic_findings","common_esp32_drop_events","temperature_series",
-          "ventilation_events","climate_events","outdoor_summary","outdoor_observations",
-          "operator_observation","constraints","window")
-        seen=set()
-        for key in required:
-            for item in parsed[key]:
-                words=re.findall(r"[A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű]+",item["statement"])
-                references=" ".join(item["evidence"])
-                normalized=item["statement"].strip().casefold()
-                if (len(words)<4 or not normalized or normalized in seen
-                    or not any(token in references for token in allowed_refs)
-                    or (key=="proven_facts" and "operator_observation" in references)):
-                    valid=False
-                seen.add(normalized)
-    message=None if valid else "A válasz szerkezete vagy bizonyítékhivatkozása nem felel meg az előírásnak."
-    return raw,parsed,elapsed,valid,message

@@ -15,6 +15,7 @@ DEVICE_METADATA = {
     "esp32": ("sensor_gateway", "WEMOS D1 Mini ESP32"),
     "computherm": ("thermostat", "Computherm E400RF-EM"),
     "connectlife": ("climate", "Hisense ConnectLife"),
+    "tasmota": ("power_meter", "NOUS A1T / Tasmota"),
 }
 
 

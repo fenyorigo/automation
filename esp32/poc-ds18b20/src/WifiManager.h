@@ -65,6 +65,7 @@ class WifiManager {
   void startConnection();
   void updateConnection();
   void scheduleRetry();
+  void resetWifiRadio();
   void printConnectionDetails() const;
 
   static bool parseRequiredIp(const String &text, IPAddress &address);
@@ -82,7 +83,10 @@ class WifiManager {
   bool configured_ = false;
   bool connecting_ = false;
   bool wasConnected_ = false;
+  bool disconnectedTimerActive_ = false;
   uint8_t retryIndex_ = 0;
+  uint8_t consecutiveFailures_ = 0;
   uint32_t connectionStartedAt_ = 0;
   uint32_t nextRetryAt_ = 0;
+  uint32_t disconnectedSince_ = 0;
 };

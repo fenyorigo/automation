@@ -6,7 +6,9 @@
 namespace {
 constexpr char PREFERENCES_NAMESPACE[] = "wifi-config";
 constexpr uint32_t CONNECTION_TIMEOUT_MS = 15000;
-constexpr uint32_t RETRY_DELAYS_MS[] = {60000, 60000, 120000, 180000, 300000};
+constexpr uint32_t RETRY_DELAYS_MS[] = {5000, 15000, 30000, 60000, 120000, 300000};
+constexpr uint8_t RADIO_RESET_AFTER_FAILURES = 3;
+constexpr uint32_t RESTART_AFTER_DISCONNECTED_MS = 30UL * 60UL * 1000UL;
 
 bool isYes(const String &line) {
   return line.equalsIgnoreCase("yes") || line.equalsIgnoreCase("y") ||
@@ -41,6 +43,8 @@ void WifiManager::begin() {
 
   configured_ = loadConfig();
   if (configured_) {
+    disconnectedTimerActive_ = true;
+    disconnectedSince_ = millis();
     startConnection();
   } else {
     Serial.println("No saved Wi-Fi configuration.");
@@ -438,6 +442,8 @@ void WifiManager::clearConfig() {
   configured_ = false;
   connecting_ = false;
   wasConnected_ = false;
+  disconnectedTimerActive_ = false;
+  consecutiveFailures_ = 0;
   config_ = WifiConfig{};
   Serial.println("Saved Wi-Fi configuration erased.");
 }
@@ -486,8 +492,24 @@ void WifiManager::updateConnection() {
     }
     connecting_ = false;
     wasConnected_ = true;
+    disconnectedTimerActive_ = false;
     retryIndex_ = 0;
+    consecutiveFailures_ = 0;
     return;
+  }
+
+  const uint32_t now = millis();
+  if (!disconnectedTimerActive_ && configured_) {
+    disconnectedTimerActive_ = true;
+    disconnectedSince_ = now;
+  }
+
+  if (disconnectedTimerActive_ && configured_ &&
+      now - disconnectedSince_ >= RESTART_AFTER_DISCONNECTED_MS) {
+    Serial.println("Wi-Fi unavailable for 30 minutes; restarting ESP32.");
+    Serial.flush();
+    delay(50);
+    ESP.restart();
   }
 
   if (wasConnected_) {
@@ -498,11 +520,15 @@ void WifiManager::updateConnection() {
     return;
   }
 
-  const uint32_t now = millis();
   if (connecting_ && now - connectionStartedAt_ >= CONNECTION_TIMEOUT_MS) {
     Serial.println("Wi-Fi connection attempt timed out.");
     WiFi.disconnect(false, false);
     connecting_ = false;
+    ++consecutiveFailures_;
+    if (consecutiveFailures_ >= RADIO_RESET_AFTER_FAILURES) {
+      resetWifiRadio();
+      consecutiveFailures_ = 0;
+    }
     scheduleRetry();
     return;
   }
@@ -510,6 +536,15 @@ void WifiManager::updateConnection() {
   if (configured_ && !connecting_ && static_cast<int32_t>(now - nextRetryAt_) >= 0) {
     startConnection();
   }
+}
+
+void WifiManager::resetWifiRadio() {
+  Serial.println("Repeated Wi-Fi failures; reinitializing Wi-Fi radio.");
+  WiFi.disconnect(true, false);
+  WiFi.mode(WIFI_OFF);
+  delay(50);
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(false);
 }
 
 void WifiManager::scheduleRetry() {

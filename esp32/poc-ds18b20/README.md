@@ -33,6 +33,9 @@ Available commands outside the wizard:
 - `cancel`: leave the active wizard.
 
 The password is never printed back by the firmware. Configuration is stored in
-the ESP32 NVS partition. If a connection attempt times out, retry delays are
-1, 1, 2, 3 and then 5 minutes. Sensor measurements continue during setup and
-connection retries.
+the ESP32 NVS partition. Sensor measurements continue during setup and
+connection retries. After a connection loss it retries after 5, 15 and 30
+seconds, then after 1, 2 and finally 5 minutes. Three consecutive failed
+attempts reinitialize the Wi-Fi radio. If the connection remains unavailable
+for 30 minutes, the ESP32 restarts itself and continues using the saved
+configuration.

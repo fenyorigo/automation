@@ -26,6 +26,8 @@ Ez a dokumentáció a MariaDB alapú, forrásfüggetlen adatbázis-sémát írja
 - `sensors`: szenzorok, például DS18B20, ConnectLife beltéri hőmérséklet, Computherm hőmérséklet
 - `sensor_readings`: mért értékek idősorokhoz
 - `device_states`: eszközállapotok, például üzemmód, be-/kikapcsolás, ventilátorsebesség
+- `deterministic_reports`: kereshető, időbélyegzett automatikus jelentések,
+  verziózott szabályokkal, bizonyítékokkal és az eredeti ténycsomaggal
 
 ## Seed fájlok
 

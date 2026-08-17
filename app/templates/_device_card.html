@@ -14,10 +14,19 @@
     {% if device.derived_target_temperature_c is defined %}<strong>{{ device.derived_target_temperature_c|temperature }} °C</strong><small>{{ device.derived_target_source }}</small>
     {% else %}<strong>—</strong><small>nincs friss Computherm-adat</small>{% endif %}
   </div>
+  {% elif device.source_system == 'tasmota' %}
+  <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c if device.temperature_c is not none else '—' }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}"> W</span></div>
   {% else %}
   <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c|temperature }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}">°C</span></div>
   {% endif %}
-  {% if device.source_system not in ['esp32', 'manual'] %}
+  {% if device.source_system == 'tasmota' %}
+  <dl class="state-grid">
+    <div><dt>Összes energia</dt><dd>{% if device.energy_total_kwh is not none %}{{ device.energy_total_kwh|float|round(3) }} kWh{% else %}—{% endif %}{% if device.energy_total_started_at %}<br><small class="measurement-period">{{ device.energy_total_started_at|replace('T',' ') }} <span style="text-transform: lowercase">óta</span></small>{% endif %}</dd></div>
+    <div><dt>Feszültség</dt><dd>{% if device.voltage_v is not none %}{{ device.voltage_v|float|round(0)|int }} V{% else %}—{% endif %}</dd></div>
+    <div><dt>Dugalj</dt><dd>{% if device.power %}Bekapcsolva{% else %}Kikapcsolva{% endif %}</dd></div>
+    <div><dt>Fogyasztó aktív</dt><dd>{% if device.active %}Igen{% else %}Nem{% endif %}</dd></div>
+  </dl>
+  {% elif device.source_system not in ['esp32', 'manual'] %}
   <dl class="state-grid">
     <div><dt>Célhőmérséklet</dt><dd>{{ device.target_temperature_c|temperature }} °C</dd></div>
     <div><dt>Állapot</dt><dd class="{{ 'power-on' if device.source_system == 'connectlife' and device.power else '' }}">{% if device.power is none %}—{% elif device.power %}Bekapcsolva{% else %}Kikapcsolva{% endif %}</dd></div>

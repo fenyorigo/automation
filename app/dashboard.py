@@ -34,7 +34,8 @@ from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_ac
 from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import SETTINGS as GLOBAL_SETTINGS, save as save_global_settings, values as global_setting_values
-from analysis_experiment import PROMPT_VERSION, build_evidence, call_ollama, prompt_for
+from analysis_experiment import build_evidence
+from deterministic_report import GENERATOR_VERSION, generate_report
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,6 +80,7 @@ SOURCE_LABELS = {
     "esp32": "ESP32",
     "computherm": "Computherm",
     "connectlife": "Hisense",
+    "tasmota": "Nous / Tasmota",
     "manual": "Kézi",
 }
 
@@ -86,6 +88,7 @@ DEVICE_GROUPS = (
     ("esp32", "ESP32 hőmérők"),
     ("computherm", "Computherm termosztátok"),
     ("connectlife", "Hisense klímák"),
+    ("tasmota", "Nous teljesítménymérők"),
     ("manual", "Kézi eszközök"),
 )
 
@@ -104,36 +107,6 @@ HISTORY_RANGES = {
     "30d": 24 * 30,
 }
 WEEKDAYS = ["Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat", "Vasárnap"]
-OLLAMA_ENABLED = False
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
-
-
-def check_ollama() -> dict[str, Any]:
-    if not OLLAMA_ENABLED:
-        return {
-            "reachable": False,
-            "models": [],
-            "model_available": False,
-            "error": None,
-        }
-    url = f"{OLLAMA_BASE_URL}/api/tags"
-    try:
-        with urllib.request.urlopen(url, timeout=2.0) as response:
-            payload = json.load(response)
-        models = sorted(
-            item.get("name", "") for item in payload.get("models", []) if item.get("name")
-        )
-        return {
-            "reachable": True,
-            "models": models,
-            "model_available": OLLAMA_MODEL in models,
-            "error": None,
-        }
-    except (OSError, urllib.error.URLError, ValueError, json.JSONDecodeError) as error:
-        return {"reachable": False, "models": [], "model_available": False, "error": str(error)}
-
-
 def find_gnuplot() -> tuple[str | None, str | None]:
     configured = os.getenv("GNUPLOT_BIN")
     candidate = configured or shutil.which("gnuplot")
@@ -143,7 +116,10 @@ def find_gnuplot() -> tuple[str | None, str | None]:
         return None, "A gnuplot nem található."
     try:
         result = subprocess.run(
-            [candidate, "--version"], capture_output=True, text=True, timeout=3, check=True
+            # The first invocation after a macOS restart may be delayed by
+            # Homebrew/font-cache initialization.  Do not disable graphing for
+            # the lifetime of the dashboard because of a short startup delay.
+            [candidate, "--version"], capture_output=True, text=True, timeout=15, check=True
         )
     except (OSError, subprocess.SubprocessError) as error:
         return None, f"A gnuplot nem indítható: {error}"
@@ -311,7 +287,8 @@ def load_resettable_sensors() -> list[dict[str, Any]]:
         connection.close()
 
 
-def load_analysis_overview() -> dict[str, Any]:
+def load_analysis_overview(report_filters: dict[str, str] | None = None) -> dict[str, Any]:
+    report_filters = report_filters or {}
     connection = connect_database()
     cursor = connection.cursor()
     try:
@@ -329,22 +306,41 @@ def load_analysis_overview() -> dict[str, Any]:
                ORDER BY a.window_started_at DESC,a.id DESC LIMIT 20"""
         )
         anomalies = rows_as_dicts(cursor)
+        conditions = []
+        parameters: list[Any] = []
+        severity = report_filters.get("severity", "")
+        if severity in {"info", "warning", "critical"}:
+            conditions.append("dr.severity=?")
+            parameters.append(severity)
+        query = report_filters.get("q", "").strip()
+        if query:
+            conditions.append("(dr.title LIKE ? OR dr.report_text LIKE ? OR dr.operator_observation LIKE ?)")
+            pattern = f"%{query}%"
+            parameters.extend((pattern, pattern, pattern))
+        date_from = report_filters.get("date_from", "")
+        if date_from:
+            conditions.append("dr.created_at>=?")
+            parameters.append(datetime.fromisoformat(parse_local_datetime(f"{date_from}T00:00")))
+        date_to = report_filters.get("date_to", "")
+        if date_to:
+            conditions.append("dr.created_at<?")
+            next_day = date.fromisoformat(date_to) + timedelta(days=1)
+            parameters.append(datetime.fromisoformat(parse_local_datetime(f"{next_day.isoformat()}T00:00")))
+        where = " WHERE " + " AND ".join(conditions) if conditions else ""
         cursor.execute(
-            """SELECT summary_date,provider,model,prompt_version,summary_text,
-                      validation_status,generation_ms,created_at
-               FROM daily_ai_summaries ORDER BY summary_date DESC,id DESC LIMIT 10"""
+            """SELECT dr.id,dr.window_started_at,dr.window_ended_at,dr.generator_version,
+                      dr.severity,dr.title,dr.report_text,dr.findings_json,
+                      dr.operator_observation,dr.created_at,u.username
+               FROM deterministic_reports dr JOIN app_users u ON u.id=dr.created_by"""
+            + where
+            + " ORDER BY dr.created_at DESC,dr.id DESC LIMIT 100",
+            tuple(parameters),
         )
-        summaries = rows_as_dicts(cursor)
-        cursor.execute("""SELECT id,window_started_at,window_ended_at,model,facts_json,
-          operator_observation,raw_response,parsed_response,validation_status,generation_ms,error_message,created_at
-          FROM ai_analysis_experiments ORDER BY id DESC LIMIT 10""")
-        experiments=rows_as_dicts(cursor)
-        for item in experiments:
-            item["facts"]=json.loads(item.pop("facts_json"))
-            parsed=item.pop("parsed_response")
-            item["result"]=json.loads(parsed) if parsed and item["validation_status"]=="structurally_valid" else None
-        return {"runs": runs, "anomalies": anomalies, "summaries": summaries,
-                "experiments":experiments}
+        reports = rows_as_dicts(cursor)
+        for item in reports:
+            stored = item.pop("findings_json")
+            item["findings"] = json.loads(stored) if isinstance(stored, str) else stored
+        return {"runs": runs, "anomalies": anomalies, "reports": reports}
     finally:
         cursor.close()
         connection.close()
@@ -723,8 +719,28 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
               (SELECT mse.changed_at FROM manual_state_events mse
                WHERE mse.device_id = d.id
                ORDER BY mse.changed_at DESC, mse.id DESC LIMIT 1) AS manual_state_changed_at,
-              sr.value AS temperature_c, sr.quality AS measurement_quality,
+              sr.value AS temperature_c, s.sensor_type AS measurement_type,
+              s.unit AS measurement_unit, sr.quality AS measurement_quality,
               sr.observed_at AS measurement_at,
+              (SELECT er.value
+                 FROM sensors es
+                 JOIN sensor_readings er ON er.sensor_id=es.id
+                WHERE es.device_id=d.id AND es.is_active=1
+                  AND es.sensor_type='energy_total'
+                ORDER BY er.observed_at DESC,er.id DESC LIMIT 1) AS energy_total_kwh,
+              (SELECT JSON_UNQUOTE(JSON_EXTRACT(er.raw_payload,'$.total_start_time'))
+                 FROM sensors es
+                 JOIN sensor_readings er ON er.sensor_id=es.id
+                WHERE es.device_id=d.id AND es.is_active=1
+                  AND es.sensor_type='energy_total'
+                  AND JSON_EXTRACT(er.raw_payload,'$.total_start_time') IS NOT NULL
+                ORDER BY er.observed_at DESC,er.id DESC LIMIT 1) AS energy_total_started_at,
+              (SELECT vr.value
+                 FROM sensors vs
+                 JOIN sensor_readings vr ON vr.sensor_id=vs.id
+                WHERE vs.device_id=d.id AND vs.is_active=1
+                  AND vs.sensor_type='voltage'
+                ORDER BY vr.observed_at DESC,vr.id DESC LIMIT 1) AS voltage_v,
               ds.power, ds.mode, ds.target_temperature_c, ds.fan_speed,
               ds.online AS reported_online, ds.active, ds.observed_at AS state_at,
               pa.success AS poll_success, pa.attempted_at AS last_poll_at,
@@ -734,6 +750,8 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
             LEFT JOIN zones z ON z.id = COALESCE(r.zone_id,d.zone_id)
             LEFT JOIN sensors s
               ON s.device_id = d.id AND s.is_active = 1
+             AND ((d.source_system = 'tasmota' AND s.sensor_type = 'power')
+               OR (d.source_system <> 'tasmota' AND s.sensor_type = 'temperature'))
             LEFT JOIN sensor_readings sr
               ON sr.id = (
                 SELECT sr2.id FROM sensor_readings sr2
@@ -753,7 +771,7 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                 ORDER BY pa2.attempted_at DESC, pa2.id DESC LIMIT 1
               )
             WHERE d.is_active = 1
-            ORDER BY FIELD(d.source_system, 'esp32', 'manual', 'computherm', 'connectlife'), d.name
+            ORDER BY FIELD(d.source_system, 'esp32', 'manual', 'computherm', 'connectlife', 'tasmota'), d.name
             """
         )
         devices = rows_as_dicts(cursor)
@@ -1487,10 +1505,7 @@ def global_settings() -> str:
         validate_csrf()
         try:
             save_global_settings(dict(request.form))
-            global OLLAMA_ENABLED, OLLAMA_BASE_URL, OLLAMA_MODEL, GNUPLOT_BIN, GNUPLOT_ERROR
-            OLLAMA_ENABLED = False
-            OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
-            OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
+            global GNUPLOT_BIN, GNUPLOT_ERROR
             GNUPLOT_BIN, GNUPLOT_ERROR = find_gnuplot()
             session["global_settings_notice"] = {"kind":"success","message":"A globális beállításokat elmentettük a .env fájlba."}
         except ValueError as error:
@@ -1786,49 +1801,66 @@ def delete_history_preset(preset_id: int):
 
 @app.get("/analysis")
 def analysis() -> str:
+    report_filters = {
+        "q": request.args.get("q", "").strip()[:100],
+        "severity": request.args.get("severity", "").strip(),
+        "date_from": request.args.get("date_from", "").strip(),
+        "date_to": request.args.get("date_to", "").strip(),
+    }
+    if report_filters["severity"] not in {"", "info", "warning", "critical"}:
+        report_filters["severity"] = ""
+    for key in ("date_from", "date_to"):
+        if report_filters[key]:
+            try:
+                date.fromisoformat(report_filters[key])
+            except ValueError:
+                report_filters[key] = ""
     return render_template(
         "analysis.html",
-        overview=load_analysis_overview(),
-        ollama_enabled=OLLAMA_ENABLED,
-        ollama_base_url=OLLAMA_BASE_URL,
-        ollama_model=OLLAMA_MODEL,
-        ollama_status=check_ollama(),
+        overview=load_analysis_overview(report_filters),
+        report_filters=report_filters,
+        generator_version=GENERATOR_VERSION,
         now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
-        default_analysis_start=local_now().replace(hour=3,minute=30,second=0,microsecond=0).strftime("%Y-%m-%dT%H:%M"),
+        default_analysis_start=(local_now() - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M"),
         analysis_notice=session.pop("analysis_notice",None),
     )
 
 
-@app.post("/analysis/experiments")
+@app.post("/analysis/reports")
 @editor_required
-def create_analysis_experiment():
+def create_deterministic_report():
     validate_csrf()
     try:
         started_at=datetime.fromisoformat(parse_local_datetime(request.form["started_at"]))
         ended_at=datetime.fromisoformat(parse_local_datetime(request.form["ended_at"]))
         if ended_at <= started_at or ended_at-started_at > timedelta(days=7): raise ValueError
-    except (KeyError,ValueError): abort(400)
-    observation=request.form.get("operator_observation","").strip() or None
-    should_run=OLLAMA_ENABLED and request.form.get("run_ollama")=="1"
+    except (KeyError,ValueError):
+        session["analysis_notice"] = {
+            "kind": "warning",
+            "message": "Érvényes, legfeljebb hét napos jelentési időablakot adj meg.",
+        }
+        return redirect(url_for("analysis"))
+    observation=request.form.get("operator_observation","").strip()[:2000] or None
     connection=connect_database(); cursor=connection.cursor()
     try:
-        facts=build_evidence(cursor,started_at,ended_at,observation); prompt=prompt_for(facts)
-        raw=parsed=None; generation_ms=None; error_message=None; status="not_run"
-        if should_run:
-            try:
-                raw,parsed,generation_ms,valid,error_message=call_ollama(prompt)
-                status="structurally_valid" if valid else "rejected"
-            except Exception as error:
-                status="failed"; error_message=str(error)
-        cursor.execute("""INSERT INTO ai_analysis_experiments
-          (window_started_at,window_ended_at,prompt_version,model,facts_json,operator_observation,
-           prompt_text,raw_response,parsed_response,validation_status,generation_ms,error_message,created_by)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",(started_at,ended_at,PROMPT_VERSION,
-          os.getenv("OLLAMA_MODEL","llama3.2:1b"),json.dumps(facts,ensure_ascii=False,default=str),
-          observation,prompt,raw,json.dumps(parsed,ensure_ascii=False) if parsed else None,status,
-          generation_ms,error_message,g.current_user["id"])); connection.commit()
-        session["analysis_notice"]={"kind":"success" if status in {"not_run","structurally_valid"} else "warning",
-          "message":"A bizonyítékcsomag elkészült." + (" Az Ollama válaszát is eltároltuk." if status=="structurally_valid" else (f" Az Ollama-hívás sikertelen: {error_message}" if status=="failed" else ""))}
+        facts=build_evidence(cursor,started_at,ended_at,observation)
+        report=generate_report(facts, LOCAL_TIMEZONE_NAME)
+        cursor.execute(
+            """INSERT INTO deterministic_reports
+               (window_started_at,window_ended_at,generator_version,severity,title,
+                report_text,findings_json,facts_json,operator_observation,created_by)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (
+                started_at, ended_at, GENERATOR_VERSION, report["severity"], report["title"],
+                report["report_text"], json.dumps(report["findings"],ensure_ascii=False,default=str),
+                json.dumps(facts,ensure_ascii=False,default=str), observation,g.current_user["id"],
+            ),
+        )
+        connection.commit()
+        session["analysis_notice"]={
+            "kind":"success",
+            "message":"A determinisztikus jelentés elkészült és bekerült az adatbázisba.",
+        }
     except Exception: connection.rollback(); raise
     finally: cursor.close(); connection.close()
     return redirect(url_for("analysis"))

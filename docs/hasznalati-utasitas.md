@@ -2,8 +2,9 @@
 
 Ez a dokumentum az Otthonklíma webes alkalmazás napi használatát mutatja be a
 menüpontok sorrendjében. Az alkalmazás ESP32/DS18B20 hőmérőket, Computherm
-termosztátokat, Hisense/ConnectLife klímákat, külső hőmérsékleti forrásokat,
-valamint kézzel rögzített üzemeltetési és energiaadatokat kezel.
+termosztátokat, Hisense/ConnectLife klímákat, Nous/Tasmota fogyasztásmérőket,
+külső hőmérsékleti forrásokat, valamint kézzel rögzített üzemeltetési és
+energiaadatokat kezel.
 
 A későbbi automatikus fűtési és hűtési vezérlés elkülönített követelményeit a
 [`docs/dontesi-logika.md`](dontesi-logika.md) dokumentum tartalmazza.
@@ -43,9 +44,11 @@ megnyitása vagy frissítése önmagában nem kérdezi le az eszközöket.
 ### Nézetváltás
 
 - **Eszközök:** az eszközök típus szerint csoportosítva jelennek meg
-  (ESP32, Computherm, Hisense, kézi eszközök).
+  (ESP32, Computherm, Hisense, Nous/Tasmota, kézi eszközök). A szűrővel egy
+  kiválasztott eszközcsoport önmagában is megjeleníthető.
 - **Zónák és helyiségek:** emelet, földszint és zónán kívüli terület szerint
-  csoportosít; az eszköz nélküli helyiségeket is megmutatja.
+  csoportosít; az eszköz nélküli helyiségeket is megmutatja. A helyiségszűrő
+  egyetlen kiválasztott szobára szűkítheti a nézetet.
 
 ### Eszközkártyák értelmezése
 
@@ -55,6 +58,8 @@ A kártyák az eszköz típusától függően mutathatják:
 - az elérhetőséget és az utolsó poll eredményét;
 - a klíma be-/kikapcsolt állapotát, üzemmódját és célértékét;
 - a Computherm mért és beállított hőmérsékletét;
+- a Nous/Tasmota pillanatnyi teljesítményét, feszültségét, relé- és
+  terheltségi állapotát, továbbá az összes fogyasztást és annak kezdőidejét;
 - a Bosch 7000i kézi állapotát és szervizadatait.
 
 A **Bekapcsolva** klímaállapot kiemelten jelenik meg. Az elérhető jelzés nem
@@ -68,6 +73,11 @@ nem futhat egymásra; közös zárolás védi őket. Ha már fut egy kör, a má
 indul el.
 
 A kézi kör nem tolja el a periodikus poll eredeti tízperces ütemezését.
+
+A Nous/Tasmota lekérdezés csak adatot olvas. A dugalj reléjét nem kapcsolja,
+és a Tasmota konfigurációját sem módosítja. A beüzemelés és a
+feszültségkalibráció részletes leírása a
+[`docs/nous-tasmota.md`](nous-tasmota.md) dokumentumban található.
 
 ### Külső hőmérséklet
 
@@ -216,19 +226,31 @@ atomikusan frissíti a projekt `.env` fájlját.
 Az adatbázis és a ConnectLife felhasználónevei, jelszavai, illetve más titkok
 nem jelennek meg és nem szerkeszthetők ezen a felületen.
 
-## 7. Elemzések
+## 7. Elemzések és jelentések
 
-Az oldal a determinisztikus elemzési réteg állapotát mutatja:
+Az oldalon legfeljebb hét napos időablakból készíthető automatikus jelentés.
+A számításokat és a magyar mondatokat is determinisztikus Python-szabályok
+állítják elő; nyelvi modell nem vesz részt a folyamatban. Opcionálisan kézi
+operátori megfigyelés is rögzíthető, amelyet a rendszer elkülönít a műszeres
+tényektől.
 
-- a szöveges AI, az Ollama és a modell kikapcsolt állapota;
-- elemzési futások;
-- felismert anomáliák;
-- napi összefoglalók.
+A jelentés tartalmazza az értékelt szenzorok számát, szenzoronként a minimumot,
+maximumot, átlagot és nettó változást, a külső referencia tartományát, valamint
+az időablakkal átfedő klíma- és szellőztetési események számát. A több ESP32-n
+egyidejűleg jelentkező eséseket összesítve jelzi.
 
-A számításokat determinisztikus Python-folyamat végzi. A korábban kipróbált
-Llama 3.2 1B nem adott elég megbízható, validálható válaszokat, ezért töröltük.
-Az Ollama az UI-ból nem kapcsolható be, de a Python-alapú ténycsomag továbbra is
-elkészíthető. Egy későbbi nyelvi modell **soha nem vezérelhet eszközt**.
+Minden jelentés bekerül az adatbázisba az alábbiakkal:
+
+- jelentési időablak és létrehozási időbélyeg;
+- készítő felhasználó és generátorverzió;
+- összesített minősítés;
+- teljes, kereshető jelentésszöveg;
+- szabályazonosítók és az egyes állítások bizonyítékai;
+- az eredeti determinisztikus ténycsomag.
+
+A tárolt jelentések szabad szöveggel, minősítéssel és létrehozási
+dátumtartománnyal szűrhetők. A jelentés kizárólag tájékoztat: eszközt nem
+vezérel és beállítást nem módosít.
 
 ## 8. Külső hőmérséklet
 
@@ -438,7 +460,7 @@ szerkesztői hozzáférés véletlen megszüntetését.
   vezérlési mérés, mert a beltéri egység magasan és saját légáramában van.
 - A Kért beállítások és Időprofilok jelenleg nem vezérlik a fizikai eszközt.
 - A Klíma közvetlen és időzített vezérlése viszont valódi eszközparancsot küld.
-- Az Ollama nem kaphat eszközvezérlési jogosultságot.
+- Az automatikus jelentéskészítő nem kaphat eszközvezérlési jogosultságot.
 - Törlés, klímavezérlés és mentés előtt mindig ellenőrizd a kiválasztott
   eszközt, állapotot és időpontot.
 

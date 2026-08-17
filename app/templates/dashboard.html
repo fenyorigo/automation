@@ -60,8 +60,17 @@
       </div>
 
       {% if view_mode == 'device' %}
+      <div class="dashboard-filter">
+        <label for="device-type-filter">Eszköztípus
+          <select id="device-type-filter" data-dashboard-filter="device">
+            <option value="all">Mind</option>
+            {% if outdoor_temperature %}<option value="outdoor">Külső hőmérséklet</option>{% endif %}
+            {% for group in device_groups %}<option value="{{ group.source_system }}">{{ {'esp32':'ESP32','tasmota':'Nous','connectlife':'Hisense','computherm':'Computherm','manual':'Kézi'}.get(group.source_system,group.name) }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
       {% if outdoor_temperature %}
-      <section class="device-type-group outdoor-summary-group">
+      <section class="device-type-group outdoor-summary-group" data-device-source="outdoor">
         <div class="device-type-heading">
           <div><p class="eyebrow">Zónán kívüli</p><h2>Külső hőmérséklet</h2></div>
           <span>aktuális szolgáltatói adat</span>
@@ -77,7 +86,7 @@
       {% endif %}
       <div class="device-type-groups">
         {% for group in device_groups %}
-        <section class="device-type-group">
+        <section class="device-type-group" data-device-source="{{ group.source_system }}">
           <div class="device-type-heading">
             <div><p class="eyebrow">Eszköztípus</p><h2>{{ group.name }}</h2></div>
             <span>{{ group.devices|length }} eszköz</span>
@@ -91,11 +100,19 @@
         {% endfor %}
       </div>
       {% else %}
+      <div class="dashboard-filter">
+        <label for="room-filter">Helyiség
+          <select id="room-filter" data-dashboard-filter="room">
+            <option value="all">Mind</option>
+            {% for zone in room_groups %}{% for room in zone.rooms %}<option value="{{ room.room_id if room.room_id is not none else 'unassigned' }}">{{ zone.name }} – {{ room.room_name }}</option>{% endfor %}{% endfor %}
+          </select>
+        </label>
+      </div>
       <div class="zone-groups">
         {% for zone in room_groups %}
-        <section class="zone-block"><div class="zone-heading"><p class="eyebrow">Zóna</p><h2>{{ zone.name }}</h2></div>
+        <section class="zone-block" data-zone-block><div class="zone-heading"><p class="eyebrow">Zóna</p><h2>{{ zone.name }}</h2></div>
           {% for room in zone.rooms %}
-          <section class="room-block"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{% if room.outdoor_temperature %}aktuális szolgáltatói adat{% else %}{{ room.devices|length }} eszköz{% endif %}</span></div>
+          <section class="room-block" data-room-id="{{ room.room_id if room.room_id is not none else 'unassigned' }}"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{% if room.outdoor_temperature %}aktuális szolgáltatói adat{% else %}{{ room.devices|length }} eszköz{% endif %}</span></div>
             {% if room.outdoor_temperature %}
             <article class="outdoor-temperature-card">
               <div><p class="source">Külső hőmérséklet</p><h3>{{ room.outdoor_temperature.display_name }}</h3></div>
@@ -145,6 +162,34 @@
     let checking = false;
     let hasUnsavedChanges = false;
     let submitting = false;
+
+    const filter = document.querySelector('[data-dashboard-filter]');
+    if (filter) {
+      const kind = filter.dataset.dashboardFilter;
+      const storageKey = `automation-dashboard-${kind}-filter`;
+      const available = [...filter.options].map((option) => option.value);
+      const saved = window.localStorage.getItem(storageKey);
+      filter.value = available.includes(saved) ? saved : 'all';
+
+      const applyFilter = () => {
+        const selected = filter.value;
+        if (kind === 'device') {
+          document.querySelectorAll('[data-device-source]').forEach((group) => {
+            group.hidden = selected !== 'all' && group.dataset.deviceSource !== selected;
+          });
+        } else {
+          document.querySelectorAll('[data-room-id]').forEach((room) => {
+            room.hidden = selected !== 'all' && room.dataset.roomId !== selected;
+          });
+          document.querySelectorAll('[data-zone-block]').forEach((zone) => {
+            zone.hidden = !zone.querySelector('[data-room-id]:not([hidden])');
+          });
+        }
+        window.localStorage.setItem(storageKey, selected);
+      };
+      filter.addEventListener('change', applyFilter);
+      applyFilter();
+    }
 
     const isEditableField = (element) => element && element.matches(
       'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea'
