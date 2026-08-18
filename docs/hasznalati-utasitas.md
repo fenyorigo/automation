@@ -45,7 +45,10 @@ megnyitása vagy frissítése önmagában nem kérdezi le az eszközöket.
 
 - **Eszközök:** az eszközök típus szerint csoportosítva jelennek meg
   (ESP32, Computherm, Hisense, Nous/Tasmota, kézi eszközök). A szűrővel egy
-  kiválasztott eszközcsoport önmagában is megjeleníthető.
+  kiválasztott eszközcsoport önmagában is megjeleníthető. A mellette levő
+  **Lekérdezési körben** jelölővel az összes vagy a kiválasztott típuson belül
+  csak az automatikusan lekérdezett eszközök maradnak láthatók. A böngésző a
+  típust és a jelölő állapotát is megjegyzi.
 - **Zónák és helyiségek:** emelet, földszint és zónán kívüli terület szerint
   csoportosít; az eszköz nélküli helyiségeket is megmutatja. A helyiségszűrő
   egyetlen kiválasztott szobára szűkítheti a nézetet.
@@ -64,6 +67,9 @@ A kártyák az eszköz típusától függően mutathatják:
 
 A **Bekapcsolva** klímaállapot kiemelten jelenik meg. Az elérhető jelzés nem
 azonos a bekapcsolt állapottal: azt mutatja, hogy az eszköz lekérdezhető volt.
+Az engedélyezett, de sikertelenül lekérdezett eszköz jelzése **Offline**. Ha az
+eszközt kivették az automatikus körből, a kártya **Lekérdezés kikapcsolva**
+jelzést mutat, és nem ismétli meg a kikapcsolás előtti hálózati hibát.
 
 ### Kézi lekérdezés
 
@@ -191,6 +197,9 @@ eszközök műszaki adatait.
   rendelhető. Helyiség választásakor a zóna automatikusan követi a helyiséget.
 - Nyilvántartható az elérési mód, a képesség, a hálózati címzés, az integrációs
   szerep, a támogatott üzemmódok, ventilátorfokozatok és kiegészítő programok.
+- A **Lekérdezési körben** kapcsoló ideiglenesen kiveszi az eszközt az
+  automatikus és kézi pollkörökből, de az eszköz és korábbi adatai megmaradnak.
+  Az **Aktív nyilvántartási elem** ezzel szemben archiválásra szolgál.
 - Az automatikus lekérdezés és az automatikus vezérlés külön engedélyezhető.
 - A lekérdezési gyakoriság eszközönként 1–1440 perc között állítható. A közös
   gomb minden aktívan, hálózaton lekérdezett eszközt visszaállít a globális
@@ -205,6 +214,18 @@ megmaradnak.
 Az UI-ban felvett eszköz csak akkor kérdezhető le ténylegesen, ha a program
 támogatja a választott lekérdező illesztőt, és annak technikai konfigurációja
 is rendelkezésre áll.
+
+ESP32 és Tasmota eszköz mentésekor a hostname, IP-cím, MAC-cím és a
+lekérdezési engedély automatikusan, atomikus fájlcserével átkerül a
+`config/devices.json` pollerkonfigurációba is. A ConnectLife és Computherm
+illesztők további, speciális technikai adatokat igényelnek; meglévő
+konfigurációjuk közös mezőit a mentés frissíti, új integrációjukhoz viszont
+továbbra is külön beállítás szükséges.
+
+Az **Integrációs azonosító** nem tetszőleges leltári szám. ESP32 esetén
+pontosan egyeznie kell a firmware `/api/v1/measurements` válaszának `device_id`
+mezőjével; a jelenlegi konfigurációban ez a hostname. A panelre írt gyári
+azonosítót ettől elkülönítve kell nyilvántartani.
 
 ### Lekérdezési idők
 
@@ -286,6 +307,15 @@ Az oldal a villany- és gázóra kumulatív állását kezeli.
 
 A rendszer az egymást követő óraállások különbségéből számítja a fogyasztást.
 A havi gázadatokhoz egységesen 09:00 használható.
+
+### Téves óraállás javítása
+
+Szerkesztői jogosultsággal a korábbi óraállások listájában minden sor végén
+megjelenik egy toll ikon. Erre kattintva javítható a mérő, a mérés időpontja,
+az óraállás és a megjegyzés. A **Javítás mentése** után az érintett, valamint
+az időrendben utána következő sor fogyasztási különbsége automatikusan az új
+értékből számolódik. A javított rekord forrása kézi bejegyzésre változik, és a
+rendszer eltárolja a javítást végző felhasználót.
 
 ### Kézi hőmérsékletmérések
 

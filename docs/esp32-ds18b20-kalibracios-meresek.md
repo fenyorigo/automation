@@ -198,13 +198,13 @@ menet közben módosíthatja a leadott teljesítményt.
 | 2026-08-15 | 18:40:12 | 19:30:25 | 50,2 perc | 25 °C | középmagas | négy gyári, `kisnappali` dobozban |
 | 2026-08-16 | 17:16:06 | 18:06:20 | 50,2 perc | 25 °C | középmagas | három gyári; `kisnappali` kisebb, `dolgozo` nagyobb dobozban |
 | 2026-08-17 | 10:12:09 | 10:27:18 | 15,2 perc | 25 °C | középmagas | három gyári; `kisnappali` kisebb, `dolgozo` leszűkített nagyobb dobozban |
-| 2026-08-17 | 18:07:11 | folyamatban | tervezett 50 perc | 25 °C | középmagas | három gyári; `kisnappali` kisebb, `dolgozo` leszűkített nagyobb dobozban |
+| 2026-08-17 | 18:07:11 | 18:57:23 | 50,2 perc | 25 °C | középmagas | három gyári; `kisnappali` kisebb, `dolgozo` leszűkített nagyobb dobozban |
 
 A 18:07-es futás a délelőtti rövid teszt azonos szenzorkialakítással végzett,
-50 perces kontrollja. A vendégszobai szellőztetést előtte lezárták, az
-ajtót és az ablakot becsukták. Közvetlenül a klíma igazolt indulása után kézi
-lekérdezési kör készült. A sor a futás lezárása és az adatsor kiértékelése után
-egészítendő ki a tényleges leállási idővel és az eredményekkel.
+50 perces kontrollja. A vendégszobai szellőztetést előtte lezárták, az ajtót és
+az ablakot becsukták. Közvetlenül a klíma igazolt indulása után kézi
+lekérdezési kör készült. A tényleges futás 18:07:11-től 18:57:23-ig tartott;
+részletes dinamikai kiértékelése még külön elvégzendő.
 
 A 2026. augusztus 16-i futás kezdő időpontját a kezelőfelületen 17:16-ra
 állították; a klíma 17:16:06-kor bekapcsolt, majd 18:06:20-kor leállt. Az öt
@@ -603,3 +603,39 @@ ennek az első visszamenőleg rögzítendő eseménye.
 
 Az eltérő napokon végzett klímateszteket csak ezeknek a körülményeknek a
 figyelembevételével szabad összehasonlítani.
+
+## 10. Második ESP32/DS18B20 kalibrációs sorozat
+
+2026. augusztus 18-án a korábbi ötös összeállítás négy eszközét leválasztották,
+hogy helyükre három új, nyers — műanyag doboz és rézcső nélküli — érzékelő
+kerüljön. Az `esp32-ext` változatlan helyen maradt referenciaként. A korábbi
+`esp32-dolgozo`, `esp32-halo`, `esp32-kisnappali` és `esp32-kristofek` utolsó
+közös mérése helyi idő szerint 09:54:34-kor készült.
+
+Az új összeállítás sorrendje balról jobbra:
+
+1. `esp32-ext` — változatlan referencia;
+2. üres mérőhely;
+3. `esp32-nappali`;
+4. `esp32-rita`;
+5. `esp32-veronika`.
+
+Az új összehasonlítható sorozat első közös mérése 10:27:36-kor készült. A
+három új érzékelő integrációs és DS18B20-azonosítója:
+
+| ESP32 | DS18B20 ROM-azonosító | Kialakítás |
+|---|---|---|
+| `esp32-nappali` | `28EB696D00000020` | nyers, gyári szondaház |
+| `esp32-rita` | `28A9676D00000099` | nyers, gyári szondaház |
+| `esp32-veronika` | `28BFEF6D00000085` | nyers, gyári szondaház |
+
+A kalibráció alatt a három új eszköz és az `esp32-ext` kétperces névleges
+lekérdezési gyakorisággal fut. A leválasztott eszközöket az eszköznyilvántartás
+**Lekérdezési körben** jelölőjének kikapcsolásával kell kivenni a pollerből;
+ettől az eszköz és teljes története az adatbázisban megmarad.
+
+Az értékelésben ugyanazokat a mutatókat kell használni, mint az első sorozatnál:
+nyugodt szakasz alapeltérése, változásszám, teljes abszolút jelmozgás,
+mintaközi maximum, irányváltások, közös környezeti gerjesztésekre adott válasz,
+valamint később az azonos protokollú klímateszt. Az első sorozat régi és az új
+sorozat új eszközeit nem szabad egyidejű fizikai összeállításként értelmezni.

@@ -68,6 +68,10 @@
             {% for group in device_groups %}<option value="{{ group.source_system }}">{{ {'esp32':'ESP32','tasmota':'Nous','connectlife':'Hisense','computherm':'Computherm','manual':'Kézi'}.get(group.source_system,group.name) }}</option>{% endfor %}
           </select>
         </label>
+        <label class="dashboard-filter-checkbox" for="polling-enabled-filter">
+          <input id="polling-enabled-filter" type="checkbox">
+          <span>Lekérdezési körben</span>
+        </label>
       </div>
       {% if outdoor_temperature %}
       <section class="device-type-group outdoor-summary-group" data-device-source="outdoor">
@@ -76,7 +80,7 @@
           <span>aktuális szolgáltatói adat</span>
         </div>
         <div class="device-grid">
-          <article class="outdoor-temperature-card">
+          <article class="outdoor-temperature-card" data-polling-enabled="true">
             <div><p class="source">Külső hőmérséklet</p><h3>{{ outdoor_temperature.display_name }}</h3></div>
             <div class="temperature"><span class="temperature-value">{{ outdoor_temperature.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
             <footer class="card-footer"><span>Szolgáltatói mérés</span><time>{{ outdoor_temperature.observed_at|local_time }}</time></footer>
@@ -167,16 +171,29 @@
     if (filter) {
       const kind = filter.dataset.dashboardFilter;
       const storageKey = `automation-dashboard-${kind}-filter`;
+      const pollingFilter = kind === 'device' ? document.querySelector('#polling-enabled-filter') : null;
+      const pollingStorageKey = 'automation-dashboard-polling-enabled-filter';
       const available = [...filter.options].map((option) => option.value);
       const saved = window.localStorage.getItem(storageKey);
       filter.value = available.includes(saved) ? saved : 'all';
+      if (pollingFilter) {
+        pollingFilter.checked = window.localStorage.getItem(pollingStorageKey) === 'true';
+      }
 
       const applyFilter = () => {
         const selected = filter.value;
         if (kind === 'device') {
           document.querySelectorAll('[data-device-source]').forEach((group) => {
-            group.hidden = selected !== 'all' && group.dataset.deviceSource !== selected;
+            const sourceMatches = selected === 'all' || group.dataset.deviceSource === selected;
+            let visibleCards = 0;
+            group.querySelectorAll('[data-polling-enabled]').forEach((card) => {
+              const pollingMatches = !pollingFilter.checked || card.dataset.pollingEnabled === 'true';
+              card.hidden = !pollingMatches;
+              if (pollingMatches) visibleCards += 1;
+            });
+            group.hidden = !sourceMatches || visibleCards === 0;
           });
+          window.localStorage.setItem(pollingStorageKey, pollingFilter.checked ? 'true' : 'false');
         } else {
           document.querySelectorAll('[data-room-id]').forEach((room) => {
             room.hidden = selected !== 'all' && room.dataset.roomId !== selected;
@@ -188,6 +205,7 @@
         window.localStorage.setItem(storageKey, selected);
       };
       filter.addEventListener('change', applyFilter);
+      if (pollingFilter) pollingFilter.addEventListener('change', applyFilter);
       applyFilter();
     }
 

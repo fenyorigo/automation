@@ -73,6 +73,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
 manual_poll_lock = threading.Lock()
+device_config_lock = threading.Lock()
 USERNAME_PATTERN = re.compile(r"[A-Za-z0-9._-]{3,64}")
 PUBLIC_ENDPOINTS = {"static", "health", "login", "setup"}
 
@@ -636,6 +637,55 @@ def audit_registry(cursor, entity_type: str, entity_id: int, action: str, change
     )
 
 
+def sync_device_config(values: dict[str, Any]) -> None:
+    """Mirror registry integration fields into the poller's JSON configuration."""
+    with device_config_lock:
+        with DEFAULT_CONFIG.open(encoding="utf-8") as handle:
+            document = json.load(handle)
+        if document.get("schema_version") != 1 or not isinstance(document.get("devices"), list):
+            raise ValueError("Érvénytelen devices.json formátum.")
+
+        source_system = str(values["source_system"])
+        source_device_id = str(values["source_device_id"])
+        entry = next(
+            (
+                item for item in document["devices"]
+                if item.get("source_system") == source_system
+                and item.get("device_id") == source_device_id
+            ),
+            None,
+        )
+        if entry is None:
+            if source_system not in {"esp32", "tasmota"}:
+                return
+            entry = {"source_system": source_system, "device_id": source_device_id}
+            document["devices"].append(entry)
+
+        entry.update({
+            "hostname": values["hostname"] or source_device_id,
+            "expected_ip": values["expected_ip"] or "",
+            "mac_address": values["mac_address"] or "",
+            "enabled": bool(values["polling_enabled"] and values["is_active"]),
+        })
+
+        descriptor, temporary = tempfile.mkstemp(
+            prefix="devices.", suffix=".json", dir=DEFAULT_CONFIG.parent, text=True
+        )
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                json.dump(document, handle, ensure_ascii=False, indent=2)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, DEFAULT_CONFIG)
+        except Exception:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+            raise
+
+
 def optional_int(value: str | None) -> int | None:
     return int(value) if value and value.strip() else None
 
@@ -1050,7 +1100,7 @@ def load_energy_readings() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         )
         meters = rows_as_dicts(cursor)
         cursor.execute(
-            """SELECT r.id,r.recorded_at,r.reading_value,r.entry_source,r.note,
+            """SELECT r.id,r.meter_id,r.recorded_at,r.reading_value,r.entry_source,r.note,
                       m.display_name,m.energy_type,m.unit,
                       u.username AS recorded_by_name,
                       r.reading_value-LAG(r.reading_value) OVER
@@ -1091,6 +1141,14 @@ def format_local_time(value: datetime | None) -> str:
         return "nincs adat"
     utc_value = value.replace(tzinfo=UTC)
     return utc_value.astimezone(LOCAL_TIMEZONE).strftime("%Y. %m. %d. %H:%M:%S")
+
+
+@app.template_filter("local_datetime_input")
+def format_local_datetime_input(value: datetime | None) -> str:
+    if value is None:
+        return ""
+    utc_value = value.replace(tzinfo=UTC)
+    return utc_value.astimezone(LOCAL_TIMEZONE).strftime("%Y-%m-%dT%H:%M")
 
 
 @app.route("/setup", methods=["GET", "POST"])
@@ -1392,9 +1450,14 @@ def poll_status():
 @app.get("/energy")
 def energy() -> str:
     meters, readings = load_energy_readings()
+    try:
+        edit_reading_id = int(request.args["edit"])
+    except (KeyError, TypeError, ValueError):
+        edit_reading_id = None
     return render_template(
         "energy.html", meters=meters, readings=readings,
         now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
+        edit_reading_id=edit_reading_id,
         notice=session.pop("energy_notice", None),
     )
 
@@ -1538,6 +1601,7 @@ def download_backup(filename: str):
 
 
 @app.post("/energy/readings")
+@editor_required
 def create_energy_reading():
     validate_csrf()
     try:
@@ -1576,6 +1640,54 @@ def create_energy_reading():
         connection.close()
     session["energy_notice"] = {"kind": "success", "message": "Az óraállást rögzítettük."}
     return redirect(url_for("energy"))
+
+
+@app.post("/energy/readings/<int:reading_id>/edit")
+@editor_required
+def edit_energy_reading(reading_id: int):
+    validate_csrf()
+    try:
+        meter_id = int(request.form["meter_id"])
+        recorded_at = parse_local_datetime(request.form["recorded_at"])
+        reading_value = Decimal(request.form["reading_value"].replace(",", "."))
+        if reading_value < 0:
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    note = request.form.get("note", "").strip() or None
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            "SELECT 1 FROM energy_meter_readings WHERE id=? FOR UPDATE", (reading_id,)
+        )
+        if cursor.fetchone() is None:
+            abort(404)
+        cursor.execute("SELECT 1 FROM energy_meters WHERE id=? AND is_active=1", (meter_id,))
+        if cursor.fetchone() is None:
+            abort(400)
+        cursor.execute(
+            """UPDATE energy_meter_readings
+               SET meter_id=?,recorded_at=?,reading_value=?,entry_source='manual',
+                   recorded_by=?,note=?
+               WHERE id=?""",
+            (meter_id, recorded_at, reading_value, g.current_user["id"], note, reading_id),
+        )
+        connection.commit()
+    except mariadb.IntegrityError:
+        connection.rollback()
+        session["energy_notice"] = {
+            "kind": "warning", "message": "Ehhez a mérőhöz erre az időpontra már van óraállás."
+        }
+        return redirect(url_for("energy", edit=reading_id) + f"#reading-{reading_id}")
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["energy_notice"] = {"kind": "success", "message": "Az óraállást javítottuk."}
+    return redirect(url_for("energy") + f"#reading-{reading_id}")
 
 
 @app.post("/poll-now")
@@ -2616,7 +2728,7 @@ def create_device():
     try: values=device_form_values()
     except (KeyError,ValueError): abort(400)
     if not values["name"] or not values["source_device_id"]: abort(400)
-    connection=connect_database(); cursor=connection.cursor()
+    connection=connect_database(); cursor=connection.cursor(); created=False
     try:
         if values["room_id"]:
             cursor.execute("SELECT zone_id FROM rooms WHERE id=? AND is_active=1",(values["room_id"],)); row=cursor.fetchone()
@@ -2624,9 +2736,14 @@ def create_device():
             values["zone_id"]=row[0]
         cursor.execute("""INSERT INTO devices (room_id,zone_id,source_system,source_device_id,hostname,expected_ip,mac_address,name,device_type,device_type_id,manufacturer_id,access_mode,capability_mode,integration_role,ip_assignment,polling_enabled,control_enabled,poll_interval_seconds,min_target_temperature_c,max_target_temperature_c,is_active)
           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(values["room_id"],values["zone_id"],values["source_system"],values["source_device_id"],values["hostname"],values["expected_ip"],values["mac_address"],values["name"],"other",values["device_type_id"],values["manufacturer_id"],values["access_mode"],values["capability_mode"],values["integration_role"],values["ip_assignment"],values["polling_enabled"],values["control_enabled"],values["poll_interval_seconds"],values["min_target"],values["max_target"],values["is_active"])); device_id=cursor.lastrowid
-        save_device_capabilities(cursor,device_id); audit_registry(cursor,"device",device_id,"created",values); connection.commit()
+        save_device_capabilities(cursor,device_id); audit_registry(cursor,"device",device_id,"created",values); connection.commit(); created=True
     except mariadb.IntegrityError as error: connection.rollback(); session["registry_notice"]={"kind":"error","message":f"Az eszköz nem vehető fel: {error}"}
     finally: cursor.close(); connection.close()
+    if created:
+        try:
+            sync_device_config(values)
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            session["registry_notice"]={"kind":"warning","message":f"Az eszköz adatbázisba került, de a pollerkonfiguráció nem frissült: {error}"}
     return redirect(url_for("locations"))
 
 
@@ -2652,7 +2769,11 @@ def save_device(device_id: int):
         connection.commit()
     except Exception: connection.rollback(); raise
     finally: cursor.close(); connection.close()
-    session["registry_notice"]={"kind":"success","message":f"{values['name']} adatai elmentve."}
+    try:
+        sync_device_config(values)
+        session["registry_notice"]={"kind":"success","message":f"{values['name']} adatai és pollerkonfigurációja elmentve."}
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        session["registry_notice"]={"kind":"warning","message":f"Az adatbázis frissült, de a pollerkonfiguráció nem: {error}"}
     return redirect(url_for("locations"))
 
 

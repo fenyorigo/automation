@@ -92,9 +92,11 @@ dd.power-on { color: #d05a16; }
 .view-switch { display:flex; gap:6px; padding:4px; border:1px solid var(--line); border-radius:999px; background:var(--card); }
 .view-switch a { padding:8px 12px; border-radius:999px; color:var(--muted); font-size:.75rem; font-weight:800; text-decoration:none; }
 .view-switch a.selected { background:var(--ink); color:white; }
-.dashboard-filter { display:flex; justify-content:flex-end; margin:0 0 20px; }
+.dashboard-filter { display:flex; justify-content:flex-end; align-items:end; gap:14px; margin:0 0 20px; }
 .dashboard-filter label { width:min(100%,320px); color:var(--muted); font-size:.72rem; font-weight:700; }
 .dashboard-filter select { display:block; width:100%; min-height:42px; margin-top:6px; padding:7px 34px 7px 10px; border:1px solid var(--line); border-radius:10px; background:white; color:var(--ink); font:inherit; }
+.dashboard-filter .dashboard-filter-checkbox { display:flex; width:auto; min-height:42px; align-items:center; gap:8px; padding:0 12px; border:1px solid var(--line); border-radius:10px; background:white; color:var(--ink); cursor:pointer; white-space:nowrap; }
+.dashboard-filter-checkbox input { width:17px; height:17px; margin:0; accent-color:var(--green); }
 .device-type-groups { display:grid; gap:28px; }
 .device-type-group + .device-type-group { padding-top:24px; border-top:1px solid var(--line); }
 .device-type-heading { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-bottom:14px; }
@@ -263,6 +265,12 @@ dd.power-on { color: #d05a16; }
 .energy-reading-form label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .energy-reading-form input,.energy-reading-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
 .energy-reading-form button { margin-top:0; }
+.row-action-heading,.row-action { width:1%; text-align:center; }
+.edit-icon { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid var(--line); border-radius:9px; color:var(--green); font-size:1.1rem; font-weight:900; text-decoration:none; }
+.edit-icon:hover { background:var(--green-soft); }
+.reading-edit-row td { padding:14px; background:var(--paper); white-space:normal; }
+.energy-edit-form { margin-top:0; grid-template-columns:1fr 1.25fr 1fr 1.5fr auto auto; }
+.energy-edit-form .secondary-link { min-height:42px; }
 .backup-list { display:grid; gap:10px; margin-top:16px; }
 .backup-list article { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:14px; border:1px solid var(--line); border-radius:12px; }
 .backup-list strong,.backup-list small { display:block; }
@@ -358,6 +366,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .zone-block { padding:13px; }
   .account-menu { width:100%; justify-content:space-between; border-radius:14px; }
   .user-create-form,.user-list form { grid-template-columns:1fr; }
+  .energy-edit-form { grid-template-columns:1fr; }
   .analysis-status { grid-template-columns:1fr; }
   .analysis-experiment-form { grid-template-columns:1fr; }.analysis-experiment-form .wide,.analysis-actions { grid-column:auto; }.analysis-actions { flex-direction:column; }
   .climate-start-form,.climate-control-form,.climate-schedule-form,.manual-climate-form { grid-template-columns:1fr; }

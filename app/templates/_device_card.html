@@ -1,8 +1,8 @@
-<article id="device-{{ device.id }}" class="device-card {{ 'is-offline' if device.online is sameas false }} {{ 'is-manual' if device.is_manual_visual }}">
+<article id="device-{{ device.id }}" data-polling-enabled="{{ 'true' if device.polling_enabled else 'false' }}" class="device-card {{ 'is-offline' if device.polling_enabled and device.online is sameas false }} {{ 'is-manual' if device.is_manual_visual }}">
   <div class="card-heading">
     <div><p class="source">{{ device.source_label }}</p><h3>{{ device.name }}</h3></div>
-    <span class="badge {{ 'manual' if device.is_manual_visual else ('online' if device.online else 'offline') }}">
-      {{ 'Kézi állapot' if device.is_manual_visual else ('Elérhető' if device.online else 'Nem elérhető') }}
+    <span class="badge {{ 'manual' if device.is_manual_visual or not device.polling_enabled else ('online' if device.online else 'offline') }}">
+      {{ 'Kézi állapot' if device.is_manual_visual else ('Lekérdezés kikapcsolva' if not device.polling_enabled else ('Elérhető' if device.online else 'Offline')) }}
     </span>
   </div>
   <p class="device-poll-interval">Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}</p>
@@ -38,7 +38,7 @@
   <div class="card-footer"><span>Utolsó kézi mérés</span><time>{{ device.measurement_at|local_time }}</time></div>
   {% elif device.hostname %}<div class="card-footer"><span>{{ device.hostname }}</span><time>{{ device.last_poll_at|local_time }}</time></div>{% endif %}
   {% if device.room_name %}<p class="device-location">{{ device.zone_name or 'Zónán kívül' }} · {{ device.room_name }}</p>{% endif %}
-  {% if not device.online and device.error_message %}<p class="error-message">{{ device.error_code }}: {{ device.error_message }}</p>{% endif %}
+  {% if device.polling_enabled and not device.online and device.error_message %}<p class="error-message">{{ device.error_code }}: {{ device.error_message }}</p>{% endif %}
 
   {% if device.source_system == 'connectlife' or device.managed_manually %}
     {% if can_write and device.managed_manually %}

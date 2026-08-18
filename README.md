@@ -1,5 +1,7 @@
 # Home Automation
 
+Current application release: **1.0.0**.
+
 Local-first home climate and energy monitoring and control for ESP32/DS18B20
 sensors, Computherm thermostats, Hisense appliances through ConnectLife and
 Nous/Tasmota power meters.
@@ -47,6 +49,7 @@ Nous power-meter setup and voltage calibration are described in the
 [Nous/Tasmota guide](docs/nous-tasmota.md).
 The ongoing ESP32/DS18B20 physical-response experiments are recorded in the
 [calibration measurement log](docs/esp32-ds18b20-kalibracios-meresek.md).
+Release history is maintained in [CHANGELOG.md](CHANGELOG.md).
 
 ## Safety model
 
