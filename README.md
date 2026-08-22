@@ -1,6 +1,6 @@
 # Home Automation
 
-Current application release: **1.0.0**.
+Current application release: **1.1.0**.
 
 Local-first home climate and energy monitoring and control for ESP32/DS18B20
 sensors, Computherm thermostats, Hisense appliances through ConnectLife and

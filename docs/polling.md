@@ -305,15 +305,30 @@ Azonos kazánállapot ismételt mentése nem hoz létre hamis állapotváltozás
 szerviz külön űrlapon menthető, ezért a szerelői próba és az azt követő kézi
 kikapcsolás egymástól független esemény marad.
 
-## Időzített klímafutás
+## Programozott klímafutás
 
-A Klíma oldalon megadható a kezdési idő, a futásidő és a célhőmérséklet. Az
-időzítés adatbázisban marad, a poller pedig legfeljebb körülbelül 10 másodperces
-ellenőrzési időközzel indítja és állítja le az eszközt. Mindkét parancs
-ConnectLife-visszaolvasással ellenőrzött, bekerül a vezérlési auditba és a
-klímaesemény-naplóba is.
+A Klíma oldalon egy–nyolc egymás után végrehajtott lépés adható meg. A program
+közös kezdési idővel és helyiséggel rendelkezik; minden lépéshez külön
+futásidő, célhőmérséklet, ventilátorfokozat és továbblépési feltétel tartozik.
+A normál fokozatok mellett a ConnectLife külön `t_fan_mute` tulajdonságával
+vezérelt **Csendes** mód is választható.
 
-Ha a gép alszik az induláskor, de ébredéskor a megadott futási ablak még tart,
-a futás késve elindul, és a tényleges indulástól számított futásidő után áll le.
-Ha a teljes ablak alvás közben lejárt, a rendszer nem kapcsolja be utólag a
-klímát, hanem hibásként jelöli az időzítést.
+A továbblépés történhet a futásidő végén, vagy a helyiség kiválasztott aktív
+hőmérőjének friss értéke alapján. Négy feltétel választható: a mérés elérte a
+célértéket, illetve a célérték és a mért érték különbsége elérte a 0,5 °C-ot,
+elérte az 1,0 °C-ot, vagy szigorúan nagyobb 1,5 °C-nál. Csak a lépés indulása
+után mért, legfeljebb 15 perces, jó
+vagy érvényes mérés fogadható el. Szenzoros
+feltételnél a futásidő biztonsági maximum: ha nincs megfelelő mérés vagy nem
+teljesül a küszöb, annak lejártakor akkor is továbblép, illetve az utolsó
+lépésnél leáll.
+
+A program adatbázisban marad, a poller pedig legfeljebb körülbelül
+10 másodperces ellenőrzési időközzel indítja, módosítja és állítja le az
+eszközt. Minden parancs ConnectLife-visszaolvasással ellenőrzött, bekerül a
+vezérlési auditba és a klímaesemény-naplóba is.
+
+Ha a gép alszik az induláskor, de ébredéskor a lépések összes maximális
+futásidejéből képzett teljes ablak még tart, a program késve elindul. Ha a
+teljes ablak alvás közben lejárt, a rendszer nem kapcsolja be utólag a klímát,
+hanem hibásként jelöli a programot.

@@ -22,6 +22,7 @@ body { margin: 0; background: var(--paper); color: var(--ink); }
 .main-nav { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:16px; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-size: clamp(2rem, 6vw, 3.4rem); letter-spacing: -.055em; line-height: 1; }
+.app-version { display:inline-block; margin-left:.3em; color:var(--muted); font-size:.28em; font-weight:800; letter-spacing:.02em; vertical-align:middle; }
 h2 { font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.035em; }
 h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .eyebrow, .source { color: var(--green); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
@@ -60,6 +61,11 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .temperature-value { font-size: clamp(3.1rem, 8vw, 4.6rem); font-weight: 700; line-height: .85; letter-spacing: -.075em; }
 .temperature-unit { padding: 2px 0 0 8px; color: var(--muted); font-size: 1rem; font-weight: 700; }
 .temperature .stale-measurement { color: #b42318; font-weight: 900; }
+.temperature-mode-row { display:flex; align-items:center; justify-content:flex-end; gap:12px; margin:0 0 18px; color:var(--muted); font-size:.82rem; font-weight:800; }
+.temperature-mode-switch { flex-wrap:wrap; }
+.temperature-provenance { min-height:34px; margin:-9px 0 16px; color:var(--muted); font-size:.72rem; line-height:1.45; }
+.temperature-provenance strong { color:var(--ink); }
+.temperature-provenance.unavailable strong { color:#9a5b00; }
 .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; padding: 16px 0; border-block: 1px solid var(--line); }
 .state-grid div { min-width: 0; }
 dt { color: var(--muted); font-size: .7rem; }
@@ -132,6 +138,7 @@ dd.power-on { color: #d05a16; }
 .history-device-picker > small { display: block; margin: 0 0 8px; color: var(--muted); font-size: .68rem; }
 .history-device-picker > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; max-height: 210px; overflow-y: auto; }
 .history-device-picker label { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 7px 9px; border-radius: 8px; background: var(--paper); color: var(--ink); cursor: pointer; }
+.history-device-picker label.polling-disabled { color:#a85d00; font-weight:800; }
 .history-device-picker input { flex: 0 0 auto; width: 17px; height: 17px; accent-color: var(--green); }
 .history-device-picker span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-controls button { min-height: 44px; padding: 0 20px; border: 0; border-radius: 10px; background: var(--ink); color: white; font: inherit; font-weight: 800; }
@@ -310,6 +317,19 @@ dd.power-on { color: #d05a16; }
 .climate-start-form button { min-height:42px; border:0; border-radius:9px; padding:0 16px; background:var(--ink); color:white; font-weight:800; }
 .climate-control-form { grid-template-columns:1fr 1fr 1fr auto; }
 .climate-schedule-form { grid-template-columns:repeat(4,1fr) auto; }
+.climate-program-form { margin-top:16px; }
+.climate-program-header { display:grid; grid-template-columns:1fr 1.4fr; gap:12px; max-width:720px; }
+.climate-program-form label { color:var(--muted); font-size:.7rem; font-weight:700; }
+.climate-program-form input,.climate-program-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
+.climate-program-step { margin:16px 0 0; padding:14px; border:1px solid var(--line); border-radius:12px; }
+.climate-program-step legend { padding:0 6px; font-weight:800; }
+.program-step-fields { display:grid; grid-template-columns:repeat(3,minmax(140px,1fr)); gap:12px; align-items:end; }
+.program-step-fields .danger-button { min-height:42px; }
+.sensor-condition[hidden] { display:none; }
+.threshold-preview { display:block; min-height:1.2em; margin-top:4px; font-weight:600; }
+.climate-program-actions { display:flex; justify-content:space-between; gap:12px; margin-top:14px; }
+.climate-program-actions button { min-height:42px; border:0; border-radius:9px; padding:0 16px; background:var(--ink); color:white; font-weight:800; }
+.climate-program-actions .secondary-button { background:var(--paper); color:var(--ink); border:1px solid var(--line); }
 .climate-schedule-list { margin-top:18px; }
 .manual-climate-form { grid-template-columns:1fr 1fr 2fr auto; }
 .climate-control-actions { display:flex; align-items:end; }
@@ -331,6 +351,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .outdoor-temperature-card { max-width:calc((100% - 16px) / 2); }
 }
 @media (max-width: 600px) {
+  .temperature-mode-row { align-items:flex-start; justify-content:flex-start; flex-direction:column; }
   .topbar, main { width: min(100% - 20px, 1180px); }
   .topbar { align-items: start; padding-top: 24px; }
   .topbar { flex-wrap: wrap; }
@@ -369,7 +390,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .energy-edit-form { grid-template-columns:1fr; }
   .analysis-status { grid-template-columns:1fr; }
   .analysis-experiment-form { grid-template-columns:1fr; }.analysis-experiment-form .wide,.analysis-actions { grid-column:auto; }.analysis-actions { flex-direction:column; }
-  .climate-start-form,.climate-control-form,.climate-schedule-form,.manual-climate-form { grid-template-columns:1fr; }
+  .climate-start-form,.climate-control-form,.climate-schedule-form,.manual-climate-form,.climate-program-header,.program-step-fields { grid-template-columns:1fr; }
   .outdoor-source-list article { grid-template-columns:1fr; }
   .energy-meter-grid,.energy-reading-form { grid-template-columns:1fr; }
   .backup-list article { align-items:flex-start; flex-direction:column; }

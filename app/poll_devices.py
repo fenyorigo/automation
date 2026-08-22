@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "config" / "devices.json"
 CONNECTLIFE_MODE = {0: "fan", 1: "heat", 2: "cool", 3: "dry", 4: "auto"}
 CONNECTLIFE_FAN_SPEED = {
-    0: "auto", 5: "low", 6: "medium_low", 7: "medium",
+    0: "auto", 1: "quiet", 5: "low", 6: "medium_low", 7: "medium",
     8: "medium_high", 9: "high",
 }
 

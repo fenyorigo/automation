@@ -17,7 +17,18 @@
   {% elif device.source_system == 'tasmota' %}
   <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c if device.temperature_c is not none else '—' }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}"> W</span></div>
   {% else %}
-  <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c|temperature }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}">°C</span></div>
+  <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.display_temperature_is_stale }}">{{ device.display_temperature_c|temperature }}</span><span class="temperature-unit {{ 'stale-measurement' if device.display_temperature_is_stale }}">°C</span></div>
+  {% if device.source_system == 'esp32' %}
+    {% if temperature_mode == 'action' %}
+      {% if device.display_temperature_available %}
+      <p class="temperature-provenance"><strong>Cselekedeti</strong> · EMA {{ device.filter_tau_seconds // 60 }} perc · korrekció {{ '%+.3f'|format(device.calibration_offset_c|float) }} °C<br><time>{{ device.action_measurement_at|local_time }}</time></p>
+      {% else %}
+      <p class="temperature-provenance unavailable"><strong>Nincs cselekedeti adat</strong><br><span>A szenzor még nem kész vagy nincs döntési célra engedélyezve.</span></p>
+      {% endif %}
+    {% else %}
+      <p class="temperature-provenance"><strong>Nyers mérés</strong> · változatlan szenzoradat<br><time>{{ device.measurement_at|local_time }}</time></p>
+    {% endif %}
+  {% endif %}
   {% endif %}
   {% if device.source_system == 'tasmota' %}
   <dl class="state-grid">

@@ -46,19 +46,28 @@
 </section>
 
 <section class="history-panel">
-  <p class="eyebrow">Automatikus leállítás</p><h2>Időzített klímafutás</h2>
-  <p class="reset-explanation">A háttérfolyamat a megadott időben bekapcsolja, majd a futásidő végén kikapcsolja a klímát. A két művelet ugyanúgy visszaolvasással ellenőrzött és naplózott, mint a közvetlen UI-vezérlés.</p>
-  <form class="climate-start-form climate-schedule-form" method="post" action="{{ url_for('create_climate_schedule') }}">
+  <p class="eyebrow">Többlépéses vezérlés</p><h2>Programozott klímafutás</h2>
+  <p class="reset-explanation">A lépések egymás után futnak. A futásidő időalapú lépésnél a váltás ideje, szenzoros lépésnél biztonsági maximum. Szenzoros váltás csak a klímával azonos helyiség aktív hőmérőjének friss, a lépés kezdete után mért értékére történhet.</p>
+  <form id="climate-program-form" class="climate-program-form" method="post" action="{{ url_for('create_climate_schedule') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Helyiség<select name="device_id" required>{% for device in devices %}<option value="{{ device.id }}">{{ device.room_name }}</option>{% endfor %}</select></label>
-    <label>Kezdés<input type="datetime-local" name="starts_at" value="{{ now_local }}" required></label>
-    <label>Futásidő (perc)<input type="number" name="runtime_minutes" min="1" max="1440" value="40" required></label>
-    <label>Célhőmérséklet<input type="number" name="temperature_c" min="25" max="30" step="1" value="25" required></label>
-    <label>Ventilátorsebesség<select name="fan_speed" required><option value="" selected disabled>Válassz fokozatot</option>{% for value,label in [('auto','Automata'),('low','Alacsony'),('medium_low','Közepesen alacsony'),('medium','Közepes'),('medium_high','Középmagas'),('high','Magas')] %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
-    <button type="submit">Futás időzítése</button>
+    <div class="climate-program-header">
+      <label>Helyiség<select id="program-device" name="device_id" required>{% for device in devices %}<option value="{{ device.id }}">{{ device.room_name }}</option>{% endfor %}</select></label>
+      <label>Kezdés<input type="datetime-local" name="starts_at" value="{{ now_local }}" required></label>
+    </div>
+    <div id="climate-program-steps"></div>
+    <div class="climate-program-actions"><button type="button" id="add-program-step" class="secondary-button" aria-label="Új programlépés hozzáadása">+ Új lépés</button><button type="submit">Program mentése</button></div>
   </form>
+  <template id="climate-program-step-template"><fieldset class="climate-program-step"><legend><span class="step-number"></span>. lépés</legend><div class="program-step-fields">
+    <label>Futásidő / maximum (perc)<input type="number" name="runtime_minutes[]" min="1" max="1440" value="40" required></label>
+    <label>Célhőmérséklet<input class="program-target" type="number" name="temperature_c[]" min="25" max="30" step="1" value="25" required></label>
+    <label>Ventilátorsebesség<select name="fan_speed[]" required>{% for value,label in [('auto','Automata'),('low','Alacsony'),('medium_low','Közepesen alacsony'),('medium','Közepes'),('medium_high','Középmagas'),('high','Magas'),('quiet','Csendes')] %}<option value="{{ value }}" {{ 'selected' if value=='medium_high' }}>{{ label }}</option>{% endfor %}</select></label>
+    <label>Továbblépés<select class="program-transition" name="transition_type[]"><option value="duration">A futásidő végén</option><option value="sensor_below">Szenzor a küszöb alatt</option></select></label>
+    <label class="sensor-condition" hidden>Figyelt szenzor<select class="program-sensor" name="sensor_id[]"><option value="">Válassz szenzort</option>{% for device in devices %}{% for sensor in device.temperature_sensors %}<option value="{{ sensor.id }}" data-device="{{ device.id }}">{{ sensor.device_name or sensor.name }}</option>{% endfor %}{% endfor %}</select></label>
+    <label class="sensor-condition" hidden>Célérték és mérés különbsége<select class="program-condition" name="sensor_condition[]"><option value="0.0">Célérték elérve</option><option value="0.5">Legalább 0,5 °C</option><option value="1.0">Legalább 1,0 °C</option><option value="gt_1.5">Nagyobb mint 1,5 °C</option></select><small class="threshold-preview"></small></label>
+    <button type="button" class="remove-program-step danger-button" aria-label="Lépés törlése">Eltávolítás</button>
+  </div></fieldset></template>
   {% if schedules %}<div class="table-wrap climate-schedule-list"><table><thead><tr><th>Kezdés</th><th>Klíma</th><th>Beállítás</th><th>Állapot</th><th></th></tr></thead><tbody>{% for item in schedules %}<tr>
-    <td>{{ item.starts_at|local_time }}</td><td>{{ item.room_name }}</td><td>{{ item.target_temperature_c|temperature }} °C · {{ {'auto':'Automata','low':'Alacsony','medium_low':'Közepesen alacsony','medium':'Közepes','medium_high':'Középmagas','high':'Magas'}.get(item.fan_speed,item.fan_speed) }} · {{ item.runtime_minutes }} perc</td>
+    <td>{{ item.starts_at|local_time }}</td><td>{{ item.room_name }}</td><td>{% if item.steps %}{% for step in item.steps %}<small><strong>{{ step.step_no }}.</strong> {{ step.target_temperature_c|temperature }} °C · {{ {'auto':'Automata','low':'Alacsony','medium_low':'Közepesen alacsony','medium':'Közepes','medium_high':'Középmagas','high':'Magas','quiet':'Csendes'}.get(step.fan_speed,step.fan_speed) }} · max. {{ step.runtime_minutes }} perc{% if step.transition_type=='sensor_below' %} · {{ step.sensor_name }} {{ '<' if step.threshold_operator=='greater_than' else '≤' }} {{ (step.target_temperature_c-step.threshold_delta_c)|temperature }} °C{% endif %}{% if item.current_step_no==step.step_no %} <span class="badge online">aktuális</span>{% endif %}</small>{% endfor %}{% else %}{{ item.target_temperature_c|temperature }} °C · {{ {'auto':'Automata','low':'Alacsony','medium_low':'Közepesen alacsony','medium':'Közepes','medium_high':'Középmagas','high':'Magas','quiet':'Csendes'}.get(item.fan_speed,item.fan_speed) }} · {{ item.runtime_minutes }} perc{% endif %}</td>
     <td><span class="badge {{ 'online' if item.status=='running' else 'offline' if item.status=='failed' else 'manual' }}">{{ {'scheduled':'ütemezve','starting':'indítás','running':'fut','stopping':'leállítás','completed':'befejezve','cancelled':'törölve','failed':'hiba'}.get(item.status,item.status) }}</span>{% if item.error_message %}<small>{{ item.error_message }}</small>{% endif %}</td>
     <td>{% if item.status=='scheduled' %}<form method="post" action="{{ url_for('cancel_climate_schedule',schedule_id=item.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="danger-button">Törlés</button></form>{% endif %}</td>
   </tr>{% endfor %}</tbody></table></div>{% endif %}
@@ -128,5 +137,52 @@ function updateControl(){
   offButton.hidden=!powered;
 }
 if(device){device.addEventListener('change',updateControl);updateControl();}
+
+const programForm=document.getElementById('climate-program-form');
+const programDevice=document.getElementById('program-device');
+const programSteps=document.getElementById('climate-program-steps');
+const programTemplate=document.getElementById('climate-program-step-template');
+const addProgramStep=document.getElementById('add-program-step');
+function updateProgramSteps(){
+  if(!programSteps)return;
+  const steps=[...programSteps.querySelectorAll('.climate-program-step')];
+  steps.forEach((step,index)=>{
+    step.querySelector('.step-number').textContent=index+1;
+    step.querySelector('.remove-program-step').hidden=steps.length===1;
+    const transition=step.querySelector('.program-transition');
+    const sensorMode=transition.value==='sensor_below';
+    step.querySelectorAll('.sensor-condition').forEach(item=>item.hidden=!sensorMode);
+    const sensor=step.querySelector('.program-sensor');
+    sensor.required=sensorMode;
+    [...sensor.options].forEach(option=>{
+      if(!option.value)return;
+      const allowed=option.dataset.device===programDevice.value;
+      option.disabled=!allowed;
+      option.hidden=!allowed;
+      if(!allowed&&option.selected)sensor.value='';
+    });
+    const target=Number(step.querySelector('.program-target').value);
+    const condition=step.querySelector('.program-condition').value;
+    const delta=condition==='gt_1.5'?1.5:Number(condition);
+    const sign=condition==='gt_1.5'?'<':'≤';
+    step.querySelector('.threshold-preview').textContent=sensorMode&&target&&!Number.isNaN(delta)
+      ? `Továbblépés, ha a mérés ${sign} ${(target-delta).toFixed(1).replace('.',',')} °C` : '';
+  });
+}
+function addStep(){
+  if(programSteps.children.length>=8)return;
+  const fragment=programTemplate.content.cloneNode(true);
+  const step=fragment.querySelector('.climate-program-step');
+  step.querySelector('.program-transition').addEventListener('change',updateProgramSteps);
+  step.querySelector('.program-target').addEventListener('input',updateProgramSteps);
+  step.querySelector('.program-condition').addEventListener('change',updateProgramSteps);
+  step.querySelector('.remove-program-step').addEventListener('click',()=>{step.remove();updateProgramSteps();});
+  programSteps.appendChild(fragment); updateProgramSteps();
+}
+if(programForm){
+  addProgramStep.addEventListener('click',addStep);
+  programDevice.addEventListener('change',updateProgramSteps);
+  addStep();
+}
 </script>
 </body></html>

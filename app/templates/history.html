@@ -38,7 +38,7 @@
       <form class="history-controls" method="get">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <fieldset class="history-device-picker"><legend>Eszközök</legend><small>Tetszőleges számú görbe kijelölhető</small><div>
-          {% for device in devices %}<label><input type="checkbox" name="device" value="{{ device.id }}" {{ 'checked' if device in selected_devices }}><span>{{ device.name }}</span></label>{% endfor %}
+          {% for device in devices %}<label class="{{ 'polling-disabled' if not device.polling_enabled }}"{% if not device.polling_enabled %} title="A lekérdezés jelenleg ki van kapcsolva; a korábbi mérések továbbra is megjeleníthetők."{% endif %}><input type="checkbox" name="device" value="{{ device.id }}" {{ 'checked' if device in selected_devices }}><span>{{ device.name }}</span></label>{% endfor %}
         </div></fieldset>
         <label>Időtáv
           <select name="range">

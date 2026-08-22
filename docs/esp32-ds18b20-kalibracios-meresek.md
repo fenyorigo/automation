@@ -639,3 +639,350 @@ nyugodt szakasz alapeltérése, változásszám, teljes abszolút jelmozgás,
 mintaközi maximum, irányváltások, közös környezeti gerjesztésekre adott válasz,
 valamint később az azonos protokollú klímateszt. Az első sorozat régi és az új
 sorozat új eszközeit nem szabad egyidejű fizikai összeállításként értelmezni.
+
+### 10.1. A második sorozat fizikai módosításai
+
+Az `esp32-nappali` szondájára 2026. augusztus 19-én körülbelül 11:04-kor egy
+40 mm hosszú, 8 mm külső és 6,1 mm belső átmérőjű sárgaréz cső került. A cső
+paszta nélkül is szorosan illeszkedett; a lecsúszást a végénél szigetelőszalag
+akadályozta meg. Ez a továbbiakban a **csak rézcsöves** kialakítás.
+
+Az `esp32-rita` szondájára 2026. augusztus 19-én 17:33-kor egy valamivel
+40 mm-nél hosszabb, D8/D6,1 sárgaréz cső és egy perforált, dupla falú
+gyógyszeresdoboz került. Hővezető paszta ennél sem volt. A módosítás után kézi
+lekérdezés készült. A doboz mérete és furatozása:
+
+- külső átmérő: 48 mm;
+- magasság: 69 mm;
+- a paláston, az aljtól 44 mm-re: 4 × 8 mm-es furat;
+- a paláston, az aljtól 20 mm-re: 4 × 8 mm-es furat, 45 fokkal elfordítva;
+- a paláston, az aljtól 15 mm-re: 4 × 6 mm-es furat;
+- az aljon: 3 × 6 mm-es furat, egymástól 120 fokra, a perem közelében.
+
+A felhelyezési tranziens körülbelül 27–29 perc alatt csengett le. A kialakítás
+részletes első értékelése a
+[`2026-08-19-rita-doboz-cső-jegyzőkönyv.md`](2026-08-19-rita-doboz-cső-jegyzőkönyv.md)
+dokumentumban található.
+
+### 10.2. Az `esp32-halo` magas dobozos kialakítása
+
+A korábbi sorozatból származó `esp32-halo` 2026. augusztus 20-án került vissza
+az üres mérőhelyre. A szonda sárgaréz csövet és egy magasabb, egyfalú műanyag
+dobozt kapott, hővezető paszta nélkül. A cső pontos hosszát még rögzíteni kell;
+a kialakítás a körülbelül 40 mm-es kísérleti csövekhez hasonló.
+
+A doboz külső átmérője 48 mm, teljes magassága 89 mm; a nyak alatti, fúrható
+palástrész körülbelül 69 mm. A furatok elrendezése:
+
+- két szemközti függőleges sorban felülről lefelé 8–6–8–6 mm-es furatok;
+- az ezekre merőleges két szemközti sorban 8–6–8 mm-es furatok;
+- a második sorpár függőlegesen eltolt: felső 8 mm-es furata az első sorpár
+  felső 8 és az alatta levő 6 mm-es furata közé esik, majd a következő furatok
+  egymástól 15 mm-re vannak;
+- az aljon 4 × 6 mm-es furat található, egymástól 90 fokra, a perem közelében.
+
+A palást összes nyílásfelülete névlegesen körülbelül 572 mm², az aljé 113 mm²,
+együtt mintegy 685 mm². A doboz közelítő külső hengertérfogata 161 cm³, így a
+nyílásfelület/térfogat arány körülbelül 4,25 mm²/cm³; a Rita kisebb dobozánál
+ez hozzávetőleg 4,8 mm²/cm³. A műanyag pontos anyaga nem ismert; a PE/PP-hez
+való hasonlóság csak hipotézis.
+
+### 10.3. Beállás az `esp32-halo` visszahelyezése után
+
+A mérőléc 14:32–14:33 körül a szondákkal együtt leesett. A 14:30–14:45 között
+látható kisebb közös melegedés azonban a helyén maradó Computhermen is
+megjelenik, ezért nem tulajdonítható kizárólag a leesésnek; emberi jelenlét és
+légkeverés is valószínű magyarázat.
+
+Az `esp32-halo` 14:36-kor kapott tápot, ekkor engedélyeztük a lekérdezését és
+kézi kört is indítottunk. Az első, 14:36:22-es 29,625 °C-os érték még a
+megfogás hatása. A tranziens körülbelül 16:05-re lecsengett. 16:05:26 és
+16:33 között minden közös mintában azonos értéket adott a nyers
+`esp32-veronika` érzékelővel; az `esp32-ext` eközben 0,125–0,1875 °C-kal
+magasabban járt. Ez azt mutatja, hogy a nagyobb tehetetlenség nem okozott
+tartós nyugalmi eltolást.
+
+### 10.4. A 2026. augusztus 20-i klímateszt
+
+Az adatbázisban rögzített klímaüzem 18:00:13-tól 18:40:26-ig tartott,
+25 °C-os célértékkel és `medium_high` ventilátorfokozattal. A vezérlés az UI-ból
+történt. Körülbelül 18:41-kor automatikus, 18:45-kor kézi lekérdezés készült.
+
+| Érzékelő | Induló medián | Minimum | Esés | Minimum ideje | Legnagyobb becsült meredekség |
+|---|---:|---:|---:|---|---:|
+| `esp32-ext`, nyers referencia | 27,3125 °C | 23,8125 °C | 3,5000 °C | 18:25:59 | −0,345 °C/perc |
+| `esp32-veronika`, nyers | 27,1875 °C | 23,3125 °C | 3,8750 °C | 18:25:59 | −0,345 °C/perc |
+| `esp32-nappali`, rézcső | 27,0000 °C | 23,6875 °C | 3,3125 °C | 18:28:09 | −0,259 °C/perc |
+| `esp32-rita`, doboz + rézcső | 27,0625 °C | 24,5000 °C | 2,5625 °C | 18:32:29 | −0,144 °C/perc |
+| `esp32-halo`, magas doboz + rézcső | 27,2500 °C | 25,0000 °C | 2,2500 °C | 18:36:50 | −0,124 °C/perc |
+| `iot-computherm-emelet` | 27,3000 °C | 26,0000 °C | 1,3000 °C | 18:40:40 | −0,040 °C/perc |
+
+Az induló medián a 17:50–18:01 közötti mintákból készült. A magas dobozos
+`esp32-halo` esése 12,2%-kal kisebb, legnagyobb meredeksége körülbelül 14%-kal
+alacsonyabb volt a Rita dobozos érzékelőjénél, minimumát pedig 4 perc
+20 másodperccel később érte el. A két nyers kontroll átlagához képest az esés
+körülbelül 39%-kal, a maximális meredekség mintegy 64%-kal csökkent.
+
+Jellemző értékek közvetlenül a kikapcsolás környezetében:
+
+| Érzékelő | kb. 18:39 | kb. 18:45 |
+|---|---:|---:|
+| `esp32-ext` | 24,2500 °C | 24,7500 °C |
+| `esp32-nappali` | 24,0000 °C | 24,3750 °C |
+| `esp32-rita` | 24,5000 °C | 24,6250 °C |
+| `esp32-veronika` | 23,8125 °C | 24,4375 °C |
+| `esp32-halo` | 25,0625 °C | 25,1250 °C |
+| `iot-computherm-emelet` | 26,0000 °C | 26,0000 °C |
+
+Az `esp32-halo` a teljes klímaüzem alatt nem ment 25 °C alá. A kikapcsolás
+előtti viselkedése az eddigi DS18B20-kialakítások közül a Computherméhez állt a
+legközelebb, bár a minimumok között még így is körülbelül 1 °C maradt.
+
+### 10.5. Visszaállás és a helyiségek összenyitása
+
+18:40 és 19:52 között a hőmérséklet-emelkedések és átlagos meredekségeik:
+
+| Érzékelő | Emelkedés | Átlagos meredekség |
+|---|---:|---:|
+| `esp32-ext` | 2,1250 °C | 1,84 °C/óra |
+| `esp32-nappali` | 2,1250 °C | 1,84 °C/óra |
+| `esp32-rita` | 1,8125 °C | 1,57 °C/óra |
+| `esp32-veronika` | 2,3750 °C | 2,06 °C/óra |
+| `esp32-halo` | 1,4375 °C | 1,25 °C/óra |
+| `iot-computherm-emelet` | 0,6000 °C | 0,55 °C/óra |
+
+19:52-re az `esp32-halo` és az `esp32-ext` egyaránt 26,5 °C-ot mért, vagyis a
+nagyobb csillapítás nem eredményezett többórás késést. Ekkor a dolgozó és a
+háló ajtaja összenyílt. A hálóban levő, de az adatbázisban jelenleg
+`shelly-dolgozo` néven szereplő kézi Shelly-mérés 27,8 °C volt. 21:01-ig a nyers
+és csak rézcsöves érzékelők körülbelül 1,19 °C-kal, a Rita és Halo dobozos
+érzékelői 1,0 °C-kal, a Computherm 0,7 °C-kal emelkedtek.
+
+### 10.6. Szellőztetés és erős szél
+
+A teljes, több helyiséget érintő szellőztetés 21:01-kor indult; a naplóban a
+Dolgozó, Háló, Kis nappali, Kristófék és Veronika helyiségekre szerepel. Az
+indításkor rögzített Open-Meteo-érték 24,9 °C volt, de más helyi források ennél
+magasabb értéket jeleztek, ezért a szolgáltatói külső hőmérséklet bizonytalan.
+21:01 és 22:10 között erős szél fújt, majd a szél megszűnt, miközben a
+nyílászárók teljesen nyitva maradtak.
+
+| Érzékelő | Nettó változás | Legnagyobb mintaközi változás | Teljes abszolút jelmozgás |
+|---|---:|---:|---:|
+| `esp32-ext` | −1,5000 °C | 0,3750 °C | 3,6250 °C |
+| `esp32-veronika` | −1,5000 °C | 0,3125 °C | 3,8750 °C |
+| `esp32-nappali` | −1,3125 °C | 0,2500 °C | 3,3125 °C |
+| `esp32-rita` | −1,0000 °C | 0,1875 °C | 2,3750 °C |
+| `esp32-halo` | −1,0625 °C | 0,1250 °C | 1,9375 °C |
+| `iot-computherm-emelet` | −0,5000 °C | 0,2000 °C | 0,9000 °C |
+
+22:09 körül a nyers és csak rézcsöves DS18B20-ak 26,0–26,1875 °C-ot, a Rita
+26,3125 °C-ot, a Halo 26,4375 °C-ot, a Computherm pedig 27,0 °C-ot mutatott.
+22:10 és éjfél között valamennyi érzékelő ismét emelkedett: a gyorsabbak
+0,625–0,75 °C-kal, a Rita 0,5625 °C-kal, a Halo 0,5 °C-kal. A Halo teljes
+abszolút jelmozgása az erős szélben körülbelül fele volt a nyers érzékelőkének.
+
+### 10.7. Az éjszakai ajtómozgások hatása
+
+A dolgozószoba ajtaját körülbelül éjfélkor bukóra csukták, majd körülbelül
+06:00-kor ismét kinyitották. Ezek felhasználói becslések, ezért az időpontokat
+nem szabad percre pontos eseményként kezelni.
+
+23:59 körül az `esp32-ext` 26,875 °C-ot, a Nappali 26,625 °C-ot, a Rita
+26,875 °C-ot, a Veronika 26,8125 °C-ot, a Halo pedig 27,0 °C-ot mért. 00:30
+körül a gyorsabb érzékelők már 26,1875–26,5625 °C között voltak, míg a Rita és
+a Halo egyaránt 26,75 °C-ot, a Computherm 27,1 °C-ot jelzett.
+
+Éjfél és 06:00 között:
+
+| Érzékelő | Nettó változás | Teljes abszolút jelmozgás | Legnagyobb mintaközi változás |
+|---|---:|---:|---:|
+| `esp32-ext` | −0,8125 °C | 5,9375 °C | 0,2500 °C |
+| `esp32-nappali` | −0,8125 °C | 4,4375 °C | 0,1250 °C |
+| `esp32-veronika` | −0,8750 °C | 3,8750 °C | 0,1250 °C |
+| `esp32-rita` | −0,7500 °C | 2,1250 °C | 0,0625 °C |
+| `esp32-halo` | −0,7500 °C | 2,3750 °C | 0,0625 °C |
+| `iot-computherm-emelet` | −0,5000 °C | 0,7000 °C | 0,1000 °C |
+
+Az ajtó reggeli kinyitása után, körülbelül 06:09-kor erős hideg légimpulzus
+jelent meg. Az `esp32-ext` egyetlen mintában 26,0-ról 25,375 °C-ra esett; a
+Veronika és a Nappali szintén gyorsan követte. A Rita és a Halo első lépése
+mindössze −0,0625 °C volt. A minimumok 06:14 körül: Ext 25,0625 °C, Veronika
+25,1875 °C, Nappali 25,25 °C, Rita 25,875 °C, Halo 26,0 °C, Computherm 26,6 °C.
+A nyers érzékelők ezt követő gyors visszatérése alátámasztja, hogy légáramlási
+tranziens, nem pedig a helyiség teljes légtömegének ilyen gyors lehűlése történt.
+
+### 10.8. Következtetések és következő kontroll
+
+Az eddigi kialakítások közül a magas dobozos, rézcsöves `esp32-halo` adta a
+legerősebb és még használhatónak látszó fizikai csillapítást:
+
+- nyugalomban együtt tudott haladni a nyers `esp32-veronika` érzékelővel;
+- a klímatesztben nem ment 25 °C alá, és a Rita dobozánál is kisebb, későbbi
+  letörést mutatott;
+- erős szélben a nyers érzékelőkéhez képest körülbelül fele teljes jelmozgást
+  regisztrált;
+- az ajtónyitás rövid hideg impulzusát lényegesen tompította;
+- a többórás környezeti trendet ugyanakkor követte, tartós nyugalmi eltérés
+  nélkül.
+
+A következő kontrollban a csak rézcsöves `esp32-nappali` kapjon egy külön,
+kézzel készített, a Halo dobozával azonos névleges méretű és furatozású dobozt.
+A reprodukálhatóság vizsgálatához azonos hosszúságú D8/D6,1 rézcsövet, azonos
+pozíciót és továbbra is paszta nélküli szerelést kell használni. Legalább
+24 órás nyugodt mérés, majd azonos — 25 °C, 40 perc, középmagas ventilátor —
+klímateszt szükséges. Ha a két példány hasonló választ ad, a kialakítás
+üzemszerűen reprodukálhatónak tekinthető. A hővezető pasztát csak ezt követően,
+külön konfigurációváltásként érdemes bevezetni.
+
+### 10.9. A Nappali dobozolása és beállása (2026-08-21)
+
+Az `esp32-nappali` érzékelőre 15:34-kor került fel a Halo mintájára készített,
+magas gyógyszeresdoboz és a D8/D6,1 sárgaréz cső kombinációja. A szerelés előtti
+utolsó érték 26,4375 °C volt; az első, kezeléstől felmelegedett adatbázisbeli
+minta 15:33:06-kor 30,3125 °C. A felhasználói eseményidő és a mintabélyeg közti
+mintegy egyperces eltérés miatt a fizikai módosítás időpontját továbbra is
+15:34-ként kezeljük.
+
+A Nappali értéke 16:03:18-kor érte el ismét a Halo 27,0 °C-os értékét, vagyis a
+szerelési tranziens körülbelül 29 perc alatt csengett le. Ezután nem maradt
+rendellenes késés vagy elhúzódó túllövés; nyugalomban a Nappali a Halóval azonos
+trendet, de jellemzően körülbelül 0,3 °C-kal alacsonyabb abszolút szintet
+követett. Ez utóbbi kalibrációs ofszet, nem dinamikai hiba.
+
+### 10.10. Kontrollált klímateszt három dobozolt érzékelővel
+
+A kontrollált futás 17:30:12 és 18:20:21 között zajlott, 25 °C célértékkel és
+középmagas ventilátorfokozattal. A minimumok a leállás utáni első mintákban
+jelentek meg a mintavétel és a fizikai tehetetlenség miatt. Az induló érték a
+17:20–17:30 közötti medián.
+
+| Érzékelő | Induló medián | Minimum | Esés | Minimum időpontja | Legnagyobb meredekség | Legnagyobb mintaközi lépés |
+|---|---:|---:|---:|---|---:|---:|
+| `esp32-nappali`, magas doboz + rézcső | 27,3125 °C | 23,6250 °C | 3,6875 °C | 18:21:56 | −0,144 °C/perc | 0,3125 °C |
+| `esp32-rita`, kisebb doboz + rézcső | 27,5000 °C | 24,0625 °C | 3,4375 °C | 18:21:56 | −0,144 °C/perc | 0,3125 °C |
+| `esp32-halo`, magas doboz + rézcső | 27,6250 °C | 24,3750 °C | 3,2500 °C | 18:21:56 | −0,116 °C/perc | 0,2500 °C |
+| `esp32-ext`, csupasz kontroll | 27,8125 °C | 23,0625 °C | 4,7500 °C | 18:19:46 | −0,418 °C/perc | 0,8750 °C |
+| `esp32-veronika`, csupasz kontroll | 27,6875 °C | 23,0625 °C | 4,6250 °C | 18:19:46 | −0,388 °C/perc | 0,8125 °C |
+| `iot-computherm-emelet` | 27,7000 °C | 25,7000 °C | 2,0000 °C | 18:20:46 | −0,050 °C/perc | 0,5000 °C |
+
+A három dobozolt érzékelő ugyanabban a mintában érte el minimumát. A Nappali és
+a Rita legnagyobb meredeksége azonos, a Halo kissé erősebben csillapított. A
+dobozolt érzékelők teljes esése közötti legnagyobb különbség 0,4375 °C volt,
+miközben mindhárom válasza lényegesen tompább volt a csupasz kontrollokénál.
+
+### 10.11. Valós használati és éjszakai ellenőrzés
+
+19:22-kor a dolgozóban és a hálóban 26 °C-os, automata klímaüzem indult, nyitott
+ajtó mellett. A háló klímája körülbelül 19:55-kor állt le, ekkor az ajtót is
+becsukták; a dolgozó klímája 20:16-kor állt le. Ez nem kontrollált kísérlet,
+hanem a kialakítás valós használati ellenőrzése. A periodikus állapotészlelés
+időpontjai későbbiek lehetnek a tényleges kapcsolásoknál, ezért itt a feljegyzett
+kézi időpontok a mérvadók.
+
+| Érzékelő | Induló medián | Minimum | Esés | Minimum időpontja | Legnagyobb meredekség | Legnagyobb mintaközi lépés |
+|---|---:|---:|---:|---|---:|---:|
+| `esp32-nappali` | 26,0000 °C | 24,4375 °C | 1,5625 °C | 20:16:32 | −0,058 °C/perc | 0,1250 °C |
+| `esp32-rita` | 26,1875 °C | 24,7500 °C | 1,4375 °C | 20:16:32 | −0,058 °C/perc | 0,1250 °C |
+| `esp32-halo` | 26,3438 °C | 24,8750 °C | 1,4688 °C | 20:18:42 | −0,058 °C/perc | 0,1250 °C |
+
+Ebben a kevésbé mesterséges helyzetben a három teljes esés mindössze 0,125 °C-os
+tartományba került, a legnagyobb meredekségük azonos volt, minimumuk pedig
+2 perc 10 másodpercen belül jelentkezett. Ez különösen erős bizonyíték arra,
+hogy a kisebb Rita-doboz sem okoz gyakorlati dinamikai eltérést.
+
+A 20:40 és másnap 08:00 közötti hosszabb, változó légmozgású időszakban mindhárom
+dobozolt érzékelő legnagyobb mintaközi változása 0,125 °C, legnagyobb csökkenési
+meredeksége körülbelül −0,058 °C/perc volt. Teljes abszolút jelmozgásuk is szűk
+tartományba esett: Nappali 7,3125 °C, Rita 7,1875 °C, Halo 7,0625 °C. A
+minimumok 07:29 és 07:33 között következtek be.
+
+### 10.12. Következtetés a három doboz reprodukálhatóságáról
+
+A Nappali dobozolásától rendelkezésre álló adatok alapján a három dobozolt,
+rézcsöves érzékelő dinamikai viselkedése üzemi szempontból konzisztens és
+reprodukálható. A kisebb Rita-doboz nem bizonyult rosszabbnak; a doboztérfogat
+és a kézi furatolás fennmaradó eltérései kisebb hatásúak, mint az érzékelők
+állandó abszolút ofszetje és a helyi légáramlás.
+
+Nyugodt, illetve valós használati szakaszokon a Nappali jellemzően körülbelül
+0,31–0,38 °C-kal, a Rita körülbelül 0,13–0,19 °C-kal mért a Halo alatt. A
+kontrollált, erős klímaáramban ezek az eltérések átmenetileg nagyobbak lettek.
+Ezért a következő fejlesztési lépés már ne újabb dobozgeometria legyen, hanem a
+nyugalmi ofszetek hosszabb adatsorból történő meghatározása, majd a nyers érték
+mellett külön kalibrált, döntési hőmérséklet számítása.
+
+További fizikai munka legfeljebb reprodukálhatósági ellenőrzésként indokolt:
+
+- egységesíteni kell a rézcső hosszát, a szonda betolási mélységét, a doboz
+  tájolását és a kábel tehermentesítését;
+- egy vagy két új példányt ugyanazzal a fúrósablonnal érdemes elkészíteni, de
+  ez már gyártási ellenőrzés, nem új csillapítási elv;
+- a hővezető paszta külön A/B kísérletként még megvizsgálható, de jelenleg nem
+  ajánlott üzemszerűen bevezetni: adagolása új szórást okozhat, nehezíti a
+  szétszerelést, miközben a paszta nélküli kialakítás már teljesíti a célt;
+- a kültéri `esp32-ext` számára külön sugárzás- és csapadékvédő kialakítás kell;
+  annak optimalizálása nem azonos a beltéri légáramlás csillapításával.
+
+Összességében a beltéri fizikai kialakítás elérte azt a pontot, ahol a további
+finomhangolás várható haszna kisebb a kalibrációs ofszet és az időbeli szűrés
+szabályos, szoftveres kezelésének hasznánál.
+
+## 11. Első üzemi kalibráció és a további érzékelők bevezetése
+
+### 11.1. A három kész érzékelő első korrekciója
+
+A 2026-08-21 17:00–17:25 közötti nyugodt szakaszban a Computherm tartománya
+0,1 °C, a három kész DS18B20 tartománya egyenként 0,125 °C volt. Az időablak
+átlagai:
+
+| Érzékelő | Átlag | Bejegyzett additív korrekció | Korrigált átlag |
+|---|---:|---:|---:|
+| `esp32-nappali` | 27,2604 °C | +0,3750 °C | 27,6354 °C |
+| `esp32-rita` | 27,4261 °C | +0,2500 °C | 27,6761 °C |
+| `esp32-halo` | 27,5568 °C | +0,1250 °C | 27,6818 °C |
+| `iot-computherm-emelet` | 27,6500 °C | — | 27,6500 °C |
+
+A nyers eltérésekből kapott értékeket a DS18B20 0,0625 °C-os lépcsőjére
+igazítottuk. A három korrigált átlag a Computherm átlaga körül ±0,032 °C-on
+belül helyezkedik el. A korrekciók az adatbázis időben verziózott
+`sensor_calibrations` rekordjai; a helyiségekbe történő szétosztás után nem
+számolhatók automatikusan újra.
+
+Az első cselekedeti idősor paraméterei:
+
+- fizikai konfiguráció: `copper_tube_box`;
+- EMA időállandó: 240 másodperc;
+- cselekedeti pontok névleges időköze: 240 másodperc;
+- az EMA minden sikeres, kétpercenkénti mintával frissül;
+- új cselekedeti pont csak legalább 240 másodperc elteltével készül;
+- a nyers mérési sorok változatlanok maradnak;
+- minden származtatott sor hivatkozik a nyers mérésre és a kalibrációra.
+
+### 11.2. A hátralevő érzékelők kalibrációs lánca
+
+Az új érzékelők bevezetésének tervezett sorrendje:
+
+1. Az `esp32-ext` és az `esp32-veronika` rézcső + doboz kialakítást kap. A már
+   kalibrált Nappali, Rita és Halo közül lehetőleg mindhárom a mérésben marad.
+2. Az Ext és Veronika korrekcióját legalább két, már kalibrált kész érzékelő
+   korrigált értékeinek konszenzusához kell meghatározni.
+3. Ezután legalább két hitelesített kész érzékelő marad a kalibrációs helyen,
+   és melléjük kerül a következő három frissen dobozolt érzékelő.
+4. A rossz forrasztások miatt hiányzó utolsó példány pótlása után elegendő a
+   dolgozószobai referencia mellé ideiglenesen visszahozni például a hálószobai,
+   már kalibrált érzékelőt, és ezekhez igazítani az új példányt.
+
+Minden csoportnál ugyanazt a protokollt kell követni: a szerelési tranziens
+teljes lecsengése, több nyugodt vagy közel lineáris szakasz, ismert klíma- és
+szellőztetési események kizárása, majd a referenciaérzékelőkhöz viszonyított
+páronkénti különbségek robusztus mediánja. A kalibráció lezárása után a fizikai
+kialakítást, az ofszetet, az érvényesség kezdetét, a referenciákat és a
+bizonyítékként használt időablakokat együtt kell rögzíteni.
+
+A további kialakításhoz négy, a Halo és Nappali dobozával teljesen azonos doboz,
+valamint egy körülbelül 2 mm-rel kisebb átmérőjű és 2 mm-rel nagyobb magasságú
+doboz áll rendelkezésre. Az eddigi vizsgálatok alapján ez az eltérés nem várható,
+hogy érdemi dinamikai különbséget okozzon. Így valamennyi tervezett érzékelőhöz
+biztosítható a rézcső + doboz fizikai konfiguráció; a furatozást, a rézcső
+hosszát és a szonda betolási mélységét továbbra is egységesíteni kell.

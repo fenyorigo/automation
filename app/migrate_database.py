@@ -106,6 +106,22 @@ MIGRATIONS = (
         "v1_25_deterministic_reports",
         ROOT / "SQL" / "migrations" / "025_home_automation_v1.24_to_v1.25.sql",
     ),
+    (
+        "v1_26_programmed_climate_runs",
+        ROOT / "SQL" / "migrations" / "026_home_automation_v1.25_to_v1.26.sql",
+    ),
+    (
+        "v1_27_climate_sensor_threshold_operator",
+        ROOT / "SQL" / "migrations" / "027_home_automation_v1.26_to_v1.27.sql",
+    ),
+    (
+        "v1_28_climate_sensor_target_reached",
+        ROOT / "SQL" / "migrations" / "028_home_automation_v1.27_to_v1.28.sql",
+    ),
+    (
+        "v1_29_sensor_calibration_and_action_temperature",
+        ROOT / "SQL" / "migrations" / "029_home_automation_v1.28_to_v1.29.sql",
+    ),
 )
 
 

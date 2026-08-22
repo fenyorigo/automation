@@ -36,6 +36,7 @@ from database_backup import create_database_export, export_directory, list_datab
 from global_settings import SETTINGS as GLOBAL_SETTINGS, save as save_global_settings, values as global_setting_values
 from analysis_experiment import build_evidence
 from deterministic_report import GENERATOR_VERSION, generate_report
+from version import APP_VERSION
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -212,7 +213,11 @@ def authenticate_request():
 @app.context_processor
 def authentication_context() -> dict[str, Any]:
     user = getattr(g, "current_user", None)
-    return {"current_user": user, "can_write": bool(user and user["role"] == "editor")}
+    return {
+        "current_user": user,
+        "can_write": bool(user and user["role"] == "editor"),
+        "app_version": APP_VERSION,
+    }
 
 
 def editor_required(function):
@@ -230,7 +235,7 @@ def load_history_devices() -> list[dict[str, Any]]:
     try:
         cursor.execute(
             """
-            SELECT DISTINCT d.id, d.name, d.source_system
+            SELECT DISTINCT d.id, d.name, d.source_system, d.polling_enabled
             FROM devices d
             JOIN sensors s ON s.device_id = d.id AND s.is_active = 1
             WHERE d.is_active = 1 AND s.sensor_type = 'temperature'
@@ -702,7 +707,10 @@ def gnuplot_quote(value: str) -> str:
 
 
 def render_temperature_svg(
-    series: list[tuple[str, list[tuple[datetime, float]]]], title: str
+    series: list[tuple[str, list[tuple[datetime, float]]]],
+    title: str,
+    started_at: datetime,
+    ended_at: datetime,
 ) -> bytes:
     if GNUPLOT_BIN is None:
         raise RuntimeError(GNUPLOT_ERROR or "A gnuplot nem érhető el.")
@@ -726,6 +734,12 @@ def render_temperature_svg(
             f'"{gnuplot_quote(str(path))}" using 1:2 with lines lw 2.5 lc rgb "{palette[index % len(palette)]}" title "{gnuplot_quote(name)}"'
             for index, (name, path) in enumerate(data_paths)
         ]
+        local_started_at = started_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
+        local_ended_at = ended_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
+        x_range = (
+            f'["{local_started_at.strftime("%Y-%m-%dT%H:%M:%S")}":'
+            f'"{local_ended_at.strftime("%Y-%m-%dT%H:%M:%S")}"]'
+        )
         script_path.write_text(
             "\n".join(
                 [
@@ -735,6 +749,7 @@ def render_temperature_svg(
                     f'set title "{gnuplot_quote(title)}" textcolor rgb "#14251f"',
                     'set xdata time',
                     'set timefmt "%Y-%m-%dT%H:%M:%S"',
+                    f'set xrange {x_range}',
                     'set format x "%m.%d\\n%H:%M" timedate',
                     'set ylabel "Hőmérséklet (°C)"',
                     'set grid xtics ytics lc rgb "#dcd9ce"',
@@ -772,6 +787,11 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
               sr.value AS temperature_c, s.sensor_type AS measurement_type,
               s.unit AS measurement_unit, sr.quality AS measurement_quality,
               sr.observed_at AS measurement_at,
+              dtr.action_temperature_c,
+              dtr.observed_at AS action_measurement_at,
+              sc.calibration_offset_c,
+              sc.filter_tau_seconds,
+              sc.calculation_version AS temperature_calculation_version,
               (SELECT er.value
                  FROM sensors es
                  JOIN sensor_readings er ON er.sensor_id=es.id
@@ -808,6 +828,14 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                 WHERE sr2.sensor_id = s.id
                 ORDER BY sr2.observed_at DESC, sr2.id DESC LIMIT 1
               )
+            LEFT JOIN derived_temperature_readings dtr
+              ON dtr.id = (
+                SELECT dtr2.id FROM derived_temperature_readings dtr2
+                WHERE dtr2.sensor_id = s.id AND dtr2.is_action_point = 1
+                  AND dtr2.action_temperature_c IS NOT NULL
+                ORDER BY dtr2.observed_at DESC, dtr2.id DESC LIMIT 1
+              )
+            LEFT JOIN sensor_calibrations sc ON sc.id = dtr.calibration_id
             LEFT JOIN device_states ds
               ON ds.id = (
                 SELECT ds2.id FROM device_states ds2
@@ -1017,7 +1045,7 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
     cursor = connection.cursor()
     try:
         cursor.execute(
-            """SELECT d.id,d.name,r.name AS room_name,d.source_puid,
+            """SELECT d.id,d.name,d.room_id,r.name AS room_name,d.source_puid,
                       s.power,s.target_temperature_c,s.fan_speed,
                       s.observed_at AS state_observed_at
                FROM devices d JOIN rooms r ON r.id=d.room_id
@@ -1029,6 +1057,17 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
                ORDER BY r.name,d.name"""
         )
         devices = rows_as_dicts(cursor)
+        for device in devices:
+            cursor.execute(
+                """SELECT s.id,s.name,d.name AS device_name
+                   FROM sensors s
+                   LEFT JOIN devices d ON d.id=s.device_id
+                   WHERE s.is_active=1 AND s.sensor_type='temperature'
+                     AND COALESCE(s.room_id,d.room_id)=?
+                   ORDER BY d.name,s.name""",
+                (device["room_id"],),
+            )
+            device["temperature_sensors"] = rows_as_dicts(cursor)
         cursor.execute(
             """SELECT e.id,e.device_id,d.name AS device_name,r.name AS room_name,
                       e.started_at,e.ended_at,e.started_target_temperature_c,
@@ -1055,13 +1094,30 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
         attempts = rows_as_dicts(cursor)
         cursor.execute(
             """SELECT s.id,s.starts_at,s.runtime_minutes,s.target_temperature_c,s.fan_speed,s.status,
+                      s.current_step_no,
                       s.actual_started_at,s.actual_ended_at,s.error_message,
                       d.name AS device_name,r.name AS room_name,u.username
                FROM climate_control_schedules s JOIN devices d ON d.id=s.device_id
                JOIN rooms r ON r.id=d.room_id JOIN app_users u ON u.id=s.created_by
                ORDER BY s.starts_at DESC,s.id DESC LIMIT 50"""
         )
-        return devices, events, attempts, rows_as_dicts(cursor)
+        schedules = rows_as_dicts(cursor)
+        for schedule in schedules:
+            cursor.execute(
+                """SELECT ps.step_no,ps.runtime_minutes,ps.target_temperature_c,
+                          ps.fan_speed,ps.transition_type,ps.threshold_delta_c,
+                          ps.threshold_operator,
+                          ps.actual_started_at,ps.actual_ended_at,ps.transition_reason,
+                          COALESCE(sd.name,psn.name) AS sensor_name
+                   FROM climate_program_steps ps
+                   LEFT JOIN sensors sn ON sn.id=ps.sensor_id
+                   LEFT JOIN devices sd ON sd.id=sn.device_id
+                   LEFT JOIN sensors psn ON psn.id=ps.sensor_id
+                   WHERE ps.schedule_id=? ORDER BY ps.step_no""",
+                (schedule["id"],),
+            )
+            schedule["steps"] = rows_as_dicts(cursor)
+        return devices, events, attempts, schedules
     finally:
         cursor.close()
         connection.close()
@@ -1363,6 +1419,27 @@ def dashboard() -> str:
     if requested_view in {"device", "room"}:
         session["dashboard_view"] = requested_view
     view_mode = session.get("dashboard_view", "device")
+    requested_temperature = request.args.get("temperature")
+    if requested_temperature in {"raw", "action"}:
+        session["dashboard_temperature"] = requested_temperature
+    temperature_mode = session.get("dashboard_temperature", "raw")
+    now_utc = datetime.now(UTC).replace(tzinfo=None)
+    for device in devices:
+        use_action = temperature_mode == "action" and device["source_system"] == "esp32"
+        if use_action:
+            device["display_temperature_c"] = device["action_temperature_c"]
+            device["display_temperature_at"] = device["action_measurement_at"]
+            device["display_temperature_kind"] = "Cselekedeti hőmérséklet"
+            device["display_temperature_available"] = device["action_temperature_c"] is not None
+        else:
+            device["display_temperature_c"] = device["temperature_c"]
+            device["display_temperature_at"] = device["measurement_at"]
+            device["display_temperature_kind"] = "Nyers mérés"
+            device["display_temperature_available"] = device["temperature_c"] is not None
+        device["display_temperature_is_stale"] = bool(
+            device["display_temperature_at"]
+            and now_utc - device["display_temperature_at"] > timedelta(hours=1)
+        )
     successful = sum(1 for item in devices if item["online"])
     monitored_count = sum(1 for item in devices if item["polling_enabled"])
     latest_poll = max(
@@ -1379,6 +1456,7 @@ def dashboard() -> str:
         poll_marker=latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
         poll_notice=session.pop("poll_notice", None),
         view_mode=view_mode,
+        temperature_mode=temperature_mode,
         outdoor_temperature=outdoor_temperature,
         device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_temperature),
@@ -2283,17 +2361,43 @@ def create_climate_schedule():
     validate_csrf()
     try:
         device_id = int(request.form["device_id"])
-        temperature = int(request.form["temperature_c"])
-        runtime = int(request.form["runtime_minutes"])
-        fan_speed = request.form["fan_speed"]
-        if fan_speed not in FAN_SPEED_VALUES:
+        runtimes = [int(value) for value in request.form.getlist("runtime_minutes[]")]
+        temperatures = [int(value) for value in request.form.getlist("temperature_c[]")]
+        fan_speeds = request.form.getlist("fan_speed[]")
+        transitions = request.form.getlist("transition_type[]")
+        sensor_values = request.form.getlist("sensor_id[]")
+        condition_values = request.form.getlist("sensor_condition[]")
+        lengths = {len(runtimes),len(temperatures),len(fan_speeds),len(transitions),len(sensor_values),len(condition_values)}
+        if lengths != {len(runtimes)} or not 1 <= len(runtimes) <= 8:
             raise ValueError
         starts_at = parse_local_datetime(request.form["starts_at"])
         starts = datetime.fromisoformat(starts_at)
     except (KeyError, TypeError, ValueError):
         abort(400)
     now = datetime.now(UTC).replace(tzinfo=None)
-    if not 25 <= temperature <= 30 or not 1 <= runtime <= 1440 or starts < now - timedelta(minutes=5):
+    if starts < now - timedelta(minutes=5):
+        abort(400)
+    steps: list[dict[str, Any]] = []
+    try:
+        for runtime, temperature, fan_speed, transition, sensor_value, condition_value in zip(
+            runtimes, temperatures, fan_speeds, transitions, sensor_values, condition_values
+        ):
+            if not 1 <= runtime <= 1440 or not 25 <= temperature <= 30 or fan_speed not in FAN_SPEED_VALUES:
+                raise ValueError
+            if transition not in {"duration","sensor_below"}:
+                raise ValueError
+            sensor_id = int(sensor_value) if transition == "sensor_below" else None
+            condition_map={"0.0":(Decimal("0.0"),"at_least"),
+                           "0.5":(Decimal("0.5"),"at_least"),
+                           "1.0":(Decimal("1.0"),"at_least"),
+                           "gt_1.5":(Decimal("1.5"),"greater_than")}
+            if transition == "sensor_below" and condition_value not in condition_map:
+                raise ValueError
+            delta,operator=condition_map[condition_value] if transition == "sensor_below" else (None,None)
+            steps.append({"runtime":runtime,"temperature":temperature,"fan_speed":fan_speed,
+                          "transition":transition,"sensor_id":sensor_id,"delta":delta,
+                          "operator":operator})
+    except (ValueError, InvalidOperation):
         abort(400)
     if starts < now:
         starts = now
@@ -2301,11 +2405,23 @@ def create_climate_schedule():
     connection=connect_database(); cursor=connection.cursor()
     try:
         cursor.execute(
-            """SELECT 1 FROM devices WHERE id=? AND is_active=1
+            """SELECT room_id FROM devices WHERE id=? AND is_active=1
                AND source_system='connectlife' AND room_id IS NOT NULL AND source_puid IS NOT NULL""",
             (device_id,),
         )
-        if cursor.fetchone() is None: abort(404)
+        device_row = cursor.fetchone()
+        if device_row is None: abort(404)
+        sensor_ids = {step["sensor_id"] for step in steps if step["sensor_id"] is not None}
+        if sensor_ids:
+            placeholders = ",".join("?" for _ in sensor_ids)
+            cursor.execute(
+                f"""SELECT s.id FROM sensors s LEFT JOIN devices d ON d.id=s.device_id
+                    WHERE s.id IN ({placeholders}) AND s.is_active=1
+                      AND s.sensor_type='temperature' AND COALESCE(s.room_id,d.room_id)=?""",
+                (*sensor_ids,device_row[0]),
+            )
+            if {int(row[0]) for row in cursor.fetchall()} != sensor_ids:
+                abort(400)
         cursor.execute(
             """SELECT 1 FROM climate_control_schedules
                WHERE device_id=? AND status IN ('scheduled','starting','running','stopping')
@@ -2313,19 +2429,30 @@ def create_climate_schedule():
         )
         if cursor.fetchone() is not None:
             connection.rollback()
-            session["climate_log_notice"]={"kind":"warning","message":"Ehhez a klímához már tartozik függő vagy futó időzítés."}
+            session["climate_log_notice"]={"kind":"warning","message":"Ehhez a klímához már tartozik függő vagy futó program."}
             return redirect(url_for("climate_log"))
         cursor.execute(
             """INSERT INTO climate_control_schedules
-               (device_id,starts_at,runtime_minutes,target_temperature_c,fan_speed,created_by)
-               VALUES (?,?,?,?,?,?)""",
-            (device_id,starts_at,runtime,temperature,fan_speed,g.current_user["id"]),
+               (device_id,starts_at,runtime_minutes,target_temperature_c,fan_speed,current_step_no,created_by)
+               VALUES (?,?,?,?,?,NULL,?)""",
+            (device_id,starts_at,steps[0]["runtime"],steps[0]["temperature"],
+             steps[0]["fan_speed"],g.current_user["id"]),
         )
+        schedule_id = int(cursor.lastrowid)
+        for step_no, step in enumerate(steps, 1):
+            cursor.execute(
+                """INSERT INTO climate_program_steps
+                   (schedule_id,step_no,runtime_minutes,target_temperature_c,fan_speed,
+                    transition_type,sensor_id,threshold_delta_c,threshold_operator)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                (schedule_id,step_no,step["runtime"],step["temperature"],step["fan_speed"],
+                 step["transition"],step["sensor_id"],step["delta"],step["operator"]),
+            )
         connection.commit()
     except Exception:
         connection.rollback(); raise
     finally: cursor.close(); connection.close()
-    session["climate_log_notice"]={"kind":"success","message":"A klímafutás időzítését elmentettük."}
+    session["climate_log_notice"]={"kind":"success","message":"A programozott klímafutást elmentettük."}
     return redirect(url_for("climate_log"))
 
 
@@ -2343,7 +2470,7 @@ def cancel_climate_schedule(schedule_id: int):
     finally: cursor.close(); connection.close()
     session["climate_log_notice"]={
         "kind":"success" if changed else "warning",
-        "message":"Az időzítést töröltük." if changed else "Az időzítés már nem törölhető.",
+        "message":"A programot töröltük." if changed else "A program már nem törölhető.",
     }
     return redirect(url_for("climate_log"))
 
@@ -2526,7 +2653,9 @@ def history_chart() -> Response:
     if not series:
         abort(404)
     try:
-        svg = render_temperature_svg(series, "Hőmérsékletek összehasonlítása")
+        svg = render_temperature_svg(
+            series, "Hőmérsékletek összehasonlítása", started_at, ended_at
+        )
     except (RuntimeError, OSError, subprocess.SubprocessError):
         abort(503)
     response = Response(svg, mimetype="image/svg+xml")

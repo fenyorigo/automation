@@ -41,6 +41,15 @@ lehet kijelentkezni.
 A kezdőlap az adatbázisban levő **utolsó ismert állapotot** mutatja. Az oldal
 megnyitása vagy frissítése önmagában nem kérdezi le az eszközöket.
 
+Az ESP32-k kijelzése a **Nyers mérés** és a **Cselekedeti** hőmérséklet között
+váltható. A választás az Eszközök, valamint a Zónák és helyiségek nézetben
+egyaránt érvényes, tehát nem kötődik zónához. A munkamenet megőrzi a választást.
+A cselekedeti érték csak kész `rézcső + doboz` kialakítással, érvényes
+kalibrációval és döntési engedéllyel rendelkező ESP–DS szenzornál jelenik meg.
+Más ESP32-nél a felület nem helyettesíti észrevétlenül nyers értékkel, hanem
+jelzi, hogy még nincs cselekedeti adat. A kártya megmutatja az EMA
+időállandóját, a kalibrációs korrekciót és a cselekedeti pont időpontját is.
+
 ### Nézetváltás
 
 - **Eszközök:** az eszközök típus szerint csoportosítva jelennek meg
@@ -100,8 +109,17 @@ Ezen az oldalon a hőmérsékleti idősorok vizsgálhatók.
    időablak ettől az időponttól indul; üresen hagyva az időtáv a jelenig tart.
 4. Nyomd meg a **Megjelenítés** gombot.
 
+A lekérdezési körből kivett eszközök neve narancssárga, félkövér felirattal
+jelenik meg. Ezek továbbra is kijelölhetők, így a korábban eltárolt méréseik
+összehasonlíthatók az aktuálisan működő eszközök adataival.
+
 A kijelölt eszközök közös időtengelyen, külön színű görbékkel jelennek meg. A
 jelmagyarázat azonosítja a görbéket, alattuk pedig eszközönként látható:
+
+Üres kezdő időpontnál a grafikon jobb széle mindig az oldal lekérésekor
+aktuális időpont. Ha egy kiválasztott eszköz lekérdezése korábban megszűnt, az
+utolsó mérésétől a jelenig üres szakasz marad; az időtengely nem rövidül az
+utolsó rendelkezésre álló adatponthoz.
 
 - minimum;
 - átlag;
@@ -367,7 +385,7 @@ változások később értelmezhetők.
 
 ## 12. Klíma
 
-Ez az oldal tényleges eszközvezérlést, automatikus időzítést, eseménynaplót és
+Ez az oldal tényleges eszközvezérlést, programozott futást, eseménynaplót és
 auditot is tartalmaz.
 
 ### 12.1 Közvetlen klímavezérlés
@@ -389,29 +407,40 @@ ventilátorsebesség változik. Az üzemmódot és a kiegészítő programokat e
 funkció nem módosítja. A sikeres visszaellenőrzéshez a ventilátorfokozatnak is
 egyeznie kell a kéréssel.
 
-### 12.2 Időzített klímafutás
+### 12.2 Programozott klímafutás
 
-Az időzítő kontrollált, automatikusan lezáruló futást készít.
+A programozott futás egy vagy több, automatikusan egymás után végrehajtott
+klímalépést készít.
 
 1. Válaszd ki a helyiséget.
 2. Add meg a kezdési dátumot és időt. Az aktuális idő megadásával az indítás
    gyakorlatilag azonnali.
-3. Add meg a futásidőt percben.
-4. Add meg a célhőmérsékletet (jelenleg 25–30 °C).
-5. Válassz automata vagy rögzített ventilátorfokozatot.
-6. Nyomd meg a **Futás időzítése** gombot.
+3. Az első lépéshez add meg a futásidőt, célhőmérsékletet (25–30 °C) és a
+   ventilátorfokozatot. A **Csendes** is választható.
+4. Válaszd ki a továbblépést:
+   - **A futásidő végén**: a megadott idő elteltével indul a következő lépés;
+   - **Szenzor a küszöb alatt**: válassz az adott helyiség aktív hőmérői közül,
+     majd válaszd ki, hogy a mérés érje el a célértéket, vagy a célérték és a
+     mérés különbsége legyen legalább 0,5 °C, legalább 1,0 °C, illetve szigorúan
+     1,5 °C-nál nagyobb.
+5. Szenzoros váltásnál a futásidő biztonsági maximumként működik. Csak a lépés
+   kezdete után készült, legfeljebb 15 perces mérés válthat tovább.
+6. A **+ Új lépés** gombbal adj hozzá további sorokat. Legfeljebb nyolc lépés
+   menthető; az utolsó feltételének teljesülésekor a klíma kikapcsol.
+7. Nyomd meg a **Program mentése** gombot.
 
-Az időzítés adatbázisban marad, ezért az oldal bezárható. A poller körülbelül
-10 másodpercenként ellenőrzi az esedékes műveleteket. Az indítás és leállítás
-is visszaolvasással ellenőrzött és auditált.
+A program és minden lépése adatbázisban marad, ezért az oldal bezárható. A
+poller körülbelül 10 másodpercenként ellenőrzi az esedékes műveleteket. Az
+indítás, minden paraméterváltás és a leállítás is visszaolvasással ellenőrzött
+és auditált.
 
 Állapotok:
 
 - **ütemezve:** még nem indult el, törölhető;
 - **indítás / leállítás:** a parancs végrehajtása folyamatban;
-- **fut:** a klíma bekapcsolt, az automatikus leállítás várható;
+- **fut:** a klíma bekapcsolt; a listában az aktuális programlépés is látszik;
 - **befejezve:** az automatikus leállítás igazolt;
-- **törölve:** a még el nem indult időzítést kézzel törölték;
+- **törölve:** a még el nem indult programot kézzel törölték;
 - **hiba:** a parancs vagy annak visszaellenőrzése sikertelen.
 
 Ha a Mac az indulás idején alszik, de ébredéskor az eredeti futási ablak még
@@ -462,8 +491,9 @@ szerkesztői hozzáférés véletlen megszüntetését.
 ### Kontrollált klímateszt
 
 1. Ellenőrizd, hogy nincs aktív szellőztetés vagy más zavaró esemény.
-2. A Klíma menüben készíts időzített futást kezdéssel, célértékkel és
-   futásidővel.
+2. A Klíma menüben készíts programozott futást kezdéssel és egy vagy több,
+   célértéket, ventilátorfokozatot, futásidőt és továbblépési feltételt tartalmazó
+   lépéssel.
 3. Ne mozgasd a szenzorokat.
 4. A futás és visszaállás után a Mérési előzményekben jelöld ki együtt az
    érintett ESP32-ket, Computhermet és szükség szerint Hisense eszközt.

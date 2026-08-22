@@ -25,9 +25,23 @@ Ez a dokumentáció a MariaDB alapú, forrásfüggetlen adatbázis-sémát írja
 - `devices`: eszközök, például klíma, ESP32 gateway, termosztát
 - `sensors`: szenzorok, például DS18B20, ConnectLife beltéri hőmérséklet, Computherm hőmérséklet
 - `sensor_readings`: mért értékek idősorokhoz
+- `sensor_calibrations`: az ESP–DS fizikai kialakításának és kalibrációjának
+  időben verziózott története
+- `derived_temperature_readings`: ofszetkompenzált, EMA-szűrt és ritkábban
+  publikált cselekedeti hőmérsékletek
+- `derived_temperature_sources`: a származtatott értékek pontos forráslánca
 - `device_states`: eszközállapotok, például üzemmód, be-/kikapcsolás, ventilátorsebesség
 - `deterministic_reports`: kereshető, időbélyegzett automatikus jelentések,
   verziózott szabályokkal, bizonyítékokkal és az eredeti ténycsomaggal
+
+## Kalibrált és cselekedeti hőmérséklet
+
+A `sensor_readings` nyers értékei változatlanok. Származtatott érték csak olyan
+ESP32-hőmérőhöz készül, amelynek az adott időpontban érvényes
+`copper_tube_box` konfigurációja és bekapcsolt `decision_enabled` jelzője van.
+Az additív ofszet után az EMA minden sikeres mintával frissül. A cselekedeti
+érték azonban csak az `action_interval_seconds` idő leteltekor jelenik meg; az
+alapértelmezett időállandó és publikálási időköz egyaránt 240 másodperc.
 
 ## Seed fájlok
 

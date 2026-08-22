@@ -9,6 +9,7 @@ from typing import Any
 import mariadb
 
 from poll_devices import DeviceConfig, PollResult
+from temperature_derivation import derive_temperature
 
 
 DEVICE_METADATA = {
@@ -100,7 +101,12 @@ class Database:
             if result.success:
                 for measurement in result.measurements:
                     sensor_id = self._upsert_sensor(cursor, device_id, config, measurement)
-                    self._insert_measurement(cursor, sensor_id, result, measurement)
+                    raw_reading_id = self._insert_measurement(
+                        cursor, sensor_id, result, measurement
+                    )
+                    self._insert_derived_temperature(
+                        cursor, sensor_id, raw_reading_id, result, measurement
+                    )
                 if result.state is not None:
                     self._insert_state(cursor, device_id, config, result)
             self._insert_attempt(cursor, device_id, result, duration_ms)
@@ -202,7 +208,7 @@ class Database:
         sensor_id: int,
         result: PollResult,
         measurement: dict[str, Any],
-    ) -> None:
+    ) -> int:
         timestamp_token = result.observed_at.replace("-", "").replace(":", "").replace(".", "")
         source_event_id = (
             f"{result.source_system}:{measurement['sensor_id']}:measurement:{timestamp_token}"
@@ -224,6 +230,99 @@ class Database:
                 source_event_id,
                 json_value(measurement.get("raw", measurement)),
             ),
+        )
+        return int(cursor.lastrowid)
+
+    @staticmethod
+    def _insert_derived_temperature(
+        cursor: mariadb.Cursor,
+        sensor_id: int,
+        raw_reading_id: int,
+        result: PollResult,
+        measurement: dict[str, Any],
+    ) -> None:
+        if (
+            result.source_system != "esp32"
+            or measurement.get("sensor_type") != "temperature"
+            or measurement.get("value") is None
+            or measurement.get("quality", "invalid") != "good"
+        ):
+            return
+        observed_at = datetime.fromisoformat(result.observed_at.replace("Z", "+00:00")).replace(
+            tzinfo=None
+        )
+        cursor.execute(
+            """
+            SELECT id,calibration_offset_c,filter_tau_seconds,
+                   action_interval_seconds,calculation_version
+            FROM sensor_calibrations
+            WHERE sensor_id=? AND physical_configuration='copper_tube_box'
+              AND decision_enabled=1 AND valid_from<=?
+              AND (valid_until IS NULL OR valid_until>?)
+            ORDER BY valid_from DESC,id DESC LIMIT 1
+            """,
+            (sensor_id, observed_at, observed_at),
+        )
+        calibration = cursor.fetchone()
+        if calibration is None:
+            return
+        calibration_id, offset_c, tau_seconds, interval_seconds, version = calibration
+        cursor.execute(
+            """
+            SELECT filtered_temperature_c,observed_at,source_from,sample_count
+            FROM derived_temperature_readings
+            WHERE sensor_id=? AND calibration_id=?
+            ORDER BY observed_at DESC,id DESC LIMIT 1
+            """,
+            (sensor_id, calibration_id),
+        )
+        previous = cursor.fetchone()
+        cursor.execute(
+            """
+            SELECT observed_at FROM derived_temperature_readings
+            WHERE sensor_id=? AND calibration_id=? AND is_action_point=1
+            ORDER BY observed_at DESC,id DESC LIMIT 1
+            """,
+            (sensor_id, calibration_id),
+        )
+        action_row = cursor.fetchone()
+        derived = derive_temperature(
+            raw_value=float(measurement["value"]),
+            offset_c=float(offset_c),
+            observed_at=observed_at,
+            tau_seconds=int(tau_seconds),
+            action_interval_seconds=int(interval_seconds),
+            previous_filtered=float(previous[0]) if previous else None,
+            previous_observed_at=previous[1] if previous else None,
+            last_action_at=action_row[0] if action_row else None,
+            source_from=previous[2] if previous else None,
+            sample_count=int(previous[3]) if previous else 0,
+        )
+        cursor.execute(
+            """
+            INSERT INTO derived_temperature_readings
+              (sensor_id,raw_reading_id,calibration_id,observed_at,
+               calibrated_temperature_c,filtered_temperature_c,
+               action_temperature_c,is_action_point,source_from,source_to,
+               sample_count,calculation_version)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                sensor_id, raw_reading_id, calibration_id, observed_at,
+                derived.calibrated, derived.filtered, derived.action,
+                derived.is_action_point, derived.source_from, observed_at,
+                derived.sample_count, version,
+            ),
+        )
+        derived_id = int(cursor.lastrowid)
+        cursor.execute(
+            """
+            INSERT INTO derived_temperature_sources
+              (derived_reading_id,source_sensor_id,source_reading_id,
+               source_role,source_weight,accepted)
+            VALUES (?,?,?,'primary',1,1)
+            """,
+            (derived_id, sensor_id, raw_reading_id),
         )
 
     @staticmethod

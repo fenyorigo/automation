@@ -156,6 +156,8 @@ szenzoraira kell alkalmazni, nem a teljes ház bármely érzékelőjére.
 
 Hisense klíma vezérlésénél a beltéri egység saját hőmérséklete csak tájékoztató
 adat: a mennyezet közelében mér, ezért nem ez a helyiség mérvadó érzékelője.
+A klímafutások során megfigyelt minimum–maximum jellegű mozgása sem alkalmas
+helyiségi szabályozási feltételnek vagy programlépés-váltás kiváltására.
 A döntést az adott helyiség elfogadott ESP-mérése alapján kell meghozni.
 
 - Hűtés nem indítható, ha a helyiség bármely elfogadott, mérvadó érzékelője

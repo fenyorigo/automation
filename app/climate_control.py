@@ -15,6 +15,7 @@ FAN_SPEED_VALUES = {
     "medium": "7",
     "medium_high": "8",
     "high": "9",
+    "quiet": "1",
 }
 FAN_SPEED_CODES = {value: key for key, value in FAN_SPEED_VALUES.items()}
 
@@ -34,7 +35,10 @@ def state_of(appliance: Any) -> dict[str, Any]:
         "power": bool(status.get("t_power")),
         "target_temperature_c": status.get("t_temp"),
         "mode": status.get("t_work_mode"),
-        "fan_speed": FAN_SPEED_CODES.get(str(status.get("t_fan_speed")), str(status.get("t_fan_speed"))),
+        "fan_speed": (
+            "quiet" if str(status.get("t_fan_mute")).lower() in {"1", "true"}
+            else FAN_SPEED_CODES.get(str(status.get("t_fan_speed")), str(status.get("t_fan_speed")))
+        ),
         "raw": status,
     }
 
@@ -55,7 +59,7 @@ def find_appliance(appliances: Any, wifi_id: str) -> Any:
 
 async def control_climate(
     wifi_id: str, desired_power: bool, temperature_c: int | None,
-    fan_speed: str | None = None,
+    fan_speed: str | None = None, *, allow_running_update: bool = False,
 ) -> ClimateControlResult:
     username = os.getenv("CONNECTLIFE_USERNAME")
     password = os.getenv("CONNECTLIFE_PASSWORD")
@@ -66,7 +70,7 @@ async def control_climate(
     try:
         appliance = find_appliance(await api.get_appliances(), wifi_id)
         preflight = state_of(appliance)
-        if preflight["power"] == desired_power:
+        if preflight["power"] == desired_power and not (desired_power and allow_running_update):
             action = "bekapcsolva" if desired_power else "kikapcsolva"
             return ClimateControlResult(
                 "rejected", preflight, error_code="state_precondition",
@@ -82,6 +86,7 @@ async def control_climate(
                 )
             properties["t_temp"] = str(temperature_c)
             properties["t_fan_speed"] = FAN_SPEED_VALUES[fan_speed]
+            properties["t_fan_mute"] = "1" if fan_speed == "quiet" else "0"
         await api.update_appliance(appliance.puid, properties)
 
         verified = None

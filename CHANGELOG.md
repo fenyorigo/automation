@@ -3,6 +3,29 @@
 A projekt a szemantikus verziózás elvét követi. A kiadás dátumai budapesti
 helyi dátumok.
 
+## 1.1.0 — 2026-08-22
+
+Kalibrált ESP32/DS18B20 hőmérsékleti feldolgozás és programozott klímaüzem.
+
+### Új funkciók
+
+- Többlépéses programozott klímafutás, lépésenkénti célhőmérséklettel,
+  ventilátorfokozattal, maximális futásidővel és szenzorfeltétellel.
+- Időben verziózott ESP–DS fizikai konfigurációk és kalibrációs korrekciók.
+- A nyers adatok változatlan megőrzése mellett EMA-szűrt, önálló cselekedeti
+  hőmérsékleti idősor és teljes forráskövetés.
+- A főoldalon zónafüggetlen váltás a nyers és cselekedeti ESP32-hőmérséklet
+  között, az ofszet, időállandó és mérési időpont kijelzésével.
+- A még nem kalibrált vagy nem kész szenzorok egyértelmű elkülönítése.
+
+### Dokumentáció és adatbázis
+
+- A kalibrációs jegyzőkönyv kiegészült a doboz–rézcső kontrollmérésekkel, az
+  első üzemi korrekciókkal és a további érzékelők kalibrációs láncával.
+- Új v1.26–v1.29 adatbázis-migrációk a programozott klímaüzemhez és a
+  származtatott hőmérsékleti adatokhoz.
+- Frissített használati, polling-, adatbázis- és döntési logika dokumentáció.
+
 ## 1.0.0 — 2026-08-18
 
 Az első egységesen verziózott, napi használatra alkalmas kiadás.
