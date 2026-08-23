@@ -986,3 +986,59 @@ doboz áll rendelkezésre. Az eddigi vizsgálatok alapján ez az eltérés nem v
 hogy érdemi dinamikai különbséget okozzon. Így valamennyi tervezett érzékelőhöz
 biztosítható a rézcső + doboz fizikai konfiguráció; a furatozást, a rézcső
 hosszát és a szonda betolási mélységét továbbra is egységesíteni kell.
+
+### 11.3. Nyolc kész érzékelő kontrollált klímatesztje (2026-08-23)
+
+A nyolc, rézcsővel és dobozzal kialakított ESP32–DS18B20 érzékelő
+együttes vizsgálatához a dolgozószobai klíma 17:42-kor indult, 24 °C-os
+célértékkel és középmagas ventilátorfokozattal. 17:43-kor kézi
+lekérdezés történt. A klíma 18:32-kor állt le, ekkor újabb kézi
+lekérdezés indult; a ventilátor körülbelül 30 másodperccel később állt
+meg, amit egy további kézi kör követett. A teljes klímafutás 50 perc volt.
+
+A klíma leállítása után a dolgozószoba ajtaja és ablaka zárva maradt. A
+zavartalan visszaállást 19:13-ig mértük. Ekkor egyszerre történt meg a
+dolgozó és a háló összenyitása, valamint a dolgozószobai szellőztetés
+megkezdése; 19:14:22-kor kézi lekérdezés futott. A 19:13 utáni adatokat
+ezért nem használjuk a klíma utáni zavartalan visszaállás értékeléséhez.
+Az alábbi időpontok helyi, CEST idők; a MariaDB-ben tárolt UTC
+időbélyegeket az elemzéskor helyi időre alakítottuk.
+
+| Érzékelő | Induláskori érték | Leálláskori minimum | Teljes esés | 19:11 körüli érték |
+|---|---:|---:|---:|---:|
+| `esp32-ext` | 24,9375 °C | 21,8750 °C | 3,0625 °C | 23,7500 °C |
+| `esp32-dolgozo` | 24,8125 °C | 22,2500 °C | 2,5625 °C | 23,6875 °C |
+| `esp32-halo` | 24,8750 °C | 22,0000 °C | 2,8750 °C | 23,6875 °C |
+| `esp32-kisnappali` | 24,9375 °C | 22,1250 °C | 2,8125 °C | 23,8125 °C |
+| `esp32-kristofek` | 24,6875 °C | 22,3750 °C | 2,3125 °C | 23,5625 °C |
+| `esp32-nappali` | 24,5625 °C | 21,5625 °C | 3,0000 °C | 23,3750 °C |
+| `esp32-rita` | 24,6875 °C | 21,8750 °C | 2,8125 °C | 23,5000 °C |
+| `esp32-veronika` | 24,6875 °C | 21,9375 °C | 2,7500 °C | 23,6250 °C |
+| `iot-computherm-emelet` | 25,0000 °C | 23,3000 °C | 1,7000 °C | 23,9000 °C |
+
+Az ESP-érzékelők induláskori teljes tartománya 0,375 °C volt. A
+leállításkori minimumok teljes tartománya 0,8125 °C-ra nőtt, de ezt az
+`esp32-nappali` lefelé kilógó értéke határozta meg; a Nappali nélkül a
+többi hét érzékelő továbbra is pontosan 0,5 °C-os sávban maradt. A
+Nappali már induláskor is körülbelül 0,19 °C-kal a nyolc ESP mediánja
+alatt mért; a leállásra ez a különbség körülbelül 0,41 °C-ra nőtt.
+Látványos kilógásának tehát egyik része állandó ofszet, kisebb része pedig
+dinamikai eltérés.
+
+A hűtés végén a Nappali görbéje már lapos volt, ezért nem elszaladó vagy
+instabil érzékelőről van szó. A visszamelegedés során 19:11-re a nyolc ESP
+ismét 0,4375 °C-os tartományba rendeződött. A 19:14:22-es, közvetlenül a
+szellőztetés indítása utáni kézi mérésben a tartomány 0,375 °C volt, és a
+görbék még felfelé haladtak; a szellőztetés hatása ebben a mintában még nem
+jelent meg.
+
+A Computherm esése 1,7 °C, az ESP-k szenzoronkénti esésének mediánja
+2,8125 °C volt. Ez ismét igazolja, hogy a Computherm háza és belső
+feldolgozása a klíma légáramának hatását az elkészített rézcsöves-dobozos
+DS18B20 kialakításnál is erősebben csillapítja.
+
+A teszt összességében a rézcső + doboz konstrukció reprodukálhatóságát
+támasztja alá. Az állandó, néhány tized fokos szenzoreltérés kalibrációs
+korrekcióval kezelhető. A Nappalit nem kell hibásnak minősíteni: dinamikája
+kissé gyorsabb volt, de a zárt szobás visszaállás végére ismét beilleszkedett
+a közös, legfeljebb 0,5 °C-os sávba.
