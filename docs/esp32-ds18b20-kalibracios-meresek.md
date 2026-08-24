@@ -1042,3 +1042,68 @@ támasztja alá. Az állandó, néhány tized fokos szenzoreltérés kalibráci�
 korrekcióval kezelhető. A Nappalit nem kell hibásnak minősíteni: dinamikája
 kissé gyorsabb volt, de a zárt szobás visszaállás végére ismét beilleszkedett
 a közös, legfeljebb 0,5 °C-os sávba.
+
+### 11.4. A mérési hely légáramlás-kitettségének vizsgálata (2026-08-24)
+
+A szenzorok fizikai kialakításának egységesítése után a következő kérdés az
+volt, hogy a mérési hely mennyire befolyásolja a klíma működése alatt mért
+hőmérsékletet. A cél nem a lehető leggyorsabb szenzorválasz, hanem a helyiség
+jellemző levegő-hőmérsékletének mérése, a klíma irányított légáramának lehető
+legkisebb közvetlen hatásával.
+
+Az `esp32-nappali` és az `esp32-halo` érzékelőt 2026. augusztus 24-én
+áthelyeztük a klímával szemközti falhoz. A mozgatás idejére mindkét eszközt
+kivettük a lekérdezési körből. Az új helyen 08:14-kor kapcsoltuk vissza őket,
+és ekkor kézi lekérdezés történt. A szerelési tranziens lecsengése után a két,
+azonos rézcső + doboz kialakítású érzékelő eltérése 09:00-tól jellemzően
+0,2 °C alatt maradt. Nyugalmi állapotban valamennyi ESP-érzékelő és a
+Computherm együttesen 1 °C-os teljes tartományon belül helyezkedett el.
+
+A kontrollált hűtési teszt előtt, 16:00 és 18:15 között az ESP-érzékelők
+lassan, közel lineárisan melegedtek. A becsült meredekség szenzortól függően
++0,02 és +0,08 °C/óra között volt; ez megfelelő, nyugodt kiindulási szakaszt
+adott. A dolgozószobai klíma 18:15-kor indult, 24 °C-os célértékkel és
+középmagas ventilátorfokozattal. Induláskor kézi lekérdezés történt. A klímát
+18:56-kor kapcsoltuk ki, ekkor, majd a ventilátor teljes megállása után ismét
+kézi lekérdezés futott. A tényleges klímaüzem 41 perc volt. Az időpontok
+helyi, CEST idők.
+
+| Érzékelő | Esés kezdete a klímaindítástól | A 0,5 °C-os esés ideje | Teljes esés | Lineáris meredekség a klímaüzemben |
+|---|---:|---:|---:|---:|
+| `esp32-halo` – áthelyezett | 6,5 perc | 10,7 perc | 2,1250 °C | −3,443 °C/óra |
+| `esp32-nappali` – áthelyezett | 6,5 perc | 10,7 perc | 2,2604 °C | −3,633 °C/óra |
+| `esp32-dolgozo` | 4,3 perc | 8,6 perc | 2,4375 °C | −3,716 °C/óra |
+| `esp32-kisnappali` | 4,3 perc | 8,6 perc | 2,5104 °C | −3,852 °C/óra |
+| `esp32-kristofek` | 6,5 perc | 10,7 perc | 2,4167 °C | −3,830 °C/óra |
+| `esp32-ext` | 4,3 perc | 8,6 perc | 3,0000 °C | −4,484 °C/óra |
+| `esp32-veronika` | 4,3 perc | 8,6 perc | 2,9896 °C | −4,578 °C/óra |
+| `esp32-rita` | 4,3 perc | 8,6 perc | 3,1250 °C | −4,771 °C/óra |
+| `iot-computherm-emelet` | 10,1 perc | 20,2 perc | 1,7000 °C | −2,513 °C/óra |
+
+Az áthelyezett Nappali–Halo páros körülbelül 2,2 perccel később kezdett
+reagálni, és a 0,5 °C-os csökkenést is körülbelül 2,1 perccel később érte el,
+mint a légáramlásnak leginkább kitett érzékelők. Teljes esésük 2,13–2,26 °C
+volt, ami 0,7–1,0 °C-kal kisebb az `ext`, `veronika` és `rita` érzékelők
+2,99–3,13 °C-os esésénél. A két áthelyezett érzékelő egymáshoz közeli
+meredeksége és teljes esése a fizikai kialakítás reprodukálhatóságát is
+megerősíti.
+
+A klíma leállítása után valamennyi érzékelőn gyors kezdeti visszapattanás,
+majd lassuló emelkedés jelent meg. A szenzorok 19:58-ig nem érték el a klíma
+előtti szintet, de ez nem tekinthető elégtelen visszaállásnak: a helyiség a
+41 perces klímaüzem során ténylegesen lehűlt. A gyors első szakasz elsősorban
+a hideg légáramlás megszűnését, a későbbi lassabb szakasz pedig a helyiség
+termikus kiegyenlítődését mutatja.
+
+A mérés alapján a klímával szemközti fal jobb mérési hely: mérhetően csökkenti
+a közvetlen légáramlás okozta letörés meredekségét és nagyságát. A hatás nem
+tűnik el teljesen, mert az érzékelőknek a helyiség valódi lehűlését továbbra is
+követniük kell. A végleges telepítésnél ezért a rézcső + doboz kialakítás
+mellett a szenzor elhelyezése is elsőrendű szabályozási paraméter. A
+hőmérséklet-változás meredeksége diagnosztikai jelként használható a túlzott
+légáramlás-kitettség felismerésére; a rossz mérési hely hatását nem szabad
+pusztán erősebb szoftveres szűréssel elfedni.
+
+A 19:58-kor megkezdett szellőztetés adatai ebben az alfejezetben szándékosan
+nem szerepelnek; azokat elegendő mérési pont összegyűlése után külön kell
+értékelni.
