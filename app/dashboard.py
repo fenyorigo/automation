@@ -33,7 +33,12 @@ from poll_scheduler import run_cycle
 from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_active
 from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
 from database_backup import create_database_export, export_directory, list_database_exports
-from global_settings import SETTINGS as GLOBAL_SETTINGS, save as save_global_settings, values as global_setting_values
+from global_settings import (
+    SETTINGS as GLOBAL_SETTINGS,
+    reload_environment,
+    save as save_global_settings,
+    values as global_setting_values,
+)
 from analysis_experiment import build_evidence
 from deterministic_report import GENERATOR_VERSION, generate_report
 from version import APP_VERSION
@@ -1653,6 +1658,34 @@ def global_settings() -> str:
             session["global_settings_notice"] = {"kind":"error","message":str(error)}
         return redirect(url_for("global_settings"))
     return render_template("global_settings.html",settings=GLOBAL_SETTINGS,values=global_setting_values(),notice=session.pop("global_settings_notice",None))
+
+
+@app.post("/global-settings/reload")
+@editor_required
+def reload_global_settings():
+    validate_csrf()
+    try:
+        changed, restart_required = reload_environment()
+        global GNUPLOT_BIN, GNUPLOT_ERROR
+        GNUPLOT_BIN, GNUPLOT_ERROR = find_gnuplot()
+        if restart_required:
+            message = (
+                f"A .env fájlt újratöltöttük; {len(changed)} érték változott. "
+                "Az alábbi beállításokhoz az alkalmazást is újra kell indítani: "
+                + ", ".join(restart_required)
+                + "."
+            )
+            kind = "warning"
+        elif changed:
+            message = f"A .env fájlt újratöltöttük; {len(changed)} érték azonnal frissült."
+            kind = "success"
+        else:
+            message = "A .env fájlt újratöltöttük; nem találtunk változást."
+            kind = "success"
+        session["global_settings_notice"] = {"kind": kind, "message": message}
+    except (OSError, ValueError) as error:
+        session["global_settings_notice"] = {"kind": "error", "message": str(error)}
+    return redirect(url_for("global_settings"))
 
 
 @app.post("/backups")

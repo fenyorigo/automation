@@ -1107,3 +1107,107 @@ pusztán erősebb szoftveres szűréssel elfedni.
 A 19:58-kor megkezdett szellőztetés adatai ebben az alfejezetben szándékosan
 nem szerepelnek; azokat elegendő mérési pont összegyűlése után külön kell
 értékelni.
+
+### 11.5. A közös kalibráció lezárása és az üzemi telepítés megkezdése (2026-08-26)
+
+A közös kalibráció lezárhatóságát a 2026. augusztus 25. 00:00 CEST után
+keletkezett korrigált adatokkal ellenőriztük. Az elemzés 1219 olyan közös,
+kétperces időablakot talált, amelyben mind a nyolc elkészült ESP32–DS18B20
+érzékelőhöz rendelkezésre állt mérés. A nyolc korrigált érték egy időablakon
+belüli legnagyobb és legkisebb értéke közötti különbség:
+
+- átlagosan 0,2441 °C volt;
+- legfeljebb 0,5000 °C volt;
+- az időablakok 100%-ában legfeljebb 0,5 °C maradt.
+
+Ez már nem pillanatnyi egyezés, hanem több mint ezer közös mintán igazolt
+stabilitás. A fizikai rézcső + doboz kialakítás, az egyedi kalibrációs
+korrekciók és az első időbeli szűrés együtt elegendően stabilak az üzemi
+telepítés megkezdéséhez. A szenzorok további közös mérése várhatóan már csak
+marginálisan pontosítaná az eredményt, ezért a közös kalibrációt ezzel lezárjuk.
+
+#### 11.5.1. Rögzített első kalibrációs korrekciók
+
+| Érzékelő | Additív korrekció |
+|---|---:|
+| `esp32-ext` | +0,0625 °C |
+| `esp32-dolgozo` | +0,1875 °C |
+| `esp32-halo` | +0,1250 °C |
+| `esp32-kisnappali` | +0,0625 °C |
+| `esp32-kristofek` | +0,3125 °C |
+| `esp32-nappali` | +0,3750 °C |
+| `esp32-rita` | +0,2500 °C |
+| `esp32-veronika` | +0,2500 °C |
+
+A korrekciókat az adatbázis időben verziózott `sensor_calibrations` rekordjai
+tárolják. A helyiségekbe helyezés után ezeket nem szabad az eltérő helyiségek
+mérései alapján automatikusan újraszámolni. Az onnantól jelentkező tartós
+eltérés már valódi térbeli hőmérséklet-különbség, eltérő elhelyezés vagy külön
+vizsgálandó szenzorhiba lehet.
+
+#### 11.5.2. A cselekvési hőmérséklet első rögzített számítási módja
+
+A nyers mérési érték változatlanul megmarad. A kalibrált hőmérséklet:
+
+```text
+T_kalibrált = T_nyers + kalibrációs_korrekció
+```
+
+Az időalapú exponenciális mozgóátlag paraméterei:
+
+```text
+tau = 240 s
+alpha = 1 - exp(-delta_t / tau)
+T_szűrt = T_előző + alpha * (T_kalibrált - T_előző)
+```
+
+Az EMA minden sikeres, jelenleg kétpercenkénti mintával frissül. Új
+cselekvési pont legalább 240 másodperc elteltével készül. A későbbi vezérlési
+logika a cselekvési hőmérsékletet használja, miközben a nyers, kalibrált,
+szűrt és cselekvési érték egymástól elkülönítve, visszakövethetően megmarad.
+A 240 másodperces időállandó első üzemi paraméter, amely a megőrzött nyers
+adatokon később visszamenőleg is újraértékelhető.
+
+#### 11.5.3. Az egyenkénti üzemi telepítés protokollja
+
+A szenzorokat 2026. augusztus 27-től egyenként helyezzük át a nevük szerinti
+helyiségekbe. Minden érzékelőnél ugyanazt az eljárást kell követni:
+
+1. az áthelyezés előtt ki kell venni az eszközt a lekérdezési körből;
+2. fel kell jegyezni a régi helyről levétel és az új helyen történő elhelyezés
+   időpontját;
+3. az új mérési pontot úgy kell megválasztani, hogy az a helyiség jellemző
+   levegő-hőmérsékletét mérje, és lehetőleg ne kerüljön klíma, ablak, ajtó,
+   radiátor, napsugárzás vagy más helyi hőforrás közvetlen hatásába;
+4. az elhelyezés után vissza kell kapcsolni a lekérdezést, majd azonnal kézi
+   lekérdezést kell indítani;
+5. az első 30–60 perc szerelési és hőmérsékleti tranziensét nem szabad
+   vezérlési következtetéshez használni;
+6. az első 3–7 napban meg kell tartani a kétperces lekérdezési gyakoriságot;
+7. az esti napi értékelésekben már nem az eltérő helyiségek szenzorainak
+   egyezését, hanem a helyiségek természetes minimumát, maximumát,
+   változási meredekségét, szellőztetési reakcióját és mérési kimaradásait
+   kell vizsgálni.
+
+Az `esp32-ext` kültéri elhelyezésénél külön követelmény a közvetlen napsütés,
+csapadék és a falfelület hőhatásának kerülése. A fal síkjától tervezett
+körülbelül 15 cm-es eltartás, az emeleti födém és tetődoboz árnyékolása,
+valamint a jó lépcsőházi Wi-Fi-lefedettség megfelelő kiindulási feltétel.
+
+A Computherm és az ESP közös fűtési döntési szabályát a telepítéskor még nem
+aktiváljuk. A kazánt ténylegesen továbbra is a Computherm kapcsolja; az ESP
+először mérési és ellenőrzési forrás. A két eszköz azonos helyiségben mutatott
+üzemi eltérését és dinamikáját hosszabb fűtési időszakban kell megfigyelni,
+mielőtt az alkalmazás a Computherm beállítását módosíthatná.
+
+A közös kalibráció lezárása a jelenleg elkészült nyolc érzékelőre vonatkozik.
+Az `esp32-vendegszoba` érzékelő még nem áll rendelkezésre. Elkészülése után
+nem a már külön helyiségekben működő teljes szenzorcsoporthoz kell igazítani,
+hanem külön kalibrációs menetben vissza kell vinni a dolgozószobai mérőhelyre.
+Ott legalább egy, lehetőleg két már kalibrált, ideiglenesen visszahelyezett
+rézcső + doboz referenciaérzékelő korrigált értékeihez kell meghatározni az
+egyedi additív korrekcióját. Ugyanazokat a feltételeket kell alkalmazni:
+szerelési tranziens teljes lecsengése, több nyugodt vagy közel lineáris
+szakasz, ismert klíma- és szellőztetési események kizárása, a DS18B20
+0,0625 °C-os mérési lépcsőjére kerekített korrekció, valamint a bizonyítékként
+használt időablak és referenciák verziózott adatbázis-rögzítése.

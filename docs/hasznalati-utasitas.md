@@ -260,7 +260,18 @@ A szerkesztők a főmenü **Globális beállítások** oldalán módosíthatják
 rendszerszintű működési értékeket: az alap lekérdezési időt, az időkorlátot,
 az adatmentés paramétereit, a gnuplot elérési útját, valamint az
 előkészített hűtési és fűtési biztonsági határokat. A mentés közvetlenül, de
-atomikusan frissíti a projekt `.env` fájlját.
+atomikusan frissíti a projekt `.env` fájlját, és a kezelt értékeket azonnal
+átvezeti a dashboard futó folyamatába. A periodikus poller minden ciklusban
+újraolvassa a `.env` fájlt.
+
+Ha a `.env` fájlt kézzel szerkesztették, a **A .env újratöltése** gombbal a
+fájlban szereplő értékek betölthetők a futó dashboard folyamatába. A művelet
+visszajelzi a megváltozott értékek számát. Az alkalmazás portja
+(`DASHBOARD_PORT`), időzónája (`APP_TIMEZONE`) és munkamenet-titka
+(`DASHBOARD_SECRET_KEY`) induláskor rögzül; ezek módosításakor az újratöltés
+figyelmeztet, hogy teljes alkalmazás-újraindítás is szükséges. A fájlból kézzel
+törölt kulcsot az újratöltés biztonsági okból nem törli a folyamat örökölt
+környezetéből; ilyen változtatás szintén újraindítással érvényesíthető teljesen.
 
 Az adatbázis és a ConnectLife felhasználónevei, jelszavai, illetve más titkok
 nem jelennek meg és nem szerkeszthetők ezen a felületen.

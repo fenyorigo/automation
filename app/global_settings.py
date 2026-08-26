@@ -7,9 +7,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from dotenv import dotenv_values
+
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_PATH = ROOT / ".env"
+
+# These values are captured while the dashboard process starts. Updating the
+# process environment cannot safely change them in an already running server.
+RESTART_REQUIRED_KEYS = frozenset({
+    "APP_TIMEZONE",
+    "DASHBOARD_PORT",
+    "DASHBOARD_SECRET_KEY",
+})
 
 
 @dataclass(frozen=True)
@@ -52,6 +62,34 @@ SETTINGS = (
 
 def values() -> dict[str, str]:
     return {item.key: os.getenv(item.key, item.default) for item in SETTINGS}
+
+
+def reload_environment() -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Reload values present in .env into the current dashboard process.
+
+    Returns the changed keys and the subset that still requires a process
+    restart. Keys removed manually from .env are deliberately not deleted from
+    ``os.environ``: an inherited service environment may be their real source.
+    """
+    if not ENV_PATH.is_file():
+        raise ValueError(f"A .env fájl nem található: {ENV_PATH}")
+
+    parsed = dotenv_values(ENV_PATH)
+    invalid = sorted(key for key, value in parsed.items() if value is None)
+    if invalid:
+        raise ValueError(
+            "Érték nélküli .env bejegyzés: " + ", ".join(invalid)
+        )
+
+    changed: list[str] = []
+    for key, value in parsed.items():
+        assert value is not None
+        if os.environ.get(key) != value:
+            changed.append(key)
+        os.environ[key] = value
+
+    restart_required = sorted(RESTART_REQUIRED_KEYS.intersection(changed))
+    return tuple(sorted(changed)), tuple(restart_required)
 
 
 def save(values_to_save: dict[str, str]) -> None:
