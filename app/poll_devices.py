@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import os
+import platform
+import socket
+import subprocess
 import sys
 import time
 import urllib.error
@@ -40,6 +44,11 @@ class DeviceConfig:
     connectlife_name: str | None = None
     auid: str | None = None
     device_type_code: str | None = None
+    local_hostname: str | None = None
+    metrics_transport: str = "auto"
+    ssh_user: str = "automation-monitor"
+    ssh_identity_file: str = "/var/lib/automation/.ssh/id_ed25519_system_metrics"
+    ssh_known_hosts_file: str = "/var/lib/automation/.ssh/known_hosts"
 
 
 @dataclass
@@ -229,6 +238,170 @@ def poll_tasmota(config: DeviceConfig, timeout: float) -> PollResult:
         return failed(config, "invalid_response", error)
 
 
+def _read_temperature_file(path: Path) -> float | None:
+    try:
+        value = float(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+    if abs(value) > 1000:
+        value /= 1000
+    return value if -50 <= value <= 150 else None
+
+
+def read_linux_cpu_temperature(sys_class: Path = Path("/sys/class")) -> float | None:
+    """Return the package CPU temperature from standard Linux sysfs interfaces."""
+    hwmon_candidates: list[tuple[int, Path]] = []
+    for directory in sorted((sys_class / "hwmon").glob("hwmon*")):
+        try:
+            driver = (directory / "name").read_text(encoding="utf-8").strip().lower()
+        except OSError:
+            continue
+        if driver not in {"coretemp", "k10temp", "zenpower"}:
+            continue
+        for input_path in directory.glob("temp*_input"):
+            label_path = input_path.with_name(input_path.name.replace("_input", "_label"))
+            try:
+                label = label_path.read_text(encoding="utf-8").strip().lower()
+            except OSError:
+                label = ""
+            priority = 0 if any(word in label for word in ("package", "tctl")) else 1
+            hwmon_candidates.append((priority, input_path))
+    for _, path in sorted(hwmon_candidates, key=lambda item: (item[0], str(item[1]))):
+        value = _read_temperature_file(path)
+        if value is not None:
+            return value
+
+    thermal_candidates: list[tuple[int, Path]] = []
+    for directory in sorted((sys_class / "thermal").glob("thermal_zone*")):
+        try:
+            zone_type = (directory / "type").read_text(encoding="utf-8").strip().lower()
+        except OSError:
+            continue
+        if zone_type in {"x86_pkg_temp", "cpu-thermal", "cpu_thermal"}:
+            thermal_candidates.append((0, directory / "temp"))
+    for _, path in sorted(thermal_candidates, key=lambda item: (item[0], str(item[1]))):
+        value = _read_temperature_file(path)
+        if value is not None:
+            return value
+    return None
+
+
+def _linux_measurements(config: DeviceConfig, payload: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_temperature = payload.get("cpu_temperature_c")
+    cpu_temperature = None if raw_temperature is None else float(raw_temperature)
+    if cpu_temperature is not None and not math.isfinite(cpu_temperature):
+        raise ValueError("Non-finite CPU temperature")
+    measurements = [{
+        "sensor_id": f"linux:{config.device_id}:cpu_temperature",
+        "sensor_type": "temperature",
+        "unit": "celsius",
+        "value": cpu_temperature,
+        "quality": "good" if cpu_temperature is not None else "invalid",
+        "error_code": None if cpu_temperature is not None else "cpu_temperature_unavailable",
+        "raw": {"property": "cpu_temperature", "value": cpu_temperature},
+    }]
+    for period in ("1m", "5m", "15m"):
+        value = float(payload[f"load_{period}"])
+        if not math.isfinite(value):
+            raise ValueError(f"Non-finite load_{period}")
+        measurements.append({
+            "sensor_id": f"linux:{config.device_id}:load_{period}",
+            "sensor_type": f"load_{period}",
+            "unit": "load",
+            "value": round(float(value), 3),
+            "quality": "good",
+            "error_code": None,
+            "raw": {"property": f"load_{period}", "value": value},
+        })
+    return measurements
+
+
+def _local_linux_payload() -> dict[str, Any]:
+    cpu_temperature = read_linux_cpu_temperature()
+    load_1m, load_5m, load_15m = os.getloadavg()
+    return {
+        "schema_version": 1,
+        "hostname": socket.gethostname().split(".", 1)[0],
+        "kernel": platform.release(),
+        "cpu_count": os.cpu_count(),
+        "cpu_temperature_c": cpu_temperature,
+        "load_1m": load_1m,
+        "load_5m": load_5m,
+        "load_15m": load_15m,
+    }
+
+
+def _remote_linux_payload(config: DeviceConfig, timeout: float) -> dict[str, Any]:
+    target = config.expected_ip or config.hostname
+    command = [
+        "/usr/bin/ssh", "-T",
+        "-i", config.ssh_identity_file,
+        "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={max(1, round(timeout))}",
+        "-o", "StrictHostKeyChecking=yes",
+        "-o", f"UserKnownHostsFile={config.ssh_known_hosts_file}",
+        f"{config.ssh_user}@{target}",
+    ]
+    completed = subprocess.run(
+        command, capture_output=True, text=True, timeout=max(timeout + 2, 3), check=False
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"ssh exited with {completed.returncode}"
+        raise ConnectionError(detail)
+    payload = json.loads(completed.stdout)
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("Unsupported remote metrics response schema")
+    return payload
+
+
+def poll_linux_system(config: DeviceConfig, timeout: float) -> PollResult:
+    """Collect Linux metrics locally or through a restricted SSH forced command."""
+    started = time.monotonic()
+    actual_hostname = socket.gethostname().split(".", 1)[0].casefold()
+    expected_hostname = (config.local_hostname or config.hostname).split(".", 1)[0].casefold()
+    transport = config.metrics_transport.casefold()
+    if transport not in {"auto", "local", "ssh"}:
+        return failed(config, "invalid_metrics_transport", transport)
+    use_local = transport == "local" or (transport == "auto" and actual_hostname == expected_hostname)
+    try:
+        if use_local:
+            if actual_hostname != expected_hostname:
+                return failed(
+                    config, "local_host_mismatch",
+                    f"Configured for {expected_hostname}, running on {actual_hostname}",
+                )
+            payload = _local_linux_payload()
+        else:
+            payload = _remote_linux_payload(config, timeout)
+        remote_hostname = str(payload.get("hostname", "")).split(".", 1)[0].casefold()
+        if remote_hostname != expected_hostname:
+            raise ValueError(
+                f"Expected host {expected_hostname}, remote reported {remote_hostname or 'empty hostname'}"
+            )
+        measurements = _linux_measurements(config, payload)
+    except subprocess.TimeoutExpired as error:
+        return failed(config, "ssh_timeout", error)
+    except (ConnectionError, OSError) as error:
+        return failed(config, "ssh_failed", error)
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return failed(config, "invalid_response", error)
+
+    return PollResult(
+        source_system=config.source_system,
+        device_id=config.device_id,
+        hostname=config.hostname,
+        observed_at=utc_now(),
+        success=True,
+        duration_ms=round((time.monotonic() - started) * 1000),
+        measurements=measurements,
+        identity={
+            "hostname": payload["hostname"],
+            "kernel": payload.get("kernel"),
+            "cpu_count": payload.get("cpu_count"),
+        },
+    )
+
+
 async def poll_connectlife(configs: list[DeviceConfig]) -> list[PollResult]:
     if not configs:
         return []
@@ -301,7 +474,10 @@ async def poll_connectlife(configs: list[DeviceConfig]) -> list[PollResult]:
 
 
 async def poll_all(devices: list[DeviceConfig], timeout: float) -> list[PollResult]:
-    local = [item for item in devices if item.source_system in {"esp32", "computherm", "tasmota"}]
+    local = [
+        item for item in devices
+        if item.source_system in {"esp32", "computherm", "tasmota", "linux_system"}
+    ]
     connectlife = [item for item in devices if item.source_system == "connectlife"]
     tasks = []
     for item in local:
@@ -309,6 +485,7 @@ async def poll_all(devices: list[DeviceConfig], timeout: float) -> list[PollResu
             "esp32": poll_esp32,
             "computherm": poll_computherm,
             "tasmota": poll_tasmota,
+            "linux_system": poll_linux_system,
         }[item.source_system]
         tasks.append(asyncio.to_thread(function, item, timeout))
     local_results = await asyncio.gather(*tasks)

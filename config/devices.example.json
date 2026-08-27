@@ -35,6 +35,29 @@
       "mac_address": "02:00:00:00:00:04",
       "device_id": "nous-power-meter-1",
       "enabled": true
+    },
+    {
+      "source_system": "linux_system",
+      "hostname": "linux-host-1",
+      "local_hostname": "linux-host-1",
+      "expected_ip": "192.0.2.50",
+      "mac_address": "",
+      "device_id": "linux-host-1",
+      "metrics_transport": "auto",
+      "enabled": true
+    },
+    {
+      "source_system": "linux_system",
+      "hostname": "linux-host-2",
+      "local_hostname": "linux-host-2",
+      "expected_ip": "192.0.2.51",
+      "mac_address": "",
+      "device_id": "linux-host-2",
+      "metrics_transport": "ssh",
+      "ssh_user": "automation-monitor",
+      "ssh_identity_file": "/var/lib/automation/.ssh/id_ed25519_system_metrics",
+      "ssh_known_hosts_file": "/var/lib/automation/.ssh/known_hosts",
+      "enabled": true
     }
   ]
 }

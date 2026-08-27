@@ -17,6 +17,7 @@ DEVICE_METADATA = {
     "computherm": ("thermostat", "Computherm E400RF-EM"),
     "connectlife": ("climate", "Hisense ConnectLife"),
     "tasmota": ("power_meter", "NOUS A1T / Tasmota"),
+    "linux_system": ("server", "Linux system"),
 }
 
 
@@ -94,7 +95,16 @@ class Database:
         finally:
             cursor.close()
 
-    def persist(self, config: DeviceConfig, result: PollResult, duration_ms: int) -> None:
+    def persist(
+        self,
+        config: DeviceConfig,
+        result: PollResult,
+        duration_ms: int,
+        *,
+        poll_origin: str = "automatic",
+    ) -> None:
+        if poll_origin not in {"automatic", "manual"}:
+            raise ValueError(f"Unsupported poll origin: {poll_origin}")
         cursor = self.connection.cursor()
         try:
             device_id = self._upsert_device(cursor, config, result)
@@ -109,7 +119,7 @@ class Database:
                     )
                 if result.state is not None:
                     self._insert_state(cursor, device_id, config, result)
-            self._insert_attempt(cursor, device_id, result, duration_ms)
+            self._insert_attempt(cursor, device_id, result, duration_ms, poll_origin)
             self.connection.commit()
         except Exception:
             self.connection.rollback()
@@ -421,22 +431,24 @@ class Database:
         device_id: int,
         result: PollResult,
         duration_ms: int,
+        poll_origin: str,
     ) -> None:
         completed = datetime.fromisoformat(result.observed_at.replace("Z", "+00:00"))
         attempted = completed - timedelta(milliseconds=max(duration_ms, 0))
         cursor.execute(
             """
             INSERT INTO poll_attempts (
-              device_id, source_system, source_device_id, hostname,
+              device_id, source_system, source_device_id, hostname, poll_origin,
               attempted_at, completed_at, duration_ms, success,
               error_code, error_message
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 device_id,
                 result.source_system,
                 result.device_id,
                 result.hostname,
+                poll_origin,
                 attempted.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
                 completed.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
                 max(duration_ms, 0),

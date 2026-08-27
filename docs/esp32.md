@@ -379,3 +379,30 @@ pollingkört folytatja.
 Az ESP32 nem készít abszolút mérési időbélyeget. Az alkalmazás a HTTP-lekérés
 időpontját írja az adatbázis `observed_at` mezőjébe; az `age_ms` megmutatja,
 hány milliszekundummal korábban készült az ESP32 legutóbbi érvényes mérése.
+
+## Firmware-kezelés a Linuxra költözés után
+
+Az üzemszerű adatgyűjtés Linuxra költözése nem változtatja meg az ESP32-k
+fejlesztési és karbantartási folyamatát. A feladatok megosztása:
+
+- a **Mac** végzi USB-n a PlatformIO firmware-feltöltést, a soros monitorozást,
+  az első Wi-Fi-konfigurálást és szükség esetén a helyreállítást;
+- a **think260x** végzi Wi-Fi-n az üzemszerű lekérdezést, az adatbázisba írást,
+  a webes felület kiszolgálását és a mentéseket.
+
+Új ESP32 üzembe helyezési sorrendje:
+
+1. Firmware feltöltése és konfigurálás a Macen, USB-kapcsolaton keresztül.
+2. A kijelzett MAC-címhez statikus DHCP-foglalás létrehozása.
+3. A `nev.home` és az IP-cím összerendelésének felvétele az AdGuard DNS-be.
+4. Az eszköz felvétele az automation nyilvántartásába, teljes
+   `nev.home` hálózati névvel.
+5. Az automatikus lekérdezés engedélyezése.
+6. Kézi lekérdezési kör futtatása és az eredmény ellenőrzése.
+
+Firmware-frissítés előtt az érintett eszközt célszerű ideiglenesen kivenni a
+lekérdezési körből. A Macen végzett feltöltés és az ESP32 újraindulása után az
+eszköz visszakapcsolható, majd kézi lekérdezéssel ellenőrizhető. A Macen
+leállított periodikus pollert a PlatformIO és az USB-s műveletek nem indítják
+újra; egyszerre továbbra is csak a think260x periodikus pollere írhatja az
+adatbázist.

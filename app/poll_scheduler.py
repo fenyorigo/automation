@@ -18,8 +18,14 @@ from scheduled_climate import process_due_climate_schedules
 
 
 async def run_cycle(
-    timeout: float, *, due_only: bool = False, poll_outdoor: bool = True
+    timeout: float,
+    *,
+    due_only: bool = False,
+    poll_outdoor: bool = True,
+    poll_origin: str = "automatic",
 ) -> tuple[int, int, int]:
+    if poll_origin not in {"automatic", "manual"}:
+        raise ValueError(f"Unsupported poll origin: {poll_origin}")
     with polling_cycle_lock():
         configured = load_devices(DEFAULT_CONFIG)
         selector = Database()
@@ -36,7 +42,12 @@ async def run_cycle(
         try:
             for result in results:
                 try:
-                    database.persist(configs[(result.source_system, result.device_id)], result, result.duration_ms)
+                    database.persist(
+                        configs[(result.source_system, result.device_id)],
+                        result,
+                        result.duration_ms,
+                        poll_origin=poll_origin,
+                    )
                     stored += 1
                 except Exception as error:
                     print(

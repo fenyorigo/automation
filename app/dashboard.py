@@ -89,6 +89,7 @@ SOURCE_LABELS = {
     "connectlife": "Hisense",
     "tasmota": "Nous / Tasmota",
     "manual": "Kézi",
+    "linux_system": "Linux rendszer",
 }
 
 DEVICE_GROUPS = (
@@ -97,6 +98,7 @@ DEVICE_GROUPS = (
     ("connectlife", "Hisense klímák"),
     ("tasmota", "Nous teljesítménymérők"),
     ("manual", "Kézi eszközök"),
+    ("linux_system", "Linux szerverek"),
 )
 
 COMPUTHERM_LOCATION = {
@@ -666,7 +668,7 @@ def sync_device_config(values: dict[str, Any]) -> None:
             None,
         )
         if entry is None:
-            if source_system not in {"esp32", "tasmota"}:
+            if source_system not in {"esp32", "tasmota", "linux_system"}:
                 return
             entry = {"source_system": source_system, "device_id": source_device_id}
             document["devices"].append(entry)
@@ -773,7 +775,9 @@ def render_temperature_svg(
         return output_path.read_bytes()
 
 
-def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def load_dashboard(
+    attempt_origin: str = "all",
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     connection = connect_database()
     cursor = connection.cursor()
     try:
@@ -816,6 +820,24 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                 WHERE vs.device_id=d.id AND vs.is_active=1
                   AND vs.sensor_type='voltage'
                 ORDER BY vr.observed_at DESC,vr.id DESC LIMIT 1) AS voltage_v,
+              (SELECT lr.value
+                 FROM sensors ls
+                 JOIN sensor_readings lr ON lr.sensor_id=ls.id
+                WHERE ls.device_id=d.id AND ls.is_active=1
+                  AND ls.sensor_type='load_1m'
+                ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1) AS load_1m,
+              (SELECT lr.value
+                 FROM sensors ls
+                 JOIN sensor_readings lr ON lr.sensor_id=ls.id
+                WHERE ls.device_id=d.id AND ls.is_active=1
+                  AND ls.sensor_type='load_5m'
+                ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1) AS load_5m,
+              (SELECT lr.value
+                 FROM sensors ls
+                 JOIN sensor_readings lr ON lr.sensor_id=ls.id
+                WHERE ls.device_id=d.id AND ls.is_active=1
+                  AND ls.sensor_type='load_15m'
+                ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1) AS load_15m,
               ds.power, ds.mode, ds.target_temperature_c, ds.fan_speed,
               ds.online AS reported_online, ds.active, ds.observed_at AS state_at,
               pa.success AS poll_success, pa.attempted_at AS last_poll_at,
@@ -859,16 +881,20 @@ def load_dashboard() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         )
         devices = rows_as_dicts(cursor)
 
+        attempt_where = "" if attempt_origin == "all" else "WHERE pa.poll_origin = ?"
+        attempt_params: tuple[str, ...] = () if attempt_origin == "all" else (attempt_origin,)
         cursor.execute(
-            """
+            f"""
             SELECT pa.attempted_at, pa.completed_at, pa.duration_ms, pa.success,
                    pa.error_code, pa.error_message, d.name, d.hostname,
-                   pa.source_system
+                   pa.source_system, pa.poll_origin
             FROM poll_attempts pa
             LEFT JOIN devices d ON d.id = pa.device_id
+            {attempt_where}
             ORDER BY pa.attempted_at DESC, pa.id DESC
             LIMIT 40
-            """
+            """,
+            attempt_params,
         )
         attempts = rows_as_dicts(cursor)
     finally:
@@ -1418,7 +1444,11 @@ def update_user(user_id: int):
 
 @app.get("/")
 def dashboard() -> str:
-    devices, attempts = load_dashboard()
+    requested_attempt_origin = request.args.get("poll_origin")
+    if requested_attempt_origin in {"all", "automatic", "manual"}:
+        session["dashboard_poll_origin"] = requested_attempt_origin
+    attempt_origin = session.get("dashboard_poll_origin", "all")
+    devices, attempts = load_dashboard(attempt_origin)
     _, outdoor_temperature = load_outdoor_sources()
     requested_view = request.args.get("view")
     if requested_view in {"device", "room"}:
@@ -1455,6 +1485,7 @@ def dashboard() -> str:
         "dashboard.html",
         devices=devices,
         attempts=attempts,
+        attempt_origin=attempt_origin,
         successful=successful,
         monitored_count=monitored_count,
         latest_poll=latest_poll,
@@ -1812,7 +1843,9 @@ def poll_now():
         return redirect(url_for("dashboard"))
     try:
         timeout = float(os.getenv("POLL_TIMEOUT_SECONDS", "5"))
-        successful, stored, monitored_count = asyncio.run(run_cycle(timeout))
+        successful, stored, monitored_count = asyncio.run(
+            run_cycle(timeout, poll_origin="manual")
+        )
         kind = "success" if successful == monitored_count and stored == monitored_count else "warning"
         session["poll_notice"] = {
             "kind": kind,

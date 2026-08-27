@@ -37,6 +37,12 @@
     <div><dt>Dugalj</dt><dd>{% if device.power %}Bekapcsolva{% else %}Kikapcsolva{% endif %}</dd></div>
     <div><dt>Fogyasztó aktív</dt><dd>{% if device.active %}Igen{% else %}Nem{% endif %}</dd></div>
   </dl>
+  {% elif device.source_system == 'linux_system' %}
+  <dl class="state-grid">
+    <div><dt>Load 1 perc</dt><dd>{{ device.load_1m|round(2) if device.load_1m is not none else '—' }}</dd></div>
+    <div><dt>Load 5 perc</dt><dd>{{ device.load_5m|round(2) if device.load_5m is not none else '—' }}</dd></div>
+    <div><dt>Load 15 perc</dt><dd>{{ device.load_15m|round(2) if device.load_15m is not none else '—' }}</dd></div>
+  </dl>
   {% elif device.source_system not in ['esp32', 'manual'] %}
   <dl class="state-grid">
     <div><dt>Célhőmérséklet</dt><dd>{{ device.target_temperature_c|temperature }} °C</dd></div>

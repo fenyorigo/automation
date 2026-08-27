@@ -122,6 +122,14 @@ MIGRATIONS = (
         "v1_29_sensor_calibration_and_action_temperature",
         ROOT / "SQL" / "migrations" / "029_home_automation_v1.28_to_v1.29.sql",
     ),
+    (
+        "v1_30_poll_attempt_origin",
+        ROOT / "SQL" / "migrations" / "030_home_automation_v1.29_to_v1.30.sql",
+    ),
+    (
+        "v1_31_linux_system_metrics",
+        ROOT / "SQL" / "migrations" / "031_home_automation_v1.30_to_v1.31.sql",
+    ),
 )
 
 
