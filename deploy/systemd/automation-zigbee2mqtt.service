@@ -3,6 +3,7 @@ Description=Automation Zigbee2MQTT discovery and state cache
 After=network-online.target mariadb.service mosquitto.service zigbee2mqtt.service
 Wants=network-online.target
 Requires=mariadb.service mosquitto.service
+PartOf=mariadb.service mosquitto.service
 
 [Service]
 Type=simple
