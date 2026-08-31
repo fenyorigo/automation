@@ -90,6 +90,7 @@ SOURCE_LABELS = {
     "tasmota": "Nous / Tasmota",
     "manual": "Kézi",
     "linux_system": "Linux rendszer",
+    "zigbee2mqtt": "Zigbee2MQTT",
 }
 
 DEVICE_GROUPS = (
@@ -99,6 +100,7 @@ DEVICE_GROUPS = (
     ("tasmota", "Nous teljesítménymérők"),
     ("manual", "Kézi eszközök"),
     ("linux_system", "Linux szerverek"),
+    ("zigbee2mqtt", "Zigbee eszközök"),
 )
 
 COMPUTHERM_LOCATION = {

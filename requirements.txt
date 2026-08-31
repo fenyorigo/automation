@@ -5,3 +5,4 @@ mariadb
 flask
 pandas
 matplotlib
+paho-mqtt

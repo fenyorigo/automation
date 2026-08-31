@@ -130,6 +130,10 @@ MIGRATIONS = (
         "v1_31_linux_system_metrics",
         ROOT / "SQL" / "migrations" / "031_home_automation_v1.30_to_v1.31.sql",
     ),
+    (
+        "v1_32_zigbee2mqtt_discovery",
+        ROOT / "SQL" / "migrations" / "032_home_automation_v1.31_to_v1.32.sql",
+    ),
 )
 
 

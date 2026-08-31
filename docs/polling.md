@@ -131,6 +131,17 @@ A teljes, normalizált JSON megtekintéséhez hagyjuk el a `--summary` kapcsoló
 - Computherm: helyi BroadLink/Hysen UDP API, hostname és MAC alapján
 - ConnectLife: egyetlen felhős bejelentkezés és eszközlista-lekérés; az öt
   eredmény AUID és ConnectLife-név alapján kerül a saját hostname-ekhez
+- Zigbee2MQTT: a külön `automation-zigbee2mqtt.service` folyamatosan figyeli
+  a helyi Mosquitto broker `zigbee2mqtt/#` témáit. A `bridge/devices`
+  leírásból IEEE-cím alapján automatikusan létrehozza az eszközöket és az
+  olvasható mérési csatornákat. Az új eszköz csak olvasható, vezérlése
+  kikapcsolt, helyisége pedig nincs, amíg a Nyilvántartásban hozzá nem rendelik.
+
+A Zigbee2MQTT adapter nem küld rendszeres `/get` parancsokat az elemes
+eszközöknek. Az MQTT-üzenetek legutó ismert tulajdonságait a
+`zigbee2mqtt_property_cache` táblában tartja, a Zigbee2MQTT `last_seen`
+időpontját pedig a fogadás idejétől külön tárolja. A szabályos idősoros
+minták készítése egy következő lépésben erre a cache-re épül.
 
 A ConnectLife felhasználónév és jelszó kizárólag a nem verziózott `.env`
 fájlban szerepelhet.

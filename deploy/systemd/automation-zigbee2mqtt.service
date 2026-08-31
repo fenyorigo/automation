@@ -1,0 +1,18 @@
+[Unit]
+Description=Automation Zigbee2MQTT discovery and state cache
+After=network-online.target mariadb.service mosquitto.service zigbee2mqtt.service
+Wants=network-online.target
+Requires=mariadb.service mosquitto.service
+
+[Service]
+Type=simple
+User=automation
+Group=automation
+WorkingDirectory=/var/www/automation
+ExecStart=/var/www/automation/.venv/bin/python /var/www/automation/app/zigbee2mqtt_service.py
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

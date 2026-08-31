@@ -23,6 +23,7 @@ matplotlib==3.11.1
 multidict==6.7.1
 numpy==2.5.1
 packaging==26.2
+paho-mqtt==2.1.0
 pandas==3.0.5
 pillow==12.3.0
 propcache==0.5.2
