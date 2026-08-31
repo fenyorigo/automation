@@ -2,10 +2,10 @@
   <div class="card-heading">
     <div><p class="source">{{ device.source_label }}</p><h3>{{ device.name }}</h3></div>
     <span class="badge {{ 'manual' if device.is_manual_visual or not device.polling_enabled else ('online' if device.online else 'offline') }}">
-      {{ 'Kézi állapot' if device.is_manual_visual else ('Lekérdezés kikapcsolva' if not device.polling_enabled else ('Elérhető' if device.online else 'Offline')) }}
+      {% if device.source_system == 'zigbee2mqtt' %}{{ 'Zigbee' if device.online else 'Nincs friss Zigbee-adat' }}{% else %}{{ 'Kézi állapot' if device.is_manual_visual else ('Lekérdezés kikapcsolva' if not device.polling_enabled else ('Elérhető' if device.online else 'Offline')) }}{% endif %}
     </span>
   </div>
-  <p class="device-poll-interval">Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}</p>
+  <p class="device-poll-interval">{% if device.source_system == 'zigbee2mqtt' %}Adatkapcsolat: <strong>folyamatos MQTT</strong>{% else %}Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}{% endif %}</p>
   {% if device.managed_manually %}
   <div class="manual-state {{ 'powered' if device.manual_power_state else 'stopped' }}">
     <span class="manual-state-label">Kazán</span><strong>{{ 'Bekapcsolva' if device.manual_power_state else 'Kikapcsolva' }}</strong>
@@ -14,6 +14,7 @@
     {% if device.derived_target_temperature_c is defined %}<strong>{{ device.derived_target_temperature_c|temperature }} °C</strong><small>{{ device.derived_target_source }}</small>
     {% else %}<strong>—</strong><small>nincs friss Computherm-adat</small>{% endif %}
   </div>
+  {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
   {% elif device.source_system == 'tasmota' %}
   <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c if device.temperature_c is not none else '—' }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}"> W</span></div>
   {% else %}
@@ -30,7 +31,14 @@
     {% endif %}
   {% endif %}
   {% endif %}
-  {% if device.source_system == 'tasmota' %}
+  {% if device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
+  <dl class="state-grid">
+    <div><dt>Kapcsolat</dt><dd>{{ 'Aktív' if device.online else 'Nincs friss adat' }}</dd></div>
+    <div><dt>Típus</dt><dd>{{ device.zigbee_type or 'Zigbee' }}</dd></div>
+    <div><dt>Jelminőség</dt><dd>{% if device.zigbee_linkquality is not none %}{{ device.zigbee_linkquality|int }} LQI{% else %}—{% endif %}</dd></div>
+    <div><dt>Modell</dt><dd>{{ device.zigbee_model or '—' }}</dd></div>
+  </dl>
+  {% elif device.source_system == 'tasmota' %}
   <dl class="state-grid">
     <div><dt>Összes energia</dt><dd>{% if device.energy_total_kwh is not none %}{{ device.energy_total_kwh|float|round(3) }} kWh{% else %}—{% endif %}{% if device.energy_total_started_at %}<br><small class="measurement-period">{{ device.energy_total_started_at|replace('T',' ') }} <span style="text-transform: lowercase">óta</span></small>{% endif %}</dd></div>
     <div><dt>Feszültség</dt><dd>{% if device.voltage_v is not none %}{{ device.voltage_v|float|round(0)|int }} V{% else %}—{% endif %}</dd></div>
@@ -51,7 +59,9 @@
     <div><dt>Aktív</dt><dd>{% if device.active is none %}—{% elif device.active %}Igen{% else %}Nem{% endif %}</dd></div>
   </dl>
   {% endif %}
-  {% if device.is_manual_visual %}
+  {% if device.source_system == 'zigbee2mqtt' %}
+  <div class="card-footer"><span>Utolsó Zigbee-jel</span><time>{{ device.zigbee_last_seen|local_time }}</time></div>
+  {% elif device.is_manual_visual %}
   <div class="card-footer"><span>Utolsó kézi mérés</span><time>{{ device.measurement_at|local_time }}</time></div>
   {% elif device.hostname %}<div class="card-footer"><span>{{ device.hostname }}</span><time>{{ device.last_poll_at|local_time }}</time></div>{% endif %}
   {% if device.room_name %}<p class="device-location">{{ device.zone_name or 'Zónán kívül' }} · {{ device.room_name }}</p>{% endif %}

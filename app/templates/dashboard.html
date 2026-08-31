@@ -73,7 +73,7 @@
           <select id="device-type-filter" data-dashboard-filter="device">
             <option value="all">Mind</option>
             {% if outdoor_temperature %}<option value="outdoor">Külső hőmérséklet</option>{% endif %}
-            {% for group in device_groups %}<option value="{{ group.source_system }}">{{ {'esp32':'ESP32','tasmota':'Nous','connectlife':'Hisense','computherm':'Computherm','manual':'Kézi','linux_system':'Linux'}.get(group.source_system,group.name) }}</option>{% endfor %}
+            {% for group in device_groups %}<option value="{{ group.source_system }}">{{ {'esp32':'ESP32','tasmota':'Nous','connectlife':'Hisense','computherm':'Computherm','manual':'Kézi','linux_system':'Linux','zigbee2mqtt':'Zigbee'}.get(group.source_system,group.name) }}</option>{% endfor %}
           </select>
         </label>
         <label class="dashboard-filter-checkbox" for="polling-enabled-filter">

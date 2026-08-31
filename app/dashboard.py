@@ -792,6 +792,15 @@ def load_dashboard(
               d.capability_mode, d.polling_enabled,
               d.poll_interval_seconds,
               d.last_service_date, d.next_service_due,
+              zd.availability AS zigbee_availability,
+              zd.zigbee_type, zd.model_id AS zigbee_model,
+              zd.last_message_at AS mqtt_message_at,
+              (SELECT MAX(zpc.source_observed_at)
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id) AS zigbee_last_seen,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='linkquality') AS zigbee_linkquality,
               (SELECT mse.changed_at FROM manual_state_events mse
                WHERE mse.device_id = d.id
                ORDER BY mse.changed_at DESC, mse.id DESC LIMIT 1) AS manual_state_changed_at,
@@ -847,10 +856,14 @@ def load_dashboard(
             FROM devices d
             LEFT JOIN rooms r ON r.id = d.room_id
             LEFT JOIN zones z ON z.id = COALESCE(r.zone_id,d.zone_id)
+            LEFT JOIN zigbee2mqtt_devices zd ON zd.device_id=d.id
             LEFT JOIN sensors s
               ON s.device_id = d.id AND s.is_active = 1
              AND ((d.source_system = 'tasmota' AND s.sensor_type = 'power')
-               OR (d.source_system <> 'tasmota' AND s.sensor_type = 'temperature'))
+               OR (d.source_system NOT IN ('tasmota','zigbee2mqtt')
+                   AND s.sensor_type = 'temperature')
+               OR (d.source_system = 'zigbee2mqtt'
+                   AND d.device_type <> 'power_meter' AND s.sensor_type = 'temperature'))
             LEFT JOIN sensor_readings sr
               ON sr.id = (
                 SELECT sr2.id FROM sensor_readings sr2
@@ -908,9 +921,19 @@ def load_dashboard(
             device["source_system"], device["source_system"]
         )
         device["is_manual_visual"] = device["access_mode"] == "manual_visual"
-        device["online"] = (
-            None if device["is_manual_visual"] else bool(device["poll_success"])
-        )
+        if device["source_system"] == "zigbee2mqtt":
+            mqtt_fresh = bool(
+                device["mqtt_message_at"]
+                and datetime.now(UTC).replace(tzinfo=None) - device["mqtt_message_at"]
+                <= timedelta(minutes=2)
+            )
+            device["online"] = (
+                device["zigbee_availability"] != "offline" and mqtt_fresh
+            )
+        else:
+            device["online"] = (
+                None if device["is_manual_visual"] else bool(device["poll_success"])
+            )
         device["measurement_is_stale"] = bool(
             device["measurement_at"]
             and datetime.now(UTC).replace(tzinfo=None) - device["measurement_at"]
