@@ -105,10 +105,12 @@ def sensor_descriptors(device: dict[str, Any]) -> list[dict[str, str | None]]:
     found: dict[str, dict[str, str | None]] = {}
     for expose in iter_exposes(definition.get("exposes") or []):
         property_name = str(expose["property"])
+        if property_name not in SENSOR_TYPE_NAMES:
+            continue
         found[property_name] = {
             "property": property_name,
             "label": str(expose.get("label") or expose.get("name") or property_name),
-            "sensor_type": SENSOR_TYPE_NAMES.get(property_name, property_name)[:32],
+            "sensor_type": SENSOR_TYPE_NAMES[property_name],
             "unit": UNIT_NAMES.get(str(expose.get("unit")), str(expose.get("unit")))
             if expose.get("unit") is not None
             else ("boolean" if expose.get("type") == "binary" else None),

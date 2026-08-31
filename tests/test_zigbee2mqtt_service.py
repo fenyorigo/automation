@@ -26,6 +26,7 @@ PLUG = {
             {"access": 5, "label": "Current", "property": "current", "type": "numeric", "unit": "A"},
             {"access": 5, "label": "Voltage", "property": "voltage", "type": "numeric", "unit": "V"},
             {"access": 5, "label": "Power", "property": "power", "type": "numeric", "unit": "W"},
+            {"access": 7, "label": "Outlet control protect", "property": "outlet_control_protect", "type": "binary"},
             {"access": 2, "label": "Inching time", "property": "inching_time", "type": "numeric", "unit": "seconds"},
             {"access": 1, "category": "diagnostic", "label": "Linkquality", "property": "linkquality", "type": "numeric", "unit": "lqi"},
         ]
