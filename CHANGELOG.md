@@ -9,6 +9,9 @@ helyi dátumok.
 
 - Automatikus Zigbee2MQTT eszközfelfedezés és legutolsóérték-kijelzés SONOFF
   routerekhez, beltéri és kültéri hőmérőkhöz.
+- Zigbee temperature, humidity és battery jelentések időbélyeges mentése a
+  közös `sensor_readings` táblába, stabil duplikációvédelemmel és egyszeri
+  cache-kezdőponttal.
 - Külön, eseményvezérelt Shelly H&T Gen3 MQTT collector temperature, humidity,
   battery és `battery_voltage` idősorokkal a meglévő mérési modellben.
 - Deep-sleep-tudatos Shelly UI zöld/sárga/narancs/piros, 1/2/4 órás

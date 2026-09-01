@@ -148,7 +148,9 @@ Ez a nézet használható például több ESP32 kalibrációjának, egy ESP32 é
 Computherm dinamikájának, illetve klíma- és szellőztetési események hatásának
 összehasonlítására. A Shelly MQTT-hőmérsékletek közvetlenül a
 `sensor_readings` idősorba kerülnek, ezért ugyanitt kiválaszthatók és
-exportálhatók.
+exportálhatók. A Zigbee/SONOFF temperature jelentések szintén ebbe az idősorba
+kerülnek; a funkció bevezetése előtti cache-ből csak az utolsó ismert pont
+vehető át, teljes korábbi görbe nem állítható helyre.
 
 ### CSV-export
 

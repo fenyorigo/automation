@@ -8,6 +8,7 @@ from zigbee2mqtt_service import (
     is_outdoor_temperature_sensor,
     parse_last_seen,
     sensor_descriptors,
+    time_series_event_id,
 )
 
 
@@ -136,6 +137,14 @@ class ZigbeeDiscoveryTest(unittest.TestCase):
         iso = parse_last_seen("2026-08-31T06:15:23.851Z")
         epoch = parse_last_seen(iso.replace(tzinfo=UTC).timestamp())
         self.assertEqual(iso, epoch)
+
+    def test_time_series_event_id_is_stable_for_source_timestamp(self) -> None:
+        observed = parse_last_seen("2026-09-01T19:25:51.293Z")
+        self.assertIsNotNone(observed)
+        first = time_series_event_id(PLUG["ieee_address"], "temperature", observed)
+        second = time_series_event_id(PLUG["ieee_address"], "temperature", observed)
+        self.assertEqual(first, second)
+        self.assertIn(":temperature:", first)
 
 
 if __name__ == "__main__":

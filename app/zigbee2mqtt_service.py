@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SYSTEM = "zigbee2mqtt"
 DEFAULT_BASE_TOPIC = "zigbee2mqtt"
 OUTDOOR_SENSOR_MODELS = {"SNZB-02WD"}
+TIME_SERIES_PROPERTIES = {"temperature", "humidity", "battery"}
 
 UNIT_NAMES = {
     "%": "percent",
@@ -147,6 +148,13 @@ def scalar_values(value: Any) -> tuple[Decimal | None, str | None]:
     if isinstance(value, str):
         return None, value[:255]
     return None, None
+
+
+def time_series_event_id(
+    ieee_address: str, property_name: str, observed_at: datetime
+) -> str:
+    timestamp = observed_at.strftime("%Y%m%dT%H%M%S%f")
+    return f"{SOURCE_SYSTEM}:{ieee_address}:{property_name}:{timestamp}"
 
 
 class ZigbeeRepository:
@@ -303,7 +311,61 @@ class ZigbeeRepository:
                     f"{friendly_name} {sensor['label']}", sensor["sensor_type"], sensor["unit"],
                 ),
             )
+        self._bootstrap_time_series(cursor, device_id, ieee)
         return device_id
+
+    def _bootstrap_time_series(
+        self, cursor: mariadb.Cursor, device_id: int, ieee_address: str
+    ) -> None:
+        placeholders = ",".join("?" for _ in TIME_SERIES_PROPERTIES)
+        cursor.execute(
+            f"""SELECT property_name,numeric_value,source_observed_at,received_at,
+                       raw_payload
+                  FROM zigbee2mqtt_property_cache
+                 WHERE device_id=? AND property_name IN ({placeholders})""",
+            (device_id, *sorted(TIME_SERIES_PROPERTIES)),
+        )
+        for property_name, value, source_at, received_at, raw_payload in cursor.fetchall():
+            if value is None:
+                continue
+            raw = raw_payload if isinstance(raw_payload, str) else json_value(raw_payload)
+            self._insert_time_series_measurement(
+                cursor, device_id, ieee_address, str(property_name), Decimal(str(value)),
+                source_at or received_at, raw,
+            )
+
+    @staticmethod
+    def _insert_time_series_measurement(
+        cursor: mariadb.Cursor,
+        device_id: int,
+        ieee_address: str,
+        property_name: str,
+        value: Decimal,
+        observed_at: datetime,
+        raw_payload: str,
+    ) -> None:
+        if property_name not in TIME_SERIES_PROPERTIES:
+            return
+        cursor.execute(
+            """SELECT id FROM sensors
+               WHERE device_id=? AND source_system=? AND source_sensor_id=?
+                 AND is_active=1""",
+            (device_id, SOURCE_SYSTEM, f"{ieee_address}:{property_name}"),
+        )
+        sensor = cursor.fetchone()
+        if sensor is None:
+            return
+        cursor.execute(
+            """INSERT IGNORE INTO sensor_readings
+               (sensor_id,observed_at,value,quality,error_code,source_system,
+                source_event_id,raw_payload)
+               VALUES (?,?,?,'good',NULL,?,?,?)""",
+            (
+                int(sensor[0]), observed_at, value, SOURCE_SYSTEM,
+                time_series_event_id(ieee_address, property_name, observed_at),
+                raw_payload,
+            ),
+        )
 
     def cache_state(
         self, friendly_name: str, topic: str, payload: dict[str, Any], retained: bool
@@ -342,6 +404,11 @@ class ZigbeeRepository:
                         text_value, source_observed_at, received_at, topic, retained, raw,
                     ),
                 )
+                if property_name in TIME_SERIES_PROPERTIES and numeric_value is not None:
+                    self._insert_time_series_measurement(
+                        cursor, device_id, ieee_address, property_name, numeric_value,
+                        source_observed_at or received_at, raw,
+                    )
             cursor.execute(
                 "UPDATE zigbee2mqtt_devices SET last_message_at=? WHERE device_id=?",
                 (received_at, device_id),

@@ -47,9 +47,10 @@ A retained Shelly-üzenetek stabil topic+payload hash-alapú eseményazonosító
 kapnak. Élő üzenetnél az érkezési idő része a `source_event_id`-nak, így azonos
 érték ismételt jelentése is megmarad.
 
-A Zigbee2MQTT általános mérései jelenleg ettől eltérően a
-`zigbee2mqtt_property_cache` legutolsóérték-táblában vannak. A Zigbee collector
-idősoros `sensor_readings` bővítése külön fejlesztési lépés.
+A Zigbee2MQTT minden tulajdonságának legutolsó értéke a
+`zigbee2mqtt_property_cache` táblában marad. A temperature, humidity és battery
+tulajdonságok ezen felül a közös `sensor_readings` idősorba is bekerülnek. A
+forrásoldali `last_seen` idő és az IEEE-cím stabil eseményazonosítást biztosít.
 
 ## Kalibrált és cselekedeti hőmérséklet
 

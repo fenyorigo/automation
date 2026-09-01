@@ -153,8 +153,15 @@ mérési pont. Részletes üzemeltetés: [`docs/shelly-mqtt.md`](shelly-mqtt.md)
 A Zigbee2MQTT adapter nem küld rendszeres `/get` parancsokat az elemes
 eszközöknek. Az MQTT-üzenetek legutó ismert tulajdonságait a
 `zigbee2mqtt_property_cache` táblában tartja, a Zigbee2MQTT `last_seen`
-időpontját pedig a fogadás idejétől külön tárolja. A szabályos idősoros
-minták készítése egy következő lépésben erre a cache-re épül.
+időpontját pedig a fogadás idejétől külön tárolja. A temperature, humidity és
+battery jelentések emellett külön, időbélyeges `sensor_readings` sorokként is
+megmaradnak. Az eseményazonosító a fizikai IEEE-címből, tulajdonságból és
+forrásoldali `last_seen` időből készül, ezért retained vagy ismételt üzenet nem
+duplázza ugyanazt a mintát.
+
+Az idősoros mentés bevezetésekor a collector a cache aktuális értékeiből
+eszközönként és tulajdonságonként egy kezdőpontot készít. A cache nem tartalmaz
+előzményeket, ezért a bevezetés előtti teljes Zigbee-idősor nem rekonstruálható.
 
 Az SNZB-02WD kültéri hőmérő jelentései ezen felül időbélyeges
 `outdoor_temperature_observations` sorokat hoznak létre. A hozzá tartozó
