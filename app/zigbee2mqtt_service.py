@@ -270,6 +270,23 @@ class ZigbeeRepository:
             "UPDATE sensors SET is_active=0 WHERE device_id=? AND source_system=?",
             (device_id, SOURCE_SYSTEM),
         )
+        if is_outdoor_temperature_sensor(model):
+            cursor.execute(
+                """SELECT numeric_value,source_observed_at,received_at,raw_payload
+                   FROM zigbee2mqtt_property_cache
+                   WHERE device_id=? AND property_name='temperature'""",
+                (device_id,),
+            )
+            cached_temperature = cursor.fetchone()
+            if cached_temperature is not None and cached_temperature[0] is not None:
+                observed_at = cached_temperature[1] or cached_temperature[2]
+                cached_raw = cached_temperature[3]
+                self._cache_outdoor_temperature(
+                    cursor, device_id, ieee, friendly_name,
+                    {"temperature": cached_temperature[0]}, observed_at,
+                    cached_temperature[2],
+                    cached_raw if isinstance(cached_raw, str) else json_value(cached_raw),
+                )
         cursor.execute("SELECT room_id FROM devices WHERE id=?", (device_id,))
         room_id = cursor.fetchone()[0]
         for sensor in sensors:
