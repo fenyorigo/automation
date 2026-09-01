@@ -134,6 +134,10 @@ MIGRATIONS = (
         "v1_32_zigbee2mqtt_discovery",
         ROOT / "SQL" / "migrations" / "032_home_automation_v1.31_to_v1.32.sql",
     ),
+    (
+        "v1_33_zigbee_outdoor_temperature",
+        ROOT / "SQL" / "migrations" / "033_home_automation_v1.32_to_v1.33.sql",
+    ),
 )
 
 

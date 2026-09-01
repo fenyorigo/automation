@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SYSTEM = "zigbee2mqtt"
 DEFAULT_BASE_TOPIC = "zigbee2mqtt"
+OUTDOOR_SENSOR_MODELS = {"SNZB-02WD"}
 
 UNIT_NAMES = {
     "%": "percent",
@@ -80,6 +81,10 @@ def parse_last_seen(value: Any) -> datetime | None:
 def registry_code(value: str) -> str:
     code = re.sub(r"[^a-z0-9]+", "_", value.casefold()).strip("_")
     return code[:50] or "other"
+
+
+def is_outdoor_temperature_sensor(model_id: Any) -> bool:
+    return str(model_id or "").upper() in OUTDOOR_SENSOR_MODELS
 
 
 def iter_exposes(exposes: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
@@ -291,7 +296,8 @@ class ZigbeeRepository:
         source_observed_at = parse_last_seen(payload.get("last_seen"))
         try:
             cursor.execute(
-                "SELECT device_id FROM zigbee2mqtt_devices WHERE friendly_name=?",
+                """SELECT device_id,ieee_address,model_id
+                   FROM zigbee2mqtt_devices WHERE friendly_name=?""",
                 (friendly_name,),
             )
             row = cursor.fetchone()
@@ -299,6 +305,8 @@ class ZigbeeRepository:
                 self.connection.rollback()
                 return False
             device_id = int(row[0])
+            ieee_address = str(row[1])
+            model_id = row[2]
             raw = json_value(payload)
             for property_name, value in payload.items():
                 numeric_value, text_value = scalar_values(value)
@@ -321,6 +329,11 @@ class ZigbeeRepository:
                 "UPDATE zigbee2mqtt_devices SET last_message_at=? WHERE device_id=?",
                 (received_at, device_id),
             )
+            if is_outdoor_temperature_sensor(model_id) and payload.get("temperature") is not None:
+                self._cache_outdoor_temperature(
+                    cursor, device_id, ieee_address, friendly_name, payload,
+                    source_observed_at or received_at, received_at, raw,
+                )
             self.connection.commit()
             return True
         except Exception:
@@ -328,6 +341,46 @@ class ZigbeeRepository:
             raise
         finally:
             cursor.close()
+
+    @staticmethod
+    def _cache_outdoor_temperature(
+        cursor: mariadb.Cursor,
+        device_id: int,
+        ieee_address: str,
+        friendly_name: str,
+        payload: dict[str, Any],
+        observed_at: datetime,
+        received_at: datetime,
+        raw_payload: str,
+    ) -> None:
+        source_code = f"zigbee_outdoor_{registry_code(ieee_address)}"[:64]
+        cursor.execute(
+            """INSERT INTO outdoor_temperature_sources
+               (source_code,display_name,source_type,is_active,priority,max_age_minutes,
+                configuration)
+               VALUES (?,?,'zigbee2mqtt',1,1,120,
+                       JSON_OBJECT('device_id',?,'ieee_address',?))
+               ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),
+                is_active=1,priority=1,max_age_minutes=120,
+                configuration=VALUES(configuration)""",
+            (source_code, friendly_name[:120], device_id, ieee_address),
+        )
+        cursor.execute(
+            "SELECT id FROM outdoor_temperature_sources WHERE source_code=?",
+            (source_code,),
+        )
+        source_id = int(cursor.fetchone()[0])
+        event_id = f"{source_code}:{observed_at.isoformat(timespec='milliseconds')}"
+        cursor.execute(
+            """INSERT IGNORE INTO outdoor_temperature_observations
+               (source_id,observed_at,fetched_at,temperature_c,quality,
+                source_event_id,raw_payload)
+               VALUES (?,?,? ,?,'good',?,?)""",
+            (
+                source_id, observed_at, received_at, Decimal(str(payload["temperature"])),
+                event_id, raw_payload,
+            ),
+        )
 
     def set_availability(self, friendly_name: str, availability: str) -> bool:
         cursor = self.connection.cursor()

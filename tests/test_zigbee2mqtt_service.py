@@ -5,6 +5,7 @@ from datetime import UTC
 from zigbee2mqtt_service import (
     ZigbeeMessageHandler,
     inferred_device_type,
+    is_outdoor_temperature_sensor,
     parse_last_seen,
     sensor_descriptors,
 )
@@ -93,6 +94,11 @@ class ZigbeeDiscoveryTest(unittest.TestCase):
             inferred_device_type(THERMOMETER, list(descriptors.values())),
             "temperature_sensor",
         )
+
+    def test_only_waterproof_model_is_an_outdoor_source(self) -> None:
+        self.assertTrue(is_outdoor_temperature_sensor("SNZB-02WD"))
+        self.assertTrue(is_outdoor_temperature_sensor("snzb-02wd"))
+        self.assertFalse(is_outdoor_temperature_sensor("SNZB-02P"))
 
     def test_routes_bridge_discovery_and_device_state(self) -> None:
         repository = FakeRepository()

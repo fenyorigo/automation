@@ -143,6 +143,11 @@ eszközöknek. Az MQTT-üzenetek legutó ismert tulajdonságait a
 időpontját pedig a fogadás idejétől külön tárolja. A szabályos idősoros
 minták készítése egy következő lépésben erre a cache-re épül.
 
+Az SNZB-02WD kültéri hőmérő jelentései ezen felül időbélyeges
+`outdoor_temperature_observations` sorokat hoznak létre. A hozzá tartozó
+Zigbee2MQTT-forrás automatikusan aktív, 1. prioritású és 120 percig friss;
+az alacsonyabb prioritású Open-Meteo forrás ennek kiesésekor tartalék marad.
+
 A ConnectLife felhasználónév és jelszó kizárólag a nem verziózott `.env`
 fájlban szerepelhet.
 
