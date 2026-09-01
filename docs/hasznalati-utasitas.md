@@ -2,7 +2,8 @@
 
 Ez a dokumentum az Otthonklíma webes alkalmazás napi használatát mutatja be a
 menüpontok sorrendjében. Az alkalmazás ESP32/DS18B20 hőmérőket, Computherm
-termosztátokat, Hisense/ConnectLife klímákat, Nous/Tasmota fogyasztásmérőket,
+termosztátokat, Hisense/ConnectLife klímákat, Zigbee2MQTT/SONOFF és
+Shelly H&T Gen3 MQTT-hőmérőket, Nous/Tasmota fogyasztásmérőket,
 külső hőmérsékleti forrásokat, valamint kézzel rögzített üzemeltetési és
 energiaadatokat kezel.
 
@@ -53,7 +54,8 @@ időállandóját, a kalibrációs korrekciót és a cselekedeti pont időpontj�
 ### Nézetváltás
 
 - **Eszközök:** az eszközök típus szerint csoportosítva jelennek meg
-  (ESP32, Computherm, Hisense, Nous/Tasmota, kézi eszközök). A szűrővel egy
+  (ESP32, Computherm, Hisense, Nous/Tasmota, Zigbee, Shelly MQTT és kézi
+  eszközök). A szűrővel egy
   kiválasztott eszközcsoport önmagában is megjeleníthető. A mellette levő
   **Lekérdezési körben** jelölővel az összes vagy a kiválasztott típuson belül
   csak az automatikusan lekérdezett eszközök maradnak láthatók. A böngésző a
@@ -73,6 +75,12 @@ A kártyák az eszköz típusától függően mutathatják:
 - a Nous/Tasmota pillanatnyi teljesítményét, feszültségét, relé- és
   terheltségi állapotát, továbbá az összes fogyasztást és annak kezdőidejét;
 - a Bosch 7000i kézi állapotát és szervizadatait.
+- a Zigbee és Shelly hőmérők páratartalmát, elemállapotát, típusát és utolsó
+  tényleges mérési idejét.
+
+A Shelly H&T Gen3 elemes, deep-sleep eszköz. Az **MQTT / alvó** jelzés normális
+működést jelent; az `/online=false` nem offline hiba. A kártya akkor jelez
+elöregedett adatot, ha három órán belül egyetlen tényleges mérés sem érkezett.
 
 A **Bekapcsolva** klímaállapot kiemelten jelenik meg. Az elérhető jelzés nem
 azonos a bekapcsolt állapottal: azt mutatja, hogy az eszköz lekérdezhető volt.
@@ -128,7 +136,9 @@ utolsó rendelkezésre álló adatponthoz.
 
 Ez a nézet használható például több ESP32 kalibrációjának, egy ESP32 és egy
 Computherm dinamikájának, illetve klíma- és szellőztetési események hatásának
-összehasonlítására.
+összehasonlítására. A Shelly MQTT-hőmérsékletek közvetlenül a
+`sensor_readings` idősorba kerülnek, ezért ugyanitt kiválaszthatók és
+exportálhatók.
 
 ### CSV-export
 

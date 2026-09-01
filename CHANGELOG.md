@@ -3,6 +3,26 @@
 A projekt a szemantikus verziózás elvét követi. A kiadás dátumai budapesti
 helyi dátumok.
 
+## Kiadatlan
+
+### Új funkciók
+
+- Automatikus Zigbee2MQTT eszközfelfedezés és legutolsóérték-kijelzés SONOFF
+  routerekhez, beltéri és kültéri hőmérőkhöz.
+- Külön, eseményvezérelt Shelly H&T Gen3 MQTT collector temperature, humidity,
+  battery és `battery_voltage` idősorokkal a meglévő mérési modellben.
+- Deep-sleep-tudatos Shelly UI háromórás frissességgel; az `/online=false` nem
+  minősül hibának.
+- A kézi `shelly-dolgozo` fizikai utódjának automatikus, történetmegőrző
+  párosítása.
+
+### Üzemeltetés
+
+- Új `automation-zigbee2mqtt.service` és `automation-shelly-mqtt.service`
+  Fedora systemd egységek, Mosquitto- és MariaDB-függőséggel.
+- A teljes Fedora mentés Mosquitto/Zigbee2MQTT állapotot ment, és visszaállítja
+  az MQTT collectorok mentés előtti futási állapotát.
+
 ## 1.1.0 — 2026-08-22
 
 Kalibrált ESP32/DS18B20 hőmérsékleti feldolgozás és programozott klímaüzem.

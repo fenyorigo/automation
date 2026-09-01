@@ -145,6 +145,9 @@ A teljes, normalizált JSON megtekintéséhez hagyjuk el a `--summary` kapcsoló
 
 A Shelly H&T Gen3 deep-sleep működése miatt az `/online=false` nem hiba. A
 dashboard a legutóbbi tényleges mérésből számít frissességet, 3 órás határral.
+Retained üzenetnél stabil topic+payload hash védi az idősorokat az
+újraindításkori duplikációtól; azonos payloadú későbbi élő üzenet mindig új
+mérési pont. Részletes üzemeltetés: [`docs/shelly-mqtt.md`](shelly-mqtt.md).
 
 A Zigbee2MQTT adapter nem küld rendszeres `/get` parancsokat az elemes
 eszközöknek. Az MQTT-üzenetek legutó ismert tulajdonságait a

@@ -2,7 +2,8 @@
 
 ## Cél
 
-Ez a dokumentáció a MariaDB alapú, forrásfüggetlen adatbázis-sémát írja le az ESP32, ConnectLife és Computherm adatok tárolásához.
+Ez a dokumentáció a MariaDB alapú, forrásfüggetlen adatbázis-sémát írja le az
+ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásához.
 
 ## Fő elvek
 
@@ -33,6 +34,22 @@ Ez a dokumentáció a MariaDB alapú, forrásfüggetlen adatbázis-sémát írja
 - `device_states`: eszközállapotok, például üzemmód, be-/kikapcsolás, ventilátorsebesség
 - `deterministic_reports`: kereshető, időbélyegzett automatikus jelentések,
   verziózott szabályokkal, bizonyítékokkal és az eredeti ténycsomaggal
+
+## MQTT-források
+
+A Shelly H&T Gen3 a meglévő általános táblákat használja, új Shelly-specifikus
+tábla nélkül. Egy készülékhez egy `devices` rekord és négy `sensors` csatorna
+tartozhat: `temperature`, `humidity`, `battery`, `battery_voltage`. Minden élő
+MQTT-jelentés külön `sensor_readings` sort hoz létre; nem kell a külön topicokon
+érkező értékeket egyetlen mintává összevárni.
+
+A retained Shelly-üzenetek stabil topic+payload hash-alapú eseményazonosítót
+kapnak. Élő üzenetnél az érkezési idő része a `source_event_id`-nak, így azonos
+érték ismételt jelentése is megmarad.
+
+A Zigbee2MQTT általános mérései jelenleg ettől eltérően a
+`zigbee2mqtt_property_cache` legutolsóérték-táblában vannak. A Zigbee collector
+idősoros `sensor_readings` bővítése külön fejlesztési lépés.
 
 ## Kalibrált és cselekedeti hőmérséklet
 

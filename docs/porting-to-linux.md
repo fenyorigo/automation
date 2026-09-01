@@ -434,6 +434,37 @@ journalctl -u automation-poller.service -n 30 --no-pager
 A 2026-08-27-i átállás végén a dashboard és a poller is a think260x gépen
 futott, a Mac periodikus pollere pedig kikapcsolva maradt.
 
+### Shelly MQTT collector
+
+A Shelly H&T Gen3 nem része a periodikus pollkörnek. A helyi Mosquitto broker
+üzeneteit külön systemd szolgáltatás dolgozza fel:
+
+```bash
+chown automation:automation /var/www/automation/app/shelly_mqtt_service.py
+chmod 0755 /var/www/automation/app/shelly_mqtt_service.py
+install -o root -g root -m 0644 \
+  /var/www/automation/deploy/systemd/automation-shelly-mqtt.service \
+  /etc/systemd/system/automation-shelly-mqtt.service
+restorecon -R /var/www/automation/app
+restorecon /etc/systemd/system/automation-shelly-mqtt.service
+systemctl daemon-reload
+systemctl enable --now automation-shelly-mqtt.service
+```
+
+Ellenőrzés:
+
+```bash
+systemctl status automation-shelly-mqtt.service --no-pager -l
+journalctl -u automation-shelly-mqtt.service -n 50 --no-pager
+```
+
+Az unit a MariaDB és Mosquitto után indul, és mindkettővel `PartOf`
+kapcsolatban áll. A Fedora teljes mentőscriptjének is meg kell őriznie és vissza
+kell állítania az `automation-shelly-mqtt.service` futási állapotát.
+
+A részletes topic-, deep-sleep-, duplikáció- és SQL-ellenőrzési leírás a
+[`docs/shelly-mqtt.md`](shelly-mqtt.md) dokumentumban található.
+
 ### A Fedora szerver saját metrikái
 
 A `thinkpad260x` nyilvántartási eszközt a `linux_system` illesztő kérdezi le
