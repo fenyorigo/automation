@@ -136,6 +136,15 @@ A teljes, normalizált JSON megtekintéséhez hagyjuk el a `--summary` kapcsoló
   leírásból IEEE-cím alapján automatikusan létrehozza az eszközöket és az
   olvasható mérési csatornákat. Az új eszköz csak olvasható, vezérlése
   kikapcsolt, helyisége pedig nincs, amíg a Nyilvántartásban hozzá nem rendelik.
+- Shelly H&T Gen3: a külön `automation-shelly-mqtt.service` a helyi Mosquitto
+  broker `+/status/temperature:0`, `+/status/humidity:0`,
+  `+/status/devicepower:0` és `+/online` témáit figyeli. Csak a
+  `shellyhtg3-` kezdetű első topicszintet fogadja el. A hőmérsékletet,
+  páratartalmat, elemszázalékot és elemfeszültséget egymástól független,
+  időbélyeges `sensor_readings` sorokként tárolja.
+
+A Shelly H&T Gen3 deep-sleep működése miatt az `/online=false` nem hiba. A
+dashboard a legutóbbi tényleges mérésből számít frissességet, 3 órás határral.
 
 A Zigbee2MQTT adapter nem küld rendszeres `/get` parancsokat az elemes
 eszközöknek. Az MQTT-üzenetek legutó ismert tulajdonságait a

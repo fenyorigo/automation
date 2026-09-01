@@ -91,6 +91,7 @@ SOURCE_LABELS = {
     "manual": "Kézi",
     "linux_system": "Linux rendszer",
     "zigbee2mqtt": "Zigbee2MQTT",
+    "shelly_mqtt": "Shelly MQTT",
 }
 
 DEVICE_GROUPS = (
@@ -101,6 +102,7 @@ DEVICE_GROUPS = (
     ("manual", "Kézi eszközök"),
     ("linux_system", "Linux szerverek"),
     ("zigbee2mqtt", "Zigbee eszközök"),
+    ("shelly_mqtt", "Shelly MQTT hőmérők"),
 )
 
 COMPUTHERM_LOCATION = {
@@ -786,7 +788,7 @@ def load_dashboard(
         cursor.execute(
             """
             SELECT
-              d.id, d.name, d.hostname, d.source_system, d.device_type,
+              d.id, d.name, d.hostname, d.source_system, d.device_type,d.model,
               dt.name AS device_type_name,
               d.room_id, r.name AS room_name, z.name AS zone_name,
               d.managed_manually, d.manual_power_state, d.access_mode,
@@ -811,6 +813,24 @@ def load_dashboard(
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='battery') AS zigbee_battery_percent,
+              (SELECT MAX(msr.observed_at)
+                 FROM sensors ms JOIN sensor_readings msr ON msr.sensor_id=ms.id
+                WHERE ms.device_id=d.id AND ms.is_active=1
+                  AND ms.sensor_type IN ('temperature','humidity','battery','battery_voltage'))
+                AS shelly_last_measurement_at,
+              (SELECT hsr.value
+                 FROM sensors hs JOIN sensor_readings hsr ON hsr.sensor_id=hs.id
+                WHERE hs.device_id=d.id AND hs.is_active=1 AND hs.sensor_type='humidity'
+                ORDER BY hsr.observed_at DESC,hsr.id DESC LIMIT 1) AS shelly_humidity_percent,
+              (SELECT bsr.value
+                 FROM sensors bs JOIN sensor_readings bsr ON bsr.sensor_id=bs.id
+                WHERE bs.device_id=d.id AND bs.is_active=1 AND bs.sensor_type='battery'
+                ORDER BY bsr.observed_at DESC,bsr.id DESC LIMIT 1) AS shelly_battery_percent,
+              (SELECT vsr.value
+                 FROM sensors vbs JOIN sensor_readings vsr ON vsr.sensor_id=vbs.id
+                WHERE vbs.device_id=d.id AND vbs.is_active=1
+                  AND vbs.sensor_type='battery_voltage'
+                ORDER BY vsr.observed_at DESC,vsr.id DESC LIMIT 1) AS shelly_battery_voltage,
               (SELECT mse.changed_at FROM manual_state_events mse
                WHERE mse.device_id = d.id
                ORDER BY mse.changed_at DESC, mse.id DESC LIMIT 1) AS manual_state_changed_at,
@@ -951,6 +971,13 @@ def load_dashboard(
                 device["measurement_at"] = (
                     device["zigbee_last_seen"] or device["mqtt_message_at"]
                 )
+        elif device["source_system"] == "shelly_mqtt":
+            device["online"] = bool(
+                device["shelly_last_measurement_at"]
+                and datetime.now(UTC).replace(tzinfo=None)
+                - device["shelly_last_measurement_at"]
+                <= timedelta(hours=3)
+            )
         else:
             device["online"] = (
                 None if device["is_manual_visual"] else bool(device["poll_success"])

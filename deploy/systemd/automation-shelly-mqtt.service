@@ -1,0 +1,19 @@
+[Unit]
+Description=Automation Shelly H&T Gen3 MQTT collector
+After=network-online.target mariadb.service mosquitto.service
+Wants=network-online.target
+Requires=mariadb.service mosquitto.service
+PartOf=mariadb.service mosquitto.service
+
+[Service]
+Type=simple
+User=automation
+Group=automation
+WorkingDirectory=/var/www/automation
+ExecStart=/var/www/automation/.venv/bin/python /var/www/automation/app/shelly_mqtt_service.py
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -2,11 +2,11 @@
   <div class="card-heading">
     <div><p class="source">{{ device.source_label }}</p><h3>{{ device.name }}</h3></div>
     <span class="badge {{ 'manual' if device.is_manual_visual or not device.polling_enabled else ('online' if device.online else 'offline') }}">
-      {% if device.source_system == 'zigbee2mqtt' %}{{ 'Zigbee' if device.online else 'Nincs friss Zigbee-adat' }}{% else %}{{ 'Kézi állapot' if device.is_manual_visual else ('Lekérdezés kikapcsolva' if not device.polling_enabled else ('Elérhető' if device.online else 'Offline')) }}{% endif %}
+      {% if device.source_system == 'zigbee2mqtt' %}{{ 'Zigbee' if device.online else 'Nincs friss Zigbee-adat' }}{% elif device.source_system == 'shelly_mqtt' %}{{ 'MQTT / alvó' if device.online else 'Nincs friss mérés' }}{% else %}{{ 'Kézi állapot' if device.is_manual_visual else ('Lekérdezés kikapcsolva' if not device.polling_enabled else ('Elérhető' if device.online else 'Offline')) }}{% endif %}
     </span>
   </div>
-  {% if device.source_system == 'zigbee2mqtt' %}<span class="badge zigbee-type">{{ device.device_type_name or device.device_type }}</span>{% endif %}
-  <p class="device-poll-interval">{% if device.source_system == 'zigbee2mqtt' %}Adatkapcsolat: <strong>folyamatos MQTT</strong>{% else %}Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}{% endif %}</p>
+  {% if device.source_system in ['zigbee2mqtt', 'shelly_mqtt'] %}<span class="badge mqtt-sensor-type">{{ device.device_type_name or device.device_type }}</span>{% endif %}
+  <p class="device-poll-interval">{% if device.source_system == 'zigbee2mqtt' %}Adatkapcsolat: <strong>folyamatos MQTT</strong>{% elif device.source_system == 'shelly_mqtt' %}Adatkapcsolat: <strong>Wi-Fi / MQTT · deep sleep</strong>{% else %}Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}{% endif %}</p>
   {% if device.managed_manually %}
   <div class="manual-state {{ 'powered' if device.manual_power_state else 'stopped' }}">
     <span class="manual-state-label">Kazán</span><strong>{{ 'Bekapcsolva' if device.manual_power_state else 'Kikapcsolva' }}</strong>
@@ -46,6 +46,13 @@
     <div><dt>Jelminőség</dt><dd>{% if device.zigbee_linkquality is not none %}{{ device.zigbee_linkquality|int }} LQI{% else %}—{% endif %}</dd></div>
     <div><dt>Modell</dt><dd>{{ device.zigbee_model or '—' }}</dd></div>
   </dl>
+  {% elif device.source_system == 'shelly_mqtt' %}
+  <dl class="state-grid">
+    <div><dt>Páratartalom</dt><dd>{% if device.shelly_humidity_percent is not none %}{{ device.shelly_humidity_percent|float|round(1) }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>Elem</dt><dd>{% if device.shelly_battery_percent is not none %}{{ device.shelly_battery_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>Elemfeszültség</dt><dd>{% if device.shelly_battery_voltage is not none %}{{ device.shelly_battery_voltage|float|round(2) }} V{% else %}—{% endif %}</dd></div>
+    <div><dt>Modell</dt><dd>{{ device.model or 'Shelly H&T Gen3' }}</dd></div>
+  </dl>
   {% elif device.source_system == 'tasmota' %}
   <dl class="state-grid">
     <div><dt>Összes energia</dt><dd>{% if device.energy_total_kwh is not none %}{{ device.energy_total_kwh|float|round(3) }} kWh{% else %}—{% endif %}{% if device.energy_total_started_at %}<br><small class="measurement-period">{{ device.energy_total_started_at|replace('T',' ') }} <span style="text-transform: lowercase">óta</span></small>{% endif %}</dd></div>
@@ -69,6 +76,8 @@
   {% endif %}
   {% if device.source_system == 'zigbee2mqtt' %}
   <div class="card-footer"><span>Utolsó Zigbee-jel</span><time>{{ device.zigbee_last_seen|local_time }}</time></div>
+  {% elif device.source_system == 'shelly_mqtt' %}
+  <div class="card-footer"><span>Utolsó Shelly-mérés</span><time>{{ device.shelly_last_measurement_at|local_time }}</time></div>
   {% elif device.is_manual_visual %}
   <div class="card-footer"><span>Utolsó kézi mérés</span><time>{{ device.measurement_at|local_time }}</time></div>
   {% elif device.hostname %}<div class="card-footer"><span>{{ device.hostname }}</span><time>{{ device.last_poll_at|local_time }}</time></div>{% endif %}

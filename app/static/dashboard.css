@@ -57,7 +57,7 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .badge.online { background: var(--green-soft); color: var(--green); }
 .badge.offline { background: var(--red-soft); color: var(--red); }
 .badge.manual { background: #ece6d5; color: #765c20; }
-.badge.zigbee-type { margin-top: 8px; background: #e9e4f5; color: #59438a; }
+.badge.mqtt-sensor-type { margin-top: 8px; background: #e9e4f5; color: #59438a; }
 .temperature { display: flex; align-items: start; margin: 25px 0 20px; font-variant-numeric: tabular-nums; }
 .temperature-value { font-size: clamp(3.1rem, 8vw, 4.6rem); font-weight: 700; line-height: .85; letter-spacing: -.075em; }
 .temperature-unit { padding: 2px 0 0 8px; color: var(--muted); font-size: 1rem; font-weight: 700; }
