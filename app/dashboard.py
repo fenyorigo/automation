@@ -118,6 +118,24 @@ OUTDOOR_SOURCE_BADGES = {
     "manual": "Kézi adat",
 }
 
+
+def shelly_freshness_status(
+    last_measurement_at: datetime | None,
+    now_utc: datetime | None = None,
+) -> tuple[str, str, bool]:
+    """Return CSS class, Hungarian label and usability for a deep-sleep Shelly."""
+    if last_measurement_at is None:
+        return "offline", "Nincs mérés", False
+    now = now_utc or datetime.now(UTC).replace(tzinfo=None)
+    age = max(now - last_measurement_at, timedelta(0))
+    if age <= timedelta(hours=1):
+        return "online", "Friss mérés", True
+    if age <= timedelta(hours=2):
+        return "warning", "Alvó", True
+    if age <= timedelta(hours=4):
+        return "delayed", "Jelentés késik", True
+    return "offline", "Nincs friss mérés", False
+
 HISTORY_RANGES = {
     "1h": 1,
     "2h": 2,
@@ -980,11 +998,12 @@ def load_dashboard(
                     device["zigbee_last_seen"] or device["mqtt_message_at"]
                 )
         elif device["source_system"] == "shelly_mqtt":
-            device["online"] = bool(
+            (
+                device["shelly_status_class"],
+                device["shelly_status_label"],
+                device["online"],
+            ) = shelly_freshness_status(
                 device["shelly_last_measurement_at"]
-                and datetime.now(UTC).replace(tzinfo=None)
-                - device["shelly_last_measurement_at"]
-                <= timedelta(hours=3)
             )
         else:
             device["online"] = (

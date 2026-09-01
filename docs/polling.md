@@ -144,7 +144,8 @@ A teljes, normalizált JSON megtekintéséhez hagyjuk el a `--summary` kapcsoló
   időbélyeges `sensor_readings` sorokként tárolja.
 
 A Shelly H&T Gen3 deep-sleep működése miatt az `/online=false` nem hiba. A
-dashboard a legutóbbi tényleges mérésből számít frissességet, 3 órás határral.
+dashboard a legutóbbi tényleges mérésből számít négylépcsős frissességet:
+0–1 óra zöld, 1–2 óra sárga, 2–4 óra narancs, 4 óra felett piros.
 Retained üzenetnél stabil topic+payload hash védi az idősorokat az
 újraindításkori duplikációtól; azonos payloadú későbbi élő üzenet mindig új
 mérési pont. Részletes üzemeltetés: [`docs/shelly-mqtt.md`](shelly-mqtt.md).

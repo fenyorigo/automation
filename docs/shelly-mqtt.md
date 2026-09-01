@@ -59,9 +59,19 @@ egy későbbi, változatlan értékű mérés is új idősoros pont lesz.
 
 A H&T Gen3 felébred, mér, szükség esetén publikál, majd visszaalszik. Emiatt az
 `/online=false` normális állapot: nem hoz létre hibát és nem jelenti az eszköz
-kiesését. A dashboard a legutóbbi tényleges mérés időpontját használja, és az
-adatot 3 órán keresztül tekinti frissnek. Ez tartalékot ad a normál 7200
-másodperces `wakeup_period` fölött.
+kiesését. A dashboard a legutóbbi tényleges mérés időpontját használja, és a
+normál 7200 másodperces `wakeup_period` köré négylépcsős jelzést ad:
+
+| Mérési kor | Szín | Bélyeg |
+|---|---|---|
+| 0–1:00 | zöld | Friss mérés |
+| 1:01–2:00 | sárga | Alvó |
+| 2:01–4:00 | narancs | Jelentés késik |
+| 4:01 fölött | piros | Nincs friss mérés |
+
+Az utolsó ismert érték mind a négy állapotban látható marad. A sárga a normál
+deep-sleep ciklus része; a narancs legalább egy kimaradt jelentésre hívja fel a
+figyelmet, és csak két kimaradt ciklus után lesz piros a kártya.
 
 ## Automatikus regisztráció és kézi előd
 

@@ -78,9 +78,15 @@ A kártyák az eszköz típusától függően mutathatják:
 - a Zigbee és Shelly hőmérők páratartalmát, elemállapotát, típusát és utolsó
   tényleges mérési idejét.
 
-A Shelly H&T Gen3 elemes, deep-sleep eszköz. Az **MQTT / alvó** jelzés normális
-működést jelent; az `/online=false` nem offline hiba. A kártya akkor jelez
-elöregedett adatot, ha három órán belül egyetlen tényleges mérés sem érkezett.
+A Shelly H&T Gen3 elemes, deep-sleep eszköz; az `/online=false` nem offline
+hiba. A kártya a legutóbbi tényleges mérés kora alapján fokozatosan változik:
+
+- 0–1 óra: zöld, **Friss mérés**;
+- 1–2 óra: sárga, **Alvó**;
+- 2–4 óra: narancs, **Jelentés késik**;
+- 4 óra felett: piros, **Nincs friss mérés**.
+
+Az utolsó hőmérséklet minden állapotban látható marad.
 
 A **Bekapcsolva** klímaállapot kiemelten jelenik meg. Az elérhető jelzés nem
 azonos a bekapcsolt állapottal: azt mutatja, hogy az eszköz lekérdezhető volt.

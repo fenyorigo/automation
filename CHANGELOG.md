@@ -11,10 +11,12 @@ helyi dátumok.
   routerekhez, beltéri és kültéri hőmérőkhöz.
 - Külön, eseményvezérelt Shelly H&T Gen3 MQTT collector temperature, humidity,
   battery és `battery_voltage` idősorokkal a meglévő mérési modellben.
-- Deep-sleep-tudatos Shelly UI háromórás frissességgel; az `/online=false` nem
-  minősül hibának.
-- A kézi `shelly-dolgozo` fizikai utódjának automatikus, történetmegőrző
-  párosítása.
+- Deep-sleep-tudatos Shelly UI zöld/sárga/narancs/piros, 1/2/4 órás
+  frissességi fokozatokkal; az `/online=false` nem minősül hibának.
+- A kézi `shelly-dolgozo` és `shelly-nappali` fizikai utódjainak automatikus,
+  történetmegőrző párosítása.
+- A kültéri hőmérséklet-kártyán külön forrásbélyeg jelzi a Zigbee eszközt,
+  webes lekérdezést, helyi szenzort vagy kézi adatot.
 
 ### Üzemeltetés
 
