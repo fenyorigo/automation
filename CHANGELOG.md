@@ -12,6 +12,8 @@ helyi dátumok.
 - Zigbee temperature, humidity és battery jelentések időbélyeges mentése a
   közös `sensor_readings` táblába, stabil duplikációvédelemmel és egyszeri
   cache-kezdőponttal.
+- Az egypontos hőmérsékleti idősorok látható pontként jelennek meg; két vagy
+  több mérésnél marad a vonalgrafikon.
 - Külön, eseményvezérelt Shelly H&T Gen3 MQTT collector temperature, humidity,
   battery és `battery_voltage` idősorokkal a meglévő mérési modellben.
 - Deep-sleep-tudatos Shelly UI zöld/sárga/narancs/piros, 1/2/4 órás

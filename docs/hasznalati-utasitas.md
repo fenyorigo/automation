@@ -152,6 +152,9 @@ exportálhatók. A Zigbee/SONOFF temperature jelentések szintén ebbe az időso
 kerülnek; a funkció bevezetése előtti cache-ből csak az utolsó ismert pont
 vehető át, teljes korábbi görbe nem állítható helyre.
 
+Egy újonnan idősorba kapcsolt szenzor első, önálló mérését a grafikon pontként
+ábrázolja. A második méréstől a pontok között már vonal jelenik meg.
+
 ### CSV-export
 
 A kijelölt eszközök és a megadott időablak a **CSV letöltése** gombbal széles

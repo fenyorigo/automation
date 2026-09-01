@@ -765,11 +765,15 @@ def render_temperature_svg(
                 ),
                 encoding="utf-8",
             )
-            data_paths.append((name, data_path))
+            data_paths.append((name, data_path, len(points)))
         palette = ["#17765b", "#d65a31", "#386cb0", "#9b59b6", "#c49a00", "#5b6770", "#e157a0", "#2f9e44"]
         plots = [
-            f'"{gnuplot_quote(str(path))}" using 1:2 with lines lw 2.5 lc rgb "{palette[index % len(palette)]}" title "{gnuplot_quote(name)}"'
-            for index, (name, path) in enumerate(data_paths)
+            (
+                f'"{gnuplot_quote(str(path))}" using 1:2 '
+                + ("with points pt 7 ps 1.4" if point_count == 1 else "with lines lw 2.5")
+                + f' lc rgb "{palette[index % len(palette)]}" title "{gnuplot_quote(name)}"'
+            )
+            for index, (name, path, point_count) in enumerate(data_paths)
         ]
         local_started_at = started_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
         local_ended_at = ended_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
