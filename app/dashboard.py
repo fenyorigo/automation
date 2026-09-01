@@ -787,6 +787,7 @@ def load_dashboard(
             """
             SELECT
               d.id, d.name, d.hostname, d.source_system, d.device_type,
+              dt.name AS device_type_name,
               d.room_id, r.name AS room_name, z.name AS zone_name,
               d.managed_manually, d.manual_power_state, d.access_mode,
               d.capability_mode, d.polling_enabled,
@@ -801,6 +802,15 @@ def load_dashboard(
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='linkquality') AS zigbee_linkquality,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='temperature') AS zigbee_temperature_c,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='humidity') AS zigbee_humidity_percent,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='battery') AS zigbee_battery_percent,
               (SELECT mse.changed_at FROM manual_state_events mse
                WHERE mse.device_id = d.id
                ORDER BY mse.changed_at DESC, mse.id DESC LIMIT 1) AS manual_state_changed_at,
@@ -854,6 +864,7 @@ def load_dashboard(
               pa.success AS poll_success, pa.attempted_at AS last_poll_at,
               pa.duration_ms, pa.error_code, pa.error_message
             FROM devices d
+            LEFT JOIN device_types dt ON dt.id=d.device_type_id
             LEFT JOIN rooms r ON r.id = d.room_id
             LEFT JOIN zones z ON z.id = COALESCE(r.zone_id,d.zone_id)
             LEFT JOIN zigbee2mqtt_devices zd ON zd.device_id=d.id
@@ -922,14 +933,24 @@ def load_dashboard(
         )
         device["is_manual_visual"] = device["access_mode"] == "manual_visual"
         if device["source_system"] == "zigbee2mqtt":
+            freshness_limit = (
+                timedelta(hours=2)
+                if str(device["zigbee_type"] or "").casefold() == "enddevice"
+                else timedelta(minutes=2)
+            )
             mqtt_fresh = bool(
                 device["mqtt_message_at"]
                 and datetime.now(UTC).replace(tzinfo=None) - device["mqtt_message_at"]
-                <= timedelta(minutes=2)
+                <= freshness_limit
             )
             device["online"] = (
                 device["zigbee_availability"] != "offline" and mqtt_fresh
             )
+            if device["zigbee_temperature_c"] is not None:
+                device["temperature_c"] = device["zigbee_temperature_c"]
+                device["measurement_at"] = (
+                    device["zigbee_last_seen"] or device["mqtt_message_at"]
+                )
         else:
             device["online"] = (
                 None if device["is_manual_visual"] else bool(device["poll_success"])

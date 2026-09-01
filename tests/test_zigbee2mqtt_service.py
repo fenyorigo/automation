@@ -33,6 +33,25 @@ PLUG = {
     },
 }
 
+THERMOMETER = {
+    "friendly_name": "Dolgozó hőmérő",
+    "ieee_address": "0x00124b0026ffffff",
+    "manufacturer": "SONOFF",
+    "model_id": "SNZB-02P",
+    "type": "EndDevice",
+    "supported": True,
+    "interview_completed": True,
+    "definition": {
+        "exposes": [
+            {"access": 5, "label": "Battery", "property": "battery", "type": "numeric", "unit": "%"},
+            {"access": 5, "label": "Temperature", "property": "temperature", "type": "numeric", "unit": "°C"},
+            {"access": 5, "label": "Humidity", "property": "humidity", "type": "numeric", "unit": "%"},
+            {"access": 7, "category": "config", "label": "Temperature calibration", "property": "temperature_calibration", "type": "numeric", "unit": "°C"},
+            {"access": 1, "category": "diagnostic", "label": "Linkquality", "property": "linkquality", "type": "numeric", "unit": "lqi"},
+        ]
+    },
+}
+
 
 class FakeRepository:
     def __init__(self) -> None:
@@ -64,6 +83,16 @@ class ZigbeeDiscoveryTest(unittest.TestCase):
         self.assertEqual(descriptors["energy"]["unit"], "kilowatt_hour")
         self.assertEqual(descriptors["state"]["unit"], "boolean")
         self.assertEqual(inferred_device_type(PLUG, list(descriptors.values())), "power_meter")
+
+    def test_identifies_temperature_humidity_sensor(self) -> None:
+        descriptors = {item["property"]: item for item in sensor_descriptors(THERMOMETER)}
+        self.assertEqual(set(descriptors), {"battery", "temperature", "humidity", "linkquality"})
+        self.assertEqual(descriptors["temperature"]["unit"], "celsius")
+        self.assertEqual(descriptors["humidity"]["unit"], "percent")
+        self.assertEqual(
+            inferred_device_type(THERMOMETER, list(descriptors.values())),
+            "temperature_sensor",
+        )
 
     def test_routes_bridge_discovery_and_device_state(self) -> None:
         repository = FakeRepository()

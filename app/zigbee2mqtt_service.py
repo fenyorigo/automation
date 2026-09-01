@@ -233,9 +233,13 @@ class ZigbeeRepository:
             previous = cursor.fetchone()
             update_display_name = previous is not None and existing[1] == previous[0]
             cursor.execute(
-                """UPDATE devices SET source_device_id=?,model=?,is_active=1,
+                """UPDATE devices SET source_device_id=?,model=?,device_type=?,
+                   device_type_id=?,manufacturer_id=?,is_active=1,
                    name=IF(?, ?, name) WHERE id=?""",
-                (ieee, model, update_display_name, friendly_name, device_id),
+                (
+                    ieee, model, device_type, device_type_id, manufacturer_id,
+                    update_display_name, friendly_name, device_id,
+                ),
             )
 
         cursor.execute(
