@@ -19,7 +19,7 @@
   {% elif device.source_system == 'tasmota' %}
   <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c if device.temperature_c is not none else '—' }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}"> W</span></div>
   {% else %}
-  <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.display_temperature_is_stale }}">{{ device.display_temperature_c|temperature }}</span><span class="temperature-unit {{ 'stale-measurement' if device.display_temperature_is_stale }}">°C</span></div>
+  <div class="temperature"><span class="temperature-value {% if device.source_system == 'shelly_mqtt' %}shelly-{{ device.shelly_status_class }}{% elif device.display_temperature_is_stale %}stale-measurement{% endif %}">{{ device.display_temperature_c|temperature }}</span><span class="temperature-unit {% if device.source_system == 'shelly_mqtt' %}shelly-{{ device.shelly_status_class }}{% elif device.display_temperature_is_stale %}stale-measurement{% endif %}">°C</span></div>
   {% if device.source_system == 'esp32' %}
     {% if temperature_mode == 'action' %}
       {% if device.display_temperature_available %}

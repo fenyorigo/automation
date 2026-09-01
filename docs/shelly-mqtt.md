@@ -71,7 +71,9 @@ normál 7200 másodperces `wakeup_period` köré négylépcsős jelzést ad:
 
 Az utolsó ismert érték mind a négy állapotban látható marad. A sárga a normál
 deep-sleep ciklus része; a narancs legalább egy kimaradt jelentésre hívja fel a
-figyelmet, és csak két kimaradt ciklus után lesz piros a kártya.
+figyelmet, és csak két kimaradt ciklus után lesz piros a kártya. A hőmérséklet
+száma és mértékegysége is követi az állapot színét; friss, zöld állapotban az
+alapértelmezett fekete szövegszín marad.
 
 ## Automatikus regisztráció és kézi előd
 

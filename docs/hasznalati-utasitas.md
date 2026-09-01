@@ -87,6 +87,8 @@ hiba. A kártya a legutóbbi tényleges mérés kora alapján fokozatosan válto
 - 4 óra felett: piros, **Nincs friss mérés**.
 
 Az utolsó hőmérséklet minden állapotban látható marad.
+A hőmérséklet és a `°C` jelölés a sárga, narancs és piros állapot színét is
+követi; friss állapotban fekete marad.
 
 A **Bekapcsolva** klímaállapot kiemelten jelenik meg. Az elérhető jelzés nem
 azonos a bekapcsolt állapottal: azt mutatja, hogy az eszköz lekérdezhető volt.
