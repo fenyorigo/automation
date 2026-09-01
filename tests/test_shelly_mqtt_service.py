@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from shelly_mqtt_service import (
+    LEGACY_DEVICE_NAMES,
     ShellyMessageHandler,
     live_event_id,
     retained_event_id,
@@ -86,6 +87,12 @@ class ShellyMessageHandlerTest(unittest.TestCase):
         first = live_event_id(PREFIX, "temperature", datetime(2026, 9, 1, 10, 0, 0, 1))
         second = live_event_id(PREFIX, "temperature", datetime(2026, 9, 1, 10, 0, 0, 2))
         self.assertNotEqual(first, second)
+
+    def test_known_physical_devices_map_to_manual_predecessors(self) -> None:
+        self.assertEqual(LEGACY_DEVICE_NAMES[PREFIX], "shelly-dolgozo")
+        self.assertEqual(
+            LEGACY_DEVICE_NAMES["shellyhtg3-48f6eebb5c50"], "shelly-nappali"
+        )
 
     def test_rejects_missing_or_non_numeric_measurement(self) -> None:
         with self.assertRaises(ValueError):

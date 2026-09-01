@@ -79,6 +79,9 @@ Az első párosításkor átveszi annak nevét és helyiségét, új
 `device_room_history` bejegyzést kap, a kézi device és szenzorai pedig
 inaktívvá válnak. A régi méréseket nem mozgatjuk és nem töröljük.
 
+A `shellyhtg3-48f6eebb5c50` ugyanilyen módon a kézi `shelly-nappali` fizikai
+utódja, és annak nevét, valamint Nappali helyiség-hozzárendelését örökli.
+
 ## Fedora szolgáltatás
 
 ```bash

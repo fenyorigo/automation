@@ -25,6 +25,7 @@ MODEL = "Shelly H&T Gen3"
 PREFIX_PATTERN = re.compile(r"^shellyhtg3-([0-9a-fA-F]{12})$")
 LEGACY_DEVICE_NAMES = {
     "shellyhtg3-48f6eebb92d4": "shelly-dolgozo",
+    "shellyhtg3-48f6eebb5c50": "shelly-nappali",
 }
 SUBSCRIPTIONS = (
     "+/status/temperature:0",
