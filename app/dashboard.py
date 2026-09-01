@@ -110,6 +110,14 @@ COMPUTHERM_LOCATION = {
     "iot-computherm-foldszint": "földszint",
 }
 
+OUTDOOR_SOURCE_BADGES = {
+    "zigbee2mqtt": "Zigbee eszköz",
+    "open_meteo": "Webes lekérdezés",
+    "wunderground_pws": "Webes lekérdezés",
+    "esp32": "Helyi szenzor",
+    "manual": "Kézi adat",
+}
+
 HISTORY_RANGES = {
     "1h": 1,
     "2h": 2,
@@ -1096,7 +1104,8 @@ def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]
         )
         sources = rows_as_dicts(cursor)
         cursor.execute(
-            """SELECT s.id,s.source_code,s.display_name,o.temperature_c,o.observed_at,o.fetched_at
+            """SELECT s.id,s.source_code,s.display_name,s.source_type,
+                      o.temperature_c,o.observed_at,o.fetched_at
                FROM outdoor_temperature_sources s
                JOIN outdoor_temperature_observations o ON o.id=(
                  SELECT o2.id FROM outdoor_temperature_observations o2
@@ -1107,7 +1116,12 @@ def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]
                ORDER BY s.priority LIMIT 1"""
         )
         selected_rows = rows_as_dicts(cursor)
-        return sources, selected_rows[0] if selected_rows else None
+        selected = selected_rows[0] if selected_rows else None
+        if selected is not None:
+            selected["source_badge"] = OUTDOOR_SOURCE_BADGES.get(
+                selected["source_type"], selected["source_type"]
+            )
+        return sources, selected
     finally:
         cursor.close()
         connection.close()

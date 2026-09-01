@@ -105,7 +105,9 @@ feszültségkalibráció részletes leírása a
 ### Külső hőmérséklet
 
 A zónán kívüli részen az aktuálisan kiválasztott, friss külső forrás értéke is
-megjelenik. Ez lehet később kültéri ESP32, illetve időjárási szolgáltatás.
+megjelenik. A kártya forrásbélyege megkülönbözteti a saját **Zigbee eszköz**
+mérését a **Webes lekérdezés** útján érkező időjárási adattól; helyi ESP32 és
+kézi forrás esetén ezek saját jelölése látható.
 
 ## 3. Mérési előzmények
 

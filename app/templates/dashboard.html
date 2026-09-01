@@ -89,7 +89,7 @@
         </div>
         <div class="device-grid">
           <article class="outdoor-temperature-card" data-polling-enabled="true">
-            <div><p class="source">Külső hőmérséklet</p><h3>{{ outdoor_temperature.display_name }}</h3></div>
+            <div class="card-heading"><div><p class="source">Külső hőmérséklet</p><h3>{{ outdoor_temperature.display_name }}</h3></div><span class="badge outdoor-source">{{ outdoor_temperature.source_badge }}</span></div>
             <div class="temperature"><span class="temperature-value">{{ outdoor_temperature.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
             <footer class="card-footer"><span>Szolgáltatói mérés</span><time>{{ outdoor_temperature.observed_at|local_time }}</time></footer>
           </article>
@@ -127,7 +127,7 @@
           <section class="room-block" data-room-id="{{ room.room_id if room.room_id is not none else 'unassigned' }}"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{% if room.outdoor_temperature %}aktuális szolgáltatói adat{% else %}{{ room.devices|length }} eszköz{% endif %}</span></div>
             {% if room.outdoor_temperature %}
             <article class="outdoor-temperature-card">
-              <div><p class="source">Külső hőmérséklet</p><h3>{{ room.outdoor_temperature.display_name }}</h3></div>
+              <div class="card-heading"><div><p class="source">Külső hőmérséklet</p><h3>{{ room.outdoor_temperature.display_name }}</h3></div><span class="badge outdoor-source">{{ room.outdoor_temperature.source_badge }}</span></div>
               <div class="temperature"><span class="temperature-value">{{ room.outdoor_temperature.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
               <footer class="card-footer"><span>Szolgáltatói mérés</span><time>{{ room.outdoor_temperature.observed_at|local_time }}</time></footer>
             </article>
