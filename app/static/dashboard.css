@@ -291,6 +291,7 @@ dd.power-on { color: #d05a16; }
 .compact-record-list { display:grid; gap:7px; margin-top:12px; }.compact-record-list p { margin:0; padding:9px; border-radius:8px; background:white; }.compact-record-list strong,.compact-record-list span { display:block; }.compact-record-list span { margin-top:3px; color:var(--muted); font-size:.72rem; }
 .invoice-list>details>summary { display:flex; justify-content:space-between; gap:12px; }.invoice-list>details>summary span strong,.invoice-list>details>summary small { display:block; }.invoice-list>details>summary small { margin-top:3px; color:var(--muted); font-size:.7rem; }
 .invoice-summary { display:flex; flex-wrap:wrap; gap:8px 18px; margin:14px 0; color:var(--muted); font-size:.75rem; }.invoice-consumption { display:grid; gap:3px; margin:8px 0; padding:11px; border-radius:9px; background:white; }.invoice-consumption span,.invoice-consumption small { color:var(--muted); font-size:.72rem; }
+.invoice-record-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .energy-reading-form { display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr auto; align-items:end; gap:10px; margin-top:16px; }
 .energy-reading-form label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .energy-reading-form input,.energy-reading-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }

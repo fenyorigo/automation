@@ -14,6 +14,8 @@ helyi dátumok.
   automatikusan számolódik, de a számlán szereplő kerekített érték felülírható.
 - A 2025.07.07–2025.08.06 számlaidőszak `1,0000` korrekciós tényezője és
   `35,37 MJ/m³` fűtőértéke bekerült a gázátváltási törzsadatok közé.
+- A számlafejek, fogyasztási részletek és számlatételek ceruza ikonnal,
+  közvetlenül az Energia oldalon javíthatók.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.

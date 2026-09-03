@@ -426,6 +426,10 @@ A számla rögzítése három lépésből áll:
 3. a kedvezményes, versenypiaci, alapdíj-, szolgáltatási és korrekciós
    számlatételek felvitele.
 
+A számlafej, minden fogyasztási részlet és minden számlatétel mellett külön
+ceruza jelenik meg szerkesztői jogosultsággal. A ceruzával az adott rekord
+helyben javítható; a mentés nem érinti a számla többi részét.
+
 A saját, óráról leolvasott fogyasztás továbbra is kizárólag az
 `energy_meter_readings` idősorban marad. A számlán szereplő MVM-becslés az
 `energy_invoice_consumption` táblába kerül, ezért a két adatsor az éves

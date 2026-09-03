@@ -1846,12 +1846,19 @@ def energy() -> str:
         edit_reading_id = int(request.args["edit"])
     except (KeyError, TypeError, ValueError):
         edit_reading_id = None
+    edit_ids = {}
+    for key in ("edit_invoice", "edit_consumption", "edit_charge"):
+        try:
+            edit_ids[key] = int(request.args[key])
+        except (KeyError, TypeError, ValueError):
+            edit_ids[key] = None
     return render_template(
         "energy.html", meters=meters, readings=readings,
         now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
         current_year=local_now().year,
         energy_type=energy_type,
         edit_reading_id=edit_reading_id,
+        **edit_ids,
         notice=session.pop("energy_notice", None),
         **load_energy_billing(),
     )
@@ -2347,6 +2354,58 @@ def create_energy_invoice():
     return redirect(url_for("energy") + "#invoices")
 
 
+@app.post("/energy/invoices/<int:invoice_id>/edit")
+@editor_required
+def edit_energy_invoice(invoice_id: int):
+    validate_csrf()
+    try:
+        start = required_form_date("period_start_date")
+        end = required_form_date("period_end_date")
+        parameters = (
+            int(request.form["meter_id"]), optional_int(request.form.get("billing_cycle_id")),
+            request.form["invoice_number"].strip(), request.form["invoice_type"],
+            optional_int(request.form.get("sequence_no")), start, end,
+            optional_form_date("issued_at"), optional_form_date("performance_at"),
+            optional_form_date("due_at"), optional_form_decimal("net_amount_huf"),
+            optional_form_decimal("vat_amount_huf"), optional_form_decimal("gross_amount_huf"),
+            Decimal(request.form["payable_amount_huf"].replace(",", ".")),
+            optional_form_decimal("account_balance_huf"),
+            optional_form_decimal("counterfactual_market_amount_huf"),
+            request.form.get("note", "").strip() or None, g.current_user["id"], invoice_id,
+        )
+        if not parameters[2] or end < start:
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM energy_invoices WHERE id=? FOR UPDATE", (invoice_id,))
+        if cursor.fetchone() is None:
+            abort(404)
+        cursor.execute(
+            """UPDATE energy_invoices SET
+               meter_id=?,billing_cycle_id=?,invoice_number=?,invoice_type=?,sequence_no=?,
+               period_start_date=?,period_end_date=?,issued_at=?,performance_at=?,due_at=?,
+               net_amount_huf=?,vat_amount_huf=?,gross_amount_huf=?,payable_amount_huf=?,
+               account_balance_huf=?,counterfactual_market_amount_huf=?,note=?,recorded_by=?
+               WHERE id=?""", parameters,
+        )
+        connection.commit()
+    except mariadb.IntegrityError as error:
+        connection.rollback()
+        session["energy_notice"] = {"kind": "warning", "message": f"A számla nem javítható: {error}"}
+        return redirect(url_for("energy", edit_invoice=invoice_id) + f"#invoice-{invoice_id}")
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["energy_notice"] = {"kind": "success", "message": "A számla adatait javítottuk."}
+    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+
+
 @app.post("/energy/invoices/<int:invoice_id>/consumption")
 @editor_required
 def create_energy_invoice_consumption(invoice_id: int):
@@ -2388,6 +2447,62 @@ def create_energy_invoice_consumption(invoice_id: int):
     return redirect(url_for("energy") + f"#invoice-{invoice_id}")
 
 
+@app.post("/energy/invoices/<int:invoice_id>/consumption/<int:consumption_id>/edit")
+@editor_required
+def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
+    validate_csrf()
+    try:
+        start = required_form_date("period_start_date")
+        end = required_form_date("period_end_date")
+        billed_m3 = Decimal(request.form["billed_consumption_m3"].replace(",", "."))
+        correction, corrected_m3, heating_value, heat_quantity = complete_gas_consumption_values(
+            billed_m3, optional_form_decimal("correction_factor"),
+            optional_form_decimal("heating_value_mj_m3"),
+            optional_form_decimal("corrected_consumption_m3"),
+            optional_form_decimal("heat_quantity_mj"),
+        )
+        parameters = (
+            start, end, optional_form_decimal("provider_start_reading_m3"),
+            optional_form_decimal("provider_end_reading_m3"), request.form.get("reading_method") or None,
+            billed_m3, correction, corrected_m3, heating_value, heat_quantity,
+            optional_form_date("last_settled_reading_date"),
+            optional_form_decimal("last_settled_reading_value_m3"),
+            optional_form_decimal("installment_volume_since_settlement_m3"),
+            request.form.get("note", "").strip() or None, consumption_id, invoice_id,
+        )
+        if end < start or any(value < 0 for value in parameters[5:10]):
+            raise ValueError
+    except (KeyError, ValueError, InvalidOperation):
+        abort(400)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            "SELECT 1 FROM energy_invoice_consumption WHERE id=? AND invoice_id=? FOR UPDATE",
+            (consumption_id, invoice_id),
+        )
+        if cursor.fetchone() is None:
+            abort(404)
+        cursor.execute(
+            """UPDATE energy_invoice_consumption SET
+               period_start_date=?,period_end_date=?,provider_start_reading_m3=?,
+               provider_end_reading_m3=?,reading_method=?,billed_consumption_m3=?,
+               correction_factor=?,corrected_consumption_m3=?,heating_value_mj_m3=?,
+               heat_quantity_mj=?,last_settled_reading_date=?,last_settled_reading_value_m3=?,
+               installment_volume_since_settlement_m3=?,note=?
+               WHERE id=? AND invoice_id=?""", parameters,
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["energy_notice"] = {"kind": "success", "message": "A fogyasztási részletet javítottuk."}
+    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+
+
 @app.post("/energy/invoices/<int:invoice_id>/charge-lines")
 @editor_required
 def create_energy_invoice_charge_line(invoice_id: int):
@@ -2413,6 +2528,60 @@ def create_energy_invoice_charge_line(invoice_id: int):
             vat_rate_percent,gross_amount_huf,sort_order,note)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlatételt rögzítettük."
     )
+    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+
+
+@app.post("/energy/invoices/<int:invoice_id>/charge-lines/<int:line_id>/edit")
+@editor_required
+def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
+    validate_csrf()
+    try:
+        parameters = (
+            optional_int(request.form.get("invoice_consumption_id")),
+            request.form["line_category"], request.form["description"].strip(),
+            optional_form_date("period_start_date"), optional_form_date("period_end_date"),
+            optional_form_decimal("quantity"), request.form.get("quantity_unit", "").strip() or None,
+            optional_form_decimal("net_unit_price_huf"), optional_form_decimal("net_amount_huf"),
+            optional_form_decimal("vat_rate_percent"),
+            Decimal(request.form["gross_amount_huf"].replace(",", ".")),
+            int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
+            line_id, invoice_id,
+        )
+        if not parameters[1] or parameters[4] is not None and parameters[3] is not None and parameters[4] < parameters[3]:
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            "SELECT 1 FROM energy_invoice_charge_lines WHERE id=? AND invoice_id=? FOR UPDATE",
+            (line_id, invoice_id),
+        )
+        if cursor.fetchone() is None:
+            abort(404)
+        if parameters[0] is not None:
+            cursor.execute(
+                "SELECT 1 FROM energy_invoice_consumption WHERE id=? AND invoice_id=?",
+                (parameters[0], invoice_id),
+            )
+            if cursor.fetchone() is None:
+                abort(400)
+        cursor.execute(
+            """UPDATE energy_invoice_charge_lines SET
+               invoice_consumption_id=?,line_category=?,description=?,period_start_date=?,
+               period_end_date=?,quantity=?,quantity_unit=?,net_unit_price_huf=?,net_amount_huf=?,
+               vat_rate_percent=?,gross_amount_huf=?,sort_order=?,note=?
+               WHERE id=? AND invoice_id=?""", parameters,
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["energy_notice"] = {"kind": "success", "message": "A számlatételt javítottuk."}
     return redirect(url_for("energy") + f"#invoice-{invoice_id}")
 
 
