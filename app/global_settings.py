@@ -57,6 +57,7 @@ SETTINGS = (
     Setting("COOLING_MIN_TARGET_C", "Hűtés legkisebb célhőmérséklete", "25", "number", "Előkészített biztonsági korlát.", number_between(5, 40)),
     Setting("HEATING_MAX_ROOM_TEMPERATURE_C", "Fűtés felső szobahőmérsékleti határa", "22", "number", "Előkészített biztonsági korlát; a vezérlési logika még nem használja.", number_between(5, 40)),
     Setting("HEATING_MAX_TARGET_C", "Fűtés legnagyobb célhőmérséklete", "22", "number", "Előkészített biztonsági korlát.", number_between(5, 40)),
+    Setting("ENERGY_MJ_PER_KWH", "Energiaátváltás: MJ/kWh", "3.6", "number", "1 kWh energiatartalma MJ-ban; a villamos és gázfűtés közös energiaalapú összehasonlításához.", number_between(0.1, 100)),
 )
 
 

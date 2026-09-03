@@ -16,6 +16,8 @@ helyi dátumok.
   `35,37 MJ/m³` fűtőértéke bekerült a gázátváltási törzsadatok közé.
 - A számlafejek, fogyasztási részletek és számlatételek ceruza ikonnal,
   közvetlenül az Energia oldalon javíthatók.
+- Új globális `ENERGY_MJ_PER_KWH=3.6` átváltási állandó és kWh-egyenérték
+  segíti a gáz- és villamos fűtés összehasonlítását.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.

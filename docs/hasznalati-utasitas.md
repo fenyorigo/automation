@@ -417,6 +417,11 @@ Az elszámolás idő- és fogyasztásarányos. Ez nem azonos sem a novemberben i
 saját elszámolási ciklussal, sem az MVM részszámlán alkalmazott havi becsült
 díjsávmegosztással; ezért a három idősort a rendszer külön tárolja.
 
+A Globális beállítások között az `ENERGY_MJ_PER_KWH` érték adja meg a közös
+energiaátváltást; alapértéke `3,6 MJ/kWh`. A számlák gáz-hőmennyisége ennek
+alapján kWh-egyenértékben is megjelenik, ami később a klímás villamos fűtés és
+a gázfűtés energia- és költségalapú összehasonlításának alapja.
+
 ### Szolgáltatói számlák
 
 A számla rögzítése három lépésből áll:

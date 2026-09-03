@@ -28,6 +28,14 @@
 const gasConversionPeriods = [
 {% for period in conversion_periods %}{from: '{{ period.valid_from }}', to: '{{ period.valid_to or '' }}', factor: '{{ period.correction_factor }}', heating: '{{ period.heating_value_mj_m3 }}'}{{ ',' if not loop.last }}{% endfor %}
 ];
+const energyMjPerKwh = Number('{{ energy_mj_per_kwh }}');
+document.querySelectorAll('.invoice-consumption strong').forEach((element) => {
+  const match = element.textContent.match(/→\s*([\d.,]+)\s*MJ/);
+  if (match && Number.isFinite(energyMjPerKwh) && energyMjPerKwh > 0) {
+    const mj = Number(match[1].replace(',', '.'));
+    if (Number.isFinite(mj)) element.textContent += ` ≈ ${(mj / energyMjPerKwh).toFixed(2).replace('.', ',')} kWh`;
+  }
+});
 const anchoredInvoice = document.querySelector(window.location.hash);
 if (anchoredInvoice instanceof HTMLDetailsElement) anchoredInvoice.open = true;
 document.querySelectorAll('.gas-consumption-form').forEach((form) => {

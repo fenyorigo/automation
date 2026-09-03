@@ -53,6 +53,13 @@ LOCAL_TIMEZONE = ZoneInfo(LOCAL_TIMEZONE_NAME)
 def local_now() -> datetime:
     return datetime.now(LOCAL_TIMEZONE)
 
+
+def mj_to_kwh(value_mj: Decimal) -> Decimal:
+    factor = Decimal(os.getenv("ENERGY_MJ_PER_KWH", "3.6").replace(",", "."))
+    if factor <= 0:
+        raise ValueError("Az ENERGY_MJ_PER_KWH értékének pozitívnak kell lennie.")
+    return (value_mj / factor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
 def dashboard_secret_key() -> str:
     configured = os.getenv("DASHBOARD_SECRET_KEY")
     if configured:
@@ -1460,6 +1467,8 @@ def load_energy_billing() -> dict[str, Any]:
                    WHERE invoice_id=? ORDER BY period_start_date,id""", (invoice["id"],)
             )
             invoice["consumption_rows"] = rows_as_dicts(cursor)
+            for consumption in invoice["consumption_rows"]:
+                consumption["heat_quantity_kwh"] = mj_to_kwh(consumption["heat_quantity_mj"])
             cursor.execute(
                 """SELECT * FROM energy_invoice_charge_lines
                    WHERE invoice_id=? ORDER BY sort_order,id""", (invoice["id"],)
@@ -1856,6 +1865,7 @@ def energy() -> str:
         "energy.html", meters=meters, readings=readings,
         now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
         current_year=local_now().year,
+        energy_mj_per_kwh=Decimal(os.getenv("ENERGY_MJ_PER_KWH", "3.6").replace(",", ".")),
         energy_type=energy_type,
         edit_reading_id=edit_reading_id,
         **edit_ids,
