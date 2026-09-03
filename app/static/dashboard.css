@@ -277,6 +277,10 @@ dd.power-on { color: #d05a16; }
 .energy-meter-grid span,.energy-meter-grid strong,.energy-meter-grid small { display:block; }
 .energy-meter-grid span,.energy-meter-grid small { color:var(--muted); font-size:.72rem; }
 .energy-meter-grid strong { margin:6px 0; font-size:1.35rem; }
+.energy-year-total { margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+.energy-year-total strong { margin:4px 0; font-size:1rem; color:var(--ink); }
+.energy-history-filter label { color:var(--muted); font-size:.7rem; font-weight:700; }
+.energy-history-filter select { display:block; min-width:150px; min-height:40px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
 .energy-reading-form { display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr auto; align-items:end; gap:10px; margin-top:16px; }
 .energy-reading-form label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .energy-reading-form input,.energy-reading-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }

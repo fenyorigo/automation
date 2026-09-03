@@ -26,6 +26,8 @@ helyi dátumok.
   idősor törlődik, miközben az eszköz-, szenzor- és helyiségelőzmény megmarad.
 - Az ESP32 nyers/cselekedeti hőmérsékletválasztó aktív ESP32 eszköz nélkül nem
   jelenik meg a kezdőlapon.
+- Az Energia oldalon a korábbi óraállások villany- és gázórára szűrhetők, a
+  mérőkártyák pedig mutatják az aktuális év kumulált fogyasztását és kezdőpontját.
 
 ### Üzemeltetés
 

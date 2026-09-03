@@ -1281,23 +1281,49 @@ def history_window(range_key: str, local_start: str) -> tuple[datetime, datetime
     return ended_at - timedelta(hours=hours), ended_at
 
 
-def load_energy_readings() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def load_energy_readings(
+    energy_type: str = "all",
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    year = local_now().year
+    year_started_at = datetime(year, 1, 1, tzinfo=LOCAL_TIMEZONE).astimezone(UTC).replace(tzinfo=None)
+    next_year_at = datetime(year + 1, 1, 1, tzinfo=LOCAL_TIMEZONE).astimezone(UTC).replace(tzinfo=None)
     connection = connect_database()
     cursor = connection.cursor()
     try:
         cursor.execute(
             """SELECT m.id,m.meter_code,m.display_name,m.energy_type,m.unit,
-                      r.reading_value,r.recorded_at
+                      r.reading_value,r.recorded_at,
+                      first_year.reading_value AS year_first_value,
+                      first_year.recorded_at AS year_started_at,
+                      last_year.reading_value AS year_last_value,
+                      last_year.reading_value-first_year.reading_value
+                        AS year_consumption
                FROM energy_meters m
                LEFT JOIN energy_meter_readings r ON r.id=(
                  SELECT r2.id FROM energy_meter_readings r2 WHERE r2.meter_id=m.id
                  ORDER BY r2.recorded_at DESC,r2.id DESC LIMIT 1
                )
-               WHERE m.is_active=1 ORDER BY FIELD(m.energy_type,'electricity','gas')"""
+               LEFT JOIN energy_meter_readings first_year ON first_year.id=(
+                 SELECT fy.id FROM energy_meter_readings fy
+                  WHERE fy.meter_id=m.id AND fy.recorded_at>=? AND fy.recorded_at<?
+                  ORDER BY fy.recorded_at,fy.id LIMIT 1
+               )
+               LEFT JOIN energy_meter_readings last_year ON last_year.id=(
+                 SELECT ly.id FROM energy_meter_readings ly
+                  WHERE ly.meter_id=m.id AND ly.recorded_at>=? AND ly.recorded_at<?
+                  ORDER BY ly.recorded_at DESC,ly.id DESC LIMIT 1
+               )
+               WHERE m.is_active=1 ORDER BY FIELD(m.energy_type,'electricity','gas')""",
+            (year_started_at, next_year_at, year_started_at, next_year_at),
         )
         meters = rows_as_dicts(cursor)
+        reading_filter = ""
+        parameters: tuple[Any, ...] = ()
+        if energy_type in {"electricity", "gas"}:
+            reading_filter = "WHERE m.energy_type=?"
+            parameters = (energy_type,)
         cursor.execute(
-            """SELECT r.id,r.meter_id,r.recorded_at,r.reading_value,r.entry_source,r.note,
+            f"""SELECT r.id,r.meter_id,r.recorded_at,r.reading_value,r.entry_source,r.note,
                       m.display_name,m.energy_type,m.unit,
                       u.username AS recorded_by_name,
                       r.reading_value-LAG(r.reading_value) OVER
@@ -1305,7 +1331,9 @@ def load_energy_readings() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                FROM energy_meter_readings r
                JOIN energy_meters m ON m.id=r.meter_id
                LEFT JOIN app_users u ON u.id=r.recorded_by
-               ORDER BY r.recorded_at DESC,r.id DESC LIMIT 200"""
+               {reading_filter}
+               ORDER BY r.recorded_at DESC,r.id DESC LIMIT 200""",
+            parameters,
         )
         return meters, rows_as_dicts(cursor)
     finally:
@@ -1675,7 +1703,10 @@ def poll_status():
 
 @app.get("/energy")
 def energy() -> str:
-    meters, readings = load_energy_readings()
+    energy_type = request.args.get("meter", "all")
+    if energy_type not in {"all", "electricity", "gas"}:
+        energy_type = "all"
+    meters, readings = load_energy_readings(energy_type)
     try:
         edit_reading_id = int(request.args["edit"])
     except (KeyError, TypeError, ValueError):
@@ -1683,6 +1714,8 @@ def energy() -> str:
     return render_template(
         "energy.html", meters=meters, readings=readings,
         now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
+        current_year=local_now().year,
+        energy_type=energy_type,
         edit_reading_id=edit_reading_id,
         notice=session.pop("energy_notice", None),
     )

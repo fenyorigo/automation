@@ -374,6 +374,15 @@ Az oldal a villany- és gázóra kumulatív állását kezeli.
 A rendszer az egymást követő óraállások különbségéből számítja a fogyasztást.
 A havi gázadatokhoz egységesen 09:00 használható.
 
+A **Mérők** kártyáin az utolsó óraállás alatt az aktuális naptári év kumulált
+fogyasztása is látható. Ez az adott év első és legutolsó rögzített
+óraállásának különbsége; a kártya az első felhasznált mérés időpontját is
+feltünteti. Egyetlen idei mérésnél a különbség nulla.
+
+A **Korábbi óraállások** listája a fejlécben **Minden**, **Villanyóra** vagy
+**Gázóra** értékre szűrhető. A fogyasztás az adott mérő előző óraállásához
+viszonyított különbség marad.
+
 ### Téves óraállás javítása
 
 Szerkesztői jogosultsággal a korábbi óraállások listájában minden sor végén
