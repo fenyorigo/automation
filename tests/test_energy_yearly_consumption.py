@@ -5,10 +5,19 @@ import unittest
 
 sys.path.insert(0, "app")
 
-from dashboard import yearly_meter_consumption
+from dashboard import billing_period_consumption, yearly_meter_consumption
 
 
 class YearlyMeterConsumptionTest(unittest.TestCase):
+    def test_billing_period_uses_november_baseline(self) -> None:
+        self.assertEqual(
+            billing_period_consumption(Decimal("29826"), Decimal("27332")),
+            Decimal("2494"),
+        )
+
+    def test_billing_period_requires_baseline(self) -> None:
+        self.assertIsNone(billing_period_consumption(Decimal("29826"), None))
+
     def test_uses_actual_first_reading_within_31_days(self) -> None:
         result = yearly_meter_consumption(
             datetime(2026, 1, 1), datetime(2026, 1, 6), Decimal("100"),

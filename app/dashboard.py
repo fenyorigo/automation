@@ -1305,6 +1305,14 @@ def yearly_meter_consumption(
     return last_value - first_value, first_at, False
 
 
+def billing_period_consumption(
+    latest_value: Decimal | None, started_value: Decimal | None
+) -> Decimal | None:
+    if latest_value is None or started_value is None:
+        return None
+    return latest_value - started_value
+
+
 def load_energy_readings(
     energy_type: str = "all",
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -1321,7 +1329,9 @@ def load_energy_readings(
                       first_year.recorded_at AS year_started_at,
                       last_year.reading_value AS year_last_value,
                       previous_year.reading_value AS previous_value,
-                      previous_year.recorded_at AS previous_at
+                      previous_year.recorded_at AS previous_at,
+                      billing_start.reading_value AS billing_start_value,
+                      billing_start.recorded_at AS billing_started_at
                FROM energy_meters m
                LEFT JOIN energy_meter_readings r ON r.id=(
                  SELECT r2.id FROM energy_meter_readings r2 WHERE r2.meter_id=m.id
@@ -1342,6 +1352,13 @@ def load_energy_readings(
                   WHERE py.meter_id=m.id AND py.recorded_at<?
                   ORDER BY py.recorded_at DESC,py.id DESC LIMIT 1
                )
+               LEFT JOIN energy_meter_readings billing_start ON billing_start.id=(
+                 SELECT bs.id FROM energy_meter_readings bs
+                  WHERE bs.meter_id=m.id
+                    AND MONTH(DATE_ADD(bs.recorded_at,INTERVAL 1 HOUR))=11
+                    AND (r.recorded_at IS NULL OR bs.recorded_at<=r.recorded_at)
+                  ORDER BY bs.recorded_at DESC,bs.id DESC LIMIT 1
+               )
                WHERE m.is_active=1 ORDER BY FIELD(m.energy_type,'electricity','gas')""",
             (year_started_at, next_year_at, year_started_at, next_year_at, year_started_at),
         )
@@ -1355,6 +1372,16 @@ def load_energy_readings(
             meter["year_consumption"] = consumption
             meter["year_consumption_started_at"] = consumption_started_at
             meter["year_consumption_estimated"] = estimated
+            meter["consumption_label"] = f"{year}. évi kumulált fogyasztás"
+            if meter["energy_type"] == "gas":
+                meter["consumption_label"] = (
+                    "Az aktuális számlázási időszak kumulált fogyasztása"
+                )
+                meter["year_consumption"] = billing_period_consumption(
+                    meter["reading_value"], meter["billing_start_value"]
+                )
+                meter["year_consumption_started_at"] = meter["billing_started_at"]
+                meter["year_consumption_estimated"] = False
         reading_filter = ""
         parameters: tuple[Any, ...] = ()
         if energy_type in {"electricity", "gas"}:

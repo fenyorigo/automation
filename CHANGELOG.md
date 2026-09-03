@@ -30,6 +30,8 @@ helyi dátumok.
   mérőkártyák pedig mutatják az aktuális év kumulált fogyasztását és kezdőpontját.
 - A 31 napnál későbbi első éves óraállásnál az előző mérésből időarányosan
   becsült január 1-jei kezdőértékkel számolható az éves fogyasztás.
+- A gázóra naptári éves összesítése helyett a legutóbbi novemberi leolvasással
+  kezdődő aktuális számlázási időszak kumulált fogyasztása jelenik meg.
 
 ### Üzemeltetés
 

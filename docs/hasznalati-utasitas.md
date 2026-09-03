@@ -385,6 +385,13 @@ időarányosítással becsül egy január 1-jei óraállást. Az éves fogyaszt�
 a becsült kezdőértéktől számolja, és a kártyán **becsült** jelöléssel mutatja.
 Ha nincs előző évi adat, a késői első tényleges mérés marad a kezdőpont.
 
+A naptári éves szabály csak a villanyórára vonatkozik. A gázóránál a kártya
+**Az aktuális számlázási időszak kumulált fogyasztása** értéket mutatja: a
+legutóbbi óraállásból a legutóbbi, azt megelőző novemberi leolvasást vonja ki.
+A következő novemberi leolvasás automatikusan új számlázási időszakot kezd.
+Ehhez a gázadat nem kap becsült jelölést; novemberi kezdőadat hiányában az
+összesítés nem számítható.
+
 A **Korábbi óraállások** listája a fejlécben **Minden**, **Villanyóra** vagy
 **Gázóra** értékre szűrhető. A fogyasztás az adott mérő előző óraállásához
 viszonyított különbség marad.
