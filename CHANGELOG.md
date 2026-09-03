@@ -28,6 +28,8 @@ helyi dátumok.
   jelenik meg a kezdőlapon.
 - Az Energia oldalon a korábbi óraállások villany- és gázórára szűrhetők, a
   mérőkártyák pedig mutatják az aktuális év kumulált fogyasztását és kezdőpontját.
+- A 31 napnál későbbi első éves óraállásnál az előző mérésből időarányosan
+  becsült január 1-jei kezdőértékkel számolható az éves fogyasztás.
 
 ### Üzemeltetés
 

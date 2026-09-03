@@ -1281,6 +1281,30 @@ def history_window(range_key: str, local_start: str) -> tuple[datetime, datetime
     return ended_at - timedelta(hours=hours), ended_at
 
 
+def yearly_meter_consumption(
+    year_started_at: datetime,
+    first_at: datetime | None,
+    first_value: Decimal | None,
+    last_value: Decimal | None,
+    previous_at: datetime | None,
+    previous_value: Decimal | None,
+) -> tuple[Decimal | None, datetime | None, bool]:
+    """Return annual consumption, its starting point and whether it is estimated."""
+    if first_at is None or first_value is None or last_value is None:
+        return None, None, False
+    if (
+        first_at - year_started_at > timedelta(days=31)
+        and previous_at is not None
+        and previous_value is not None
+        and previous_at < year_started_at < first_at
+    ):
+        full_seconds = Decimal(str((first_at - previous_at).total_seconds()))
+        year_fraction = Decimal(str((year_started_at - previous_at).total_seconds())) / full_seconds
+        estimated_start = previous_value + (first_value - previous_value) * year_fraction
+        return (last_value - estimated_start).quantize(Decimal("0.001")), year_started_at, True
+    return last_value - first_value, first_at, False
+
+
 def load_energy_readings(
     energy_type: str = "all",
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -1296,8 +1320,8 @@ def load_energy_readings(
                       first_year.reading_value AS year_first_value,
                       first_year.recorded_at AS year_started_at,
                       last_year.reading_value AS year_last_value,
-                      last_year.reading_value-first_year.reading_value
-                        AS year_consumption
+                      previous_year.reading_value AS previous_value,
+                      previous_year.recorded_at AS previous_at
                FROM energy_meters m
                LEFT JOIN energy_meter_readings r ON r.id=(
                  SELECT r2.id FROM energy_meter_readings r2 WHERE r2.meter_id=m.id
@@ -1313,10 +1337,24 @@ def load_energy_readings(
                   WHERE ly.meter_id=m.id AND ly.recorded_at>=? AND ly.recorded_at<?
                   ORDER BY ly.recorded_at DESC,ly.id DESC LIMIT 1
                )
+               LEFT JOIN energy_meter_readings previous_year ON previous_year.id=(
+                 SELECT py.id FROM energy_meter_readings py
+                  WHERE py.meter_id=m.id AND py.recorded_at<?
+                  ORDER BY py.recorded_at DESC,py.id DESC LIMIT 1
+               )
                WHERE m.is_active=1 ORDER BY FIELD(m.energy_type,'electricity','gas')""",
-            (year_started_at, next_year_at, year_started_at, next_year_at),
+            (year_started_at, next_year_at, year_started_at, next_year_at, year_started_at),
         )
         meters = rows_as_dicts(cursor)
+        for meter in meters:
+            consumption, consumption_started_at, estimated = yearly_meter_consumption(
+                year_started_at,
+                meter["year_started_at"], meter["year_first_value"],
+                meter["year_last_value"], meter["previous_at"], meter["previous_value"],
+            )
+            meter["year_consumption"] = consumption
+            meter["year_consumption_started_at"] = consumption_started_at
+            meter["year_consumption_estimated"] = estimated
         reading_filter = ""
         parameters: tuple[Any, ...] = ()
         if energy_type in {"electricity", "gas"}:

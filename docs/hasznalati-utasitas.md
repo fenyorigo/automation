@@ -379,6 +379,12 @@ fogyasztása is látható. Ez az adott év első és legutolsó rögzített
 óraállásának különbsége; a kártya az első felhasznált mérés időpontját is
 feltünteti. Egyetlen idei mérésnél a különbség nulla.
 
+Ha az év első tényleges óraállása több mint 31 nappal január 1. után készült,
+és rendelkezésre áll az előző év utolsó mérése, a rendszer lineáris
+időarányosítással becsül egy január 1-jei óraállást. Az éves fogyasztást ettől
+a becsült kezdőértéktől számolja, és a kártyán **becsült** jelöléssel mutatja.
+Ha nincs előző évi adat, a késői első tényleges mérés marad a kezdőpont.
+
 A **Korábbi óraállások** listája a fejlécben **Minden**, **Villanyóra** vagy
 **Gázóra** értékre szűrhető. A fogyasztás az adott mérő előző óraállásához
 viszonyított különbség marad.
