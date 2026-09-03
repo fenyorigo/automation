@@ -59,13 +59,13 @@
         </nav>
       </div>
 
-      <div class="temperature-mode-row">
+      {% if has_active_esp32 %}<div class="temperature-mode-row">
         <span>ESP32 hőmérséklet</span>
         <nav class="view-switch temperature-mode-switch" aria-label="ESP32 hőmérséklet típusa">
           <a class="{{ 'selected' if temperature_mode == 'raw' }}" href="{{ url_for('dashboard', view=view_mode, temperature='raw') }}">Nyers mérés</a>
           <a class="{{ 'selected' if temperature_mode == 'action' }}" href="{{ url_for('dashboard', view=view_mode, temperature='action') }}">Cselekedeti</a>
         </nav>
-      </div>
+      </div>{% endif %}
 
       {% if view_mode == 'device' %}
       <div class="dashboard-filter">

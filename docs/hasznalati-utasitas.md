@@ -189,6 +189,18 @@ Nullázás előtt mindig készíts adatbázismentést. Kalibráció indításako
 a törlés után rögtön egy kézi lekérdezést futtatni, hogy az idősorok közös
 kezdőpontot kapjanak.
 
+A kezdőlapi **ESP32 hőmérséklet – Nyers mérés / Cselekedeti** választó csak
+akkor jelenik meg, ha van aktív ESP32 eszköz a nyilvántartásban. Az összes
+ESP32 archiválása után a már nem alkalmazható választó automatikusan eltűnik.
+
+Ugyanez eszközszinten a **Nyilvántartás** oldalon, az adott eszköz lenyitása
+után az **Új mérési élet kezdése** részből is elvégezhető. Ez az eszközhöz
+tartozó összes szenzor mérési előzményét törli, miközben az eszközrekord, a
+szenzorok és a `device_room_history` helyiség-előzmények változatlanul
+megmaradnak. Zigbee eszköznél a temperature, humidity és battery utolsóérték-
+cache is kiürül, így egy collector-újraindítás nem állítja vissza a törölt
+kezdőpontot. A következő tényleges eszközjelentés lesz az új idősor első pontja.
+
 ## 4. Kért beállítások
 
 Itt a Hisense és Computherm eszközök kívánt beállításai rögzíthetők az

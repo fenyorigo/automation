@@ -1568,6 +1568,7 @@ def dashboard() -> str:
     if requested_temperature in {"raw", "action"}:
         session["dashboard_temperature"] = requested_temperature
     temperature_mode = session.get("dashboard_temperature", "raw")
+    has_active_esp32 = any(device["source_system"] == "esp32" for device in devices)
     now_utc = datetime.now(UTC).replace(tzinfo=None)
     for device in devices:
         use_action = temperature_mode == "action" and device["source_system"] == "esp32"
@@ -1603,6 +1604,7 @@ def dashboard() -> str:
         poll_notice=session.pop("poll_notice", None),
         view_mode=view_mode,
         temperature_mode=temperature_mode,
+        has_active_esp32=has_active_esp32,
         outdoor_temperature=outdoor_temperature,
         device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_temperature),
@@ -2749,6 +2751,30 @@ def finish_climate_operation(event_id: int):
     return redirect(url_for("climate_log"))
 
 
+def delete_sensor_measurements(cursor, sensor_ids: list[int]) -> int:
+    """Delete readings and any derived-temperature rows that depend on them."""
+    if not sensor_ids:
+        return 0
+    placeholders = ",".join("?" for _ in sensor_ids)
+    reading_filter = f"SELECT id FROM sensor_readings WHERE sensor_id IN ({placeholders})"
+    cursor.execute(
+        f"""DELETE FROM derived_temperature_readings
+             WHERE sensor_id IN ({placeholders})
+                OR raw_reading_id IN ({reading_filter})
+                OR id IN (
+                    SELECT derived_reading_id FROM derived_temperature_sources
+                     WHERE source_sensor_id IN ({placeholders})
+                        OR source_reading_id IN ({reading_filter})
+                )""",
+        tuple(sensor_ids) * 4,
+    )
+    cursor.execute(
+        f"DELETE FROM sensor_readings WHERE sensor_id IN ({placeholders})",
+        tuple(sensor_ids),
+    )
+    return max(cursor.rowcount, 0)
+
+
 @app.post("/history/reset")
 def reset_sensor_history():
     validate_csrf()
@@ -2778,11 +2804,7 @@ def reset_sensor_history():
                 allowed_ids = sorted(int(row[0]) for row in cursor.fetchall())
                 if allowed_ids != sensor_ids:
                     abort(400)
-                cursor.execute(
-                    f"DELETE FROM sensor_readings WHERE sensor_id IN ({placeholders})",
-                    tuple(sensor_ids),
-                )
-                deleted_count = cursor.rowcount
+                deleted_count = delete_sensor_measurements(cursor, sensor_ids)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -3080,6 +3102,78 @@ def save_device(device_id: int):
     except (OSError, ValueError, json.JSONDecodeError) as error:
         session["registry_notice"]={"kind":"warning","message":f"Az adatbázis frissült, de a pollerkonfiguráció nem: {error}"}
     return redirect(url_for("locations"))
+
+
+@app.post("/registry/devices/<int:device_id>/reset-measurements")
+def reset_device_measurements(device_id: int):
+    """Delete an individual device's measurements without deleting its registry data."""
+    validate_csrf()
+    try:
+        with polling_cycle_lock():
+            connection = connect_database()
+            cursor = connection.cursor()
+            try:
+                cursor.execute(
+                    "SELECT name,source_system FROM devices WHERE id=? FOR UPDATE",
+                    (device_id,),
+                )
+                device = cursor.fetchone()
+                if device is None:
+                    abort(404)
+                device_name, source_system = str(device[0]), str(device[1])
+
+                cursor.execute(
+                    "SELECT id FROM sensors WHERE device_id=? FOR UPDATE", (device_id,)
+                )
+                sensor_ids = [int(row[0]) for row in cursor.fetchall()]
+                deleted_count = 0
+                if sensor_ids:
+                    deleted_count = delete_sensor_measurements(cursor, sensor_ids)
+
+                # A collector restart must not recreate the deleted Zigbee
+                # measurements from its last-value cache.
+                if source_system == "zigbee2mqtt":
+                    cursor.execute(
+                        """DELETE FROM zigbee2mqtt_property_cache
+                           WHERE device_id=?
+                             AND property_name IN ('temperature','humidity','battery')""",
+                        (device_id,),
+                    )
+                    cursor.execute(
+                        """DELETE o FROM outdoor_temperature_observations o
+                           JOIN outdoor_temperature_sources s ON s.id=o.source_id
+                           WHERE s.source_type='zigbee2mqtt'
+                             AND CAST(JSON_UNQUOTE(JSON_EXTRACT(
+                                   s.configuration,'$.device_id')) AS UNSIGNED)=?""",
+                        (device_id,),
+                    )
+
+                audit_registry(
+                    cursor, "device", device_id, "measurements_reset",
+                    {"deleted_readings": deleted_count},
+                )
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+            finally:
+                cursor.close()
+                connection.close()
+    except PollCycleBusy:
+        session["registry_notice"] = {
+            "kind": "warning",
+            "message": "A mérések most nem törölhetők, mert lekérdezés van folyamatban.",
+        }
+        return redirect(url_for("locations", _anchor=f"device-{device_id}"))
+
+    session["registry_notice"] = {
+        "kind": "success",
+        "message": (
+            f"{device_name}: {deleted_count} mérési rekordot töröltünk. "
+            "Az eszköz, a szenzorok és a helytörténet megmaradtak."
+        ),
+    }
+    return redirect(url_for("locations", _anchor=f"device-{device_id}"))
 
 
 @app.post("/registry/reset-poll-intervals")

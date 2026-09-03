@@ -22,6 +22,10 @@ helyi dátumok.
   történetmegőrző párosítása.
 - A kültéri hőmérséklet-kártyán külön forrásbélyeg jelzi a Zigbee eszközt,
   webes lekérdezést, helyi szenzort vagy kézi adatot.
+- A Nyilvántartásból eszközönként új mérési élet indítható: az összes kapcsolódó
+  idősor törlődik, miközben az eszköz-, szenzor- és helyiségelőzmény megmarad.
+- Az ESP32 nyers/cselekedeti hőmérsékletválasztó aktív ESP32 eszköz nélkül nem
+  jelenik meg a kezdőlapon.
 
 ### Üzemeltetés
 
