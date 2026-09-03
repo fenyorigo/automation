@@ -18,7 +18,7 @@ import unicodedata
 import urllib.error
 import urllib.request
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -2127,6 +2127,26 @@ def optional_form_decimal(name: str) -> Decimal | None:
     return Decimal(value.replace(",", ".")) if value else None
 
 
+def complete_gas_consumption_values(
+    billed_m3: Decimal,
+    correction_factor: Decimal | None,
+    heating_value_mj_m3: Decimal | None,
+    corrected_m3: Decimal | None = None,
+    heat_quantity_mj: Decimal | None = None,
+) -> tuple[Decimal, Decimal, Decimal, Decimal]:
+    """Fill derived gas values while preserving values copied from the invoice."""
+    correction = correction_factor if correction_factor is not None else Decimal("1")
+    if correction <= 0 or heating_value_mj_m3 is None or heating_value_mj_m3 <= 0:
+        raise ValueError("A korrekciós tényező és a fűtőérték legyen pozitív.")
+    corrected = corrected_m3
+    if corrected is None:
+        corrected = (billed_m3 * correction).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    heat = heat_quantity_mj
+    if heat is None:
+        heat = (corrected * heating_value_mj_m3).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return correction, corrected, heating_value_mj_m3, heat
+
+
 def insert_energy_billing_record(sql: str, parameters: tuple[Any, ...], message: str) -> None:
     connection = connect_database()
     cursor = connection.cursor()
@@ -2334,14 +2354,18 @@ def create_energy_invoice_consumption(invoice_id: int):
     try:
         start = required_form_date("period_start_date")
         end = required_form_date("period_end_date")
+        billed_m3 = Decimal(request.form["billed_consumption_m3"].replace(",", "."))
+        correction, corrected_m3, heating_value, heat_quantity = complete_gas_consumption_values(
+            billed_m3,
+            optional_form_decimal("correction_factor"),
+            optional_form_decimal("heating_value_mj_m3"),
+            optional_form_decimal("corrected_consumption_m3"),
+            optional_form_decimal("heat_quantity_mj"),
+        )
         parameters = (
             invoice_id, start, end, optional_form_decimal("provider_start_reading_m3"),
             optional_form_decimal("provider_end_reading_m3"), request.form.get("reading_method") or None,
-            Decimal(request.form["billed_consumption_m3"].replace(",", ".")),
-            Decimal(request.form["correction_factor"].replace(",", ".")),
-            Decimal(request.form["corrected_consumption_m3"].replace(",", ".")),
-            Decimal(request.form["heating_value_mj_m3"].replace(",", ".")),
-            Decimal(request.form["heat_quantity_mj"].replace(",", ".")),
+            billed_m3, correction, corrected_m3, heating_value, heat_quantity,
             optional_form_date("last_settled_reading_date"),
             optional_form_decimal("last_settled_reading_value_m3"),
             optional_form_decimal("installment_volume_since_settlement_m3"),

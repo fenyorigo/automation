@@ -430,8 +430,14 @@ A saját, óráról leolvasott fogyasztás továbbra is kizárólag az
 `energy_meter_readings` idősorban marad. A számlán szereplő MVM-becslés az
 `energy_invoice_consumption` táblába kerül, ezért a két adatsor az éves
 elszámolásig nem keveredik. Részszámlánál az induló és záró szolgáltatói
-mérőállás üresen hagyható; az elszámolt m³, korrigált m³, fűtőérték és MJ
-közvetlenül a számláról vihető be.
+mérőállás üresen hagyható. Az elszámolt m³ és a korrekciós tényező alapján a
+korrigált mennyiség, majd a fűtőérték megadása után a hőmennyiség automatikusan
+kitöltődik. A számlán szereplő kerekített érték mindkét mezőben felülírható. Az
+üresen hagyott számított mezőket a szerver mentéskor is kiszámítja.
+
+Az **induló MVM-állás** csak az adott fogyasztási sor induló mérőállása. Nem
+azonos az **utolsó elszámolt mérőállással**: részszámlán az előbbi gyakran
+üres, miközben az utóbbi külön tájékoztató adatként szerepel a számlán.
 
 ### Téves óraállás javítása
 
