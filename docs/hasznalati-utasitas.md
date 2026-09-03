@@ -404,11 +404,18 @@ Az Energia oldal alsó részén külön lenyitható űrlapokon rögzíthetők:
 - a gáz korrekciós tényezője és fűtőértéke zárt dátumintervallumokkal;
 - a kedvezményes és versenypiaci, nettó vagy bruttó tarifák;
 - az MVM részszámlás díjsávmegosztása;
+- az augusztus 1.–július 31. közötti kedvezményes gázjogosultsági év;
 - a tervezéshez használt becsült fix díjak.
 
 Az üres záródátum visszavonásig érvényes rekordot jelent. Az időszakok
 átfedésének tartalmi ellenőrzése a rögzítő feladata; ugyanarra a kezdőnapra és
 azonos típusra a rendszer nem enged második rekordot.
+
+A kedvezményes gázkeret külön törzsadat: jelenleg 63 645 MJ, tájékoztatóan
+legalább 1729 m³ egy augusztus 1-jétől a következő július 31-éig tartó évre.
+Az elszámolás idő- és fogyasztásarányos. Ez nem azonos sem a novemberben induló
+saját elszámolási ciklussal, sem az MVM részszámlán alkalmazott havi becsült
+díjsávmegosztással; ezért a három idősort a rendszer külön tárolja.
 
 ### Szolgáltatói számlák
 

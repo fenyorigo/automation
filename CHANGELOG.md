@@ -7,6 +7,9 @@ helyi dátumok.
 
 ### Új funkciók
 
+- Új v1.35 kedvezményes gázjogosultsági modell az augusztus 1.–július 31.
+  közötti, idő- és fogyasztásarányosan elszámolt 63 645 MJ-os kerethez; ez a
+  szolgáltatói számlázási ciklustól és a havi részszámla-becsléstől külön adat.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.

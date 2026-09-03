@@ -1443,6 +1443,11 @@ def load_energy_billing() -> dict[str, Any]:
         )
         fixed_charges = rows_as_dicts(cursor)
         cursor.execute(
+            """SELECT e.*,m.display_name AS meter_name FROM energy_entitlement_periods e
+               JOIN energy_meters m ON m.id=e.meter_id ORDER BY e.valid_from DESC"""
+        )
+        entitlement_periods = rows_as_dicts(cursor)
+        cursor.execute(
             """SELECT i.*,m.display_name AS meter_name,c.cycle_start
                FROM energy_invoices i JOIN energy_meters m ON m.id=i.meter_id
                LEFT JOIN energy_billing_cycles c ON c.id=i.billing_cycle_id
@@ -1463,7 +1468,8 @@ def load_energy_billing() -> dict[str, Any]:
         return {
             "billing_cycles": cycles, "conversion_periods": conversions,
             "tariff_periods": tariffs, "allocation_rules": allocations,
-            "fixed_charge_periods": fixed_charges, "invoices": invoices,
+            "fixed_charge_periods": fixed_charges,
+            "entitlement_periods": entitlement_periods, "invoices": invoices,
         }
     finally:
         cursor.close()
@@ -2256,6 +2262,35 @@ def create_energy_fixed_charge_period():
         """INSERT INTO energy_fixed_charge_periods
            (meter_id,valid_from,valid_to,amount_huf,period_type,description,is_estimated,note,recorded_by)
            VALUES (?,?,?,?,?,?,?,?,?)""", parameters, "A fix díjat rögzítettük."
+    )
+    return redirect(url_for("energy") + "#billing-data")
+
+
+@app.post("/energy/entitlement-periods")
+@editor_required
+def create_energy_entitlement_period():
+    validate_csrf()
+    try:
+        start = required_form_date("valid_from")
+        end = required_form_date("valid_to")
+        parameters = (
+            int(request.form["meter_id"]), start, end,
+            Decimal(request.form["discounted_limit_mj"].replace(",", ".")),
+            optional_form_decimal("reference_volume_m3"),
+            "time_and_consumption_prorated",
+            request.form.get("source_url", "").strip() or None,
+            request.form.get("note", "").strip() or None, g.current_user["id"],
+        )
+        if end < start or parameters[3] <= 0 or parameters[4] is not None and parameters[4] <= 0:
+            raise ValueError
+    except (KeyError, ValueError, InvalidOperation):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO energy_entitlement_periods
+           (meter_id,valid_from,valid_to,discounted_limit_mj,reference_volume_m3,
+            allocation_method,source_url,note,recorded_by)
+           VALUES (?,?,?,?,?,?,?,?,?)""", parameters,
+        "A kedvezményes jogosultsági időszakot rögzítettük."
     )
     return redirect(url_for("energy") + "#billing-data")
 

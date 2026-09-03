@@ -29,7 +29,9 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `energy_billing_cycles`: mérőnkénti, nem feltétlenül naptári elszámolási ciklusok
 - `gas_conversion_periods`: időben érvényes korrekciós tényező és fűtőérték
 - `energy_tariff_periods`: kedvezményes és versenypiaci energia-egységárak
-- `energy_allocation_rules`: szolgáltatói részszámla- vagy éves sávmegosztások
+- `energy_allocation_rules`: szolgáltatói részszámlák becsült díjsávmegosztásai
+- `energy_entitlement_periods`: az augusztus 1.–július 31. közötti kedvezményes
+  gázjogosultsági évek MJ-kerete és tájékoztató m³-mennyisége
 - `energy_fixed_charge_periods`: becsléshez használt, fogyasztástól független díjak
 - `energy_invoices`: szolgáltatói számlafejek és fizetendő összegek
 - `energy_invoice_consumption`: a számlán szereplő becsült vagy tényleges fogyasztási sorok

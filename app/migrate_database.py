@@ -142,6 +142,10 @@ MIGRATIONS = (
         "v1_34_energy_billing",
         ROOT / "SQL" / "migrations" / "034_home_automation_v1.33_to_v1.34.sql",
     ),
+    (
+        "v1_35_energy_entitlement_periods",
+        ROOT / "SQL" / "migrations" / "035_home_automation_v1.34_to_v1.35.sql",
+    ),
 )
 
 
