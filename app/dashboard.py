@@ -1406,6 +1406,70 @@ def load_energy_readings(
         connection.close()
 
 
+def load_energy_billing() -> dict[str, Any]:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT c.*,m.display_name AS meter_name,
+                      br.reading_value AS baseline_value,br.recorded_at AS baseline_at
+               FROM energy_billing_cycles c JOIN energy_meters m ON m.id=c.meter_id
+               LEFT JOIN energy_meter_readings br ON br.id=c.baseline_reading_id
+               ORDER BY c.cycle_start DESC"""
+        )
+        cycles = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT p.*,m.display_name AS meter_name FROM gas_conversion_periods p
+               JOIN energy_meters m ON m.id=p.meter_id ORDER BY p.valid_from DESC"""
+        )
+        conversions = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT p.*,m.display_name AS meter_name FROM energy_tariff_periods p
+               JOIN energy_meters m ON m.id=p.meter_id
+               ORDER BY p.valid_from DESC,p.tariff_tier"""
+        )
+        tariffs = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT a.*,m.display_name AS meter_name,c.cycle_start
+               FROM energy_allocation_rules a
+               JOIN energy_billing_cycles c ON c.id=a.billing_cycle_id
+               JOIN energy_meters m ON m.id=c.meter_id
+               ORDER BY a.valid_from DESC"""
+        )
+        allocations = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT f.*,m.display_name AS meter_name FROM energy_fixed_charge_periods f
+               JOIN energy_meters m ON m.id=f.meter_id ORDER BY f.valid_from DESC"""
+        )
+        fixed_charges = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT i.*,m.display_name AS meter_name,c.cycle_start
+               FROM energy_invoices i JOIN energy_meters m ON m.id=i.meter_id
+               LEFT JOIN energy_billing_cycles c ON c.id=i.billing_cycle_id
+               ORDER BY i.period_end_date DESC,i.id DESC"""
+        )
+        invoices = rows_as_dicts(cursor)
+        for invoice in invoices:
+            cursor.execute(
+                """SELECT * FROM energy_invoice_consumption
+                   WHERE invoice_id=? ORDER BY period_start_date,id""", (invoice["id"],)
+            )
+            invoice["consumption_rows"] = rows_as_dicts(cursor)
+            cursor.execute(
+                """SELECT * FROM energy_invoice_charge_lines
+                   WHERE invoice_id=? ORDER BY sort_order,id""", (invoice["id"],)
+            )
+            invoice["charge_lines"] = rows_as_dicts(cursor)
+        return {
+            "billing_cycles": cycles, "conversion_periods": conversions,
+            "tariff_periods": tariffs, "allocation_rules": allocations,
+            "fixed_charge_periods": fixed_charges, "invoices": invoices,
+        }
+    finally:
+        cursor.close()
+        connection.close()
+
+
 def csrf_token() -> str:
     token = session.get("csrf_token")
     if token is None:
@@ -1783,6 +1847,7 @@ def energy() -> str:
         energy_type=energy_type,
         edit_reading_id=edit_reading_id,
         notice=session.pop("energy_notice", None),
+        **load_energy_billing(),
     )
 
 
@@ -2040,6 +2105,256 @@ def edit_energy_reading(reading_id: int):
         connection.close()
     session["energy_notice"] = {"kind": "success", "message": "Az óraállást javítottuk."}
     return redirect(url_for("energy") + f"#reading-{reading_id}")
+
+
+def required_form_date(name: str) -> date:
+    return date.fromisoformat(request.form[name])
+
+
+def optional_form_date(name: str) -> date | None:
+    value = request.form.get(name, "").strip()
+    return date.fromisoformat(value) if value else None
+
+
+def optional_form_decimal(name: str) -> Decimal | None:
+    value = request.form.get(name, "").strip()
+    return Decimal(value.replace(",", ".")) if value else None
+
+
+def insert_energy_billing_record(sql: str, parameters: tuple[Any, ...], message: str) -> None:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(sql, parameters)
+        connection.commit()
+        session["energy_notice"] = {"kind": "success", "message": message}
+    except mariadb.IntegrityError as error:
+        connection.rollback()
+        session["energy_notice"] = {
+            "kind": "warning", "message": f"Az adat nem rögzíthető: {error}"
+        }
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.post("/energy/billing-cycles")
+@editor_required
+def create_energy_billing_cycle():
+    validate_csrf()
+    try:
+        parameters = (
+            int(request.form["meter_id"]), required_form_date("cycle_start"),
+            optional_form_date("cycle_end"), optional_int(request.form.get("baseline_reading_id")),
+            request.form.get("status", "open"), request.form.get("note", "").strip() or None,
+            g.current_user["id"],
+        )
+        if parameters[2] is not None and parameters[2] < parameters[1]:
+            raise ValueError
+    except (KeyError, TypeError, ValueError):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO energy_billing_cycles
+           (meter_id,cycle_start,cycle_end,baseline_reading_id,status,note,recorded_by)
+           VALUES (?,?,?,?,?,?,?)""", parameters, "Az elszámolási ciklust rögzítettük."
+    )
+    return redirect(url_for("energy") + "#billing-data")
+
+
+@app.post("/energy/gas-conversion-periods")
+@editor_required
+def create_gas_conversion_period():
+    validate_csrf()
+    try:
+        parameters = (
+            int(request.form["meter_id"]), required_form_date("valid_from"),
+            optional_form_date("valid_to"), Decimal(request.form["correction_factor"].replace(",", ".")),
+            Decimal(request.form["heating_value"].replace(",", ".")),
+            request.form.get("data_source", "invoice"), request.form.get("note", "").strip() or None,
+            g.current_user["id"],
+        )
+        if parameters[2] is not None and parameters[2] < parameters[1] or parameters[3] <= 0 or parameters[4] <= 0:
+            raise ValueError
+    except (KeyError, ValueError, InvalidOperation):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO gas_conversion_periods
+           (meter_id,valid_from,valid_to,correction_factor,heating_value_mj_m3,data_source,note,recorded_by)
+           VALUES (?,?,?,?,?,?,?,?)""", parameters, "A gáz átváltási időszakát rögzítettük."
+    )
+    return redirect(url_for("energy") + "#billing-data")
+
+
+@app.post("/energy/tariff-periods")
+@editor_required
+def create_energy_tariff_period():
+    validate_csrf()
+    try:
+        parameters = (
+            int(request.form["meter_id"]), request.form["tariff_tier"],
+            required_form_date("valid_from"), optional_form_date("valid_to"),
+            Decimal(request.form["unit_price"].replace(",", ".")), request.form["price_unit"],
+            request.form["tax_basis"], request.form.get("note", "").strip() or None,
+            g.current_user["id"],
+        )
+        if parameters[3] is not None and parameters[3] < parameters[2] or parameters[4] < 0:
+            raise ValueError
+    except (KeyError, ValueError, InvalidOperation):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO energy_tariff_periods
+           (meter_id,tariff_tier,valid_from,valid_to,unit_price,price_unit,tax_basis,note,recorded_by)
+           VALUES (?,?,?,?,?,?,?,?,?)""", parameters, "A tarifa-időszakot rögzítettük."
+    )
+    return redirect(url_for("energy") + "#billing-data")
+
+
+@app.post("/energy/allocation-rules")
+@editor_required
+def create_energy_allocation_rule():
+    validate_csrf()
+    try:
+        market = Decimal(request.form["market_share_percent"].replace(",", ".")) / 100
+        parameters = (
+            int(request.form["billing_cycle_id"]), required_form_date("valid_from"),
+            optional_form_date("valid_to"), Decimal(1) - market, market,
+            request.form.get("rule_type", "provider_installment_estimate"),
+            request.form.get("note", "").strip() or None, g.current_user["id"],
+        )
+        if market < 0 or market > 1 or parameters[2] is not None and parameters[2] < parameters[1]:
+            raise ValueError
+    except (KeyError, ValueError, InvalidOperation):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO energy_allocation_rules
+           (billing_cycle_id,valid_from,valid_to,discounted_share,market_share,rule_type,note,recorded_by)
+           VALUES (?,?,?,?,?,?,?,?)""", parameters, "A díjsávmegosztást rögzítettük."
+    )
+    return redirect(url_for("energy") + "#billing-data")
+
+
+@app.post("/energy/fixed-charge-periods")
+@editor_required
+def create_energy_fixed_charge_period():
+    validate_csrf()
+    try:
+        parameters = (
+            int(request.form["meter_id"]), required_form_date("valid_from"),
+            optional_form_date("valid_to"), Decimal(request.form["amount_huf"].replace(",", ".")),
+            request.form.get("period_type", "monthly"), request.form["description"].strip(),
+            int(request.form.get("is_estimated") == "1"), request.form.get("note", "").strip() or None,
+            g.current_user["id"],
+        )
+        if not parameters[5] or parameters[3] < 0 or parameters[2] is not None and parameters[2] < parameters[1]:
+            raise ValueError
+    except (KeyError, ValueError, InvalidOperation):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO energy_fixed_charge_periods
+           (meter_id,valid_from,valid_to,amount_huf,period_type,description,is_estimated,note,recorded_by)
+           VALUES (?,?,?,?,?,?,?,?,?)""", parameters, "A fix díjat rögzítettük."
+    )
+    return redirect(url_for("energy") + "#billing-data")
+
+
+@app.post("/energy/invoices")
+@editor_required
+def create_energy_invoice():
+    validate_csrf()
+    try:
+        start = required_form_date("period_start_date")
+        end = required_form_date("period_end_date")
+        parameters = (
+            int(request.form["meter_id"]), optional_int(request.form.get("billing_cycle_id")),
+            request.form["invoice_number"].strip(), request.form["invoice_type"],
+            optional_int(request.form.get("sequence_no")), start, end,
+            optional_form_date("issued_at"), optional_form_date("performance_at"), optional_form_date("due_at"),
+            optional_form_decimal("net_amount_huf"), optional_form_decimal("vat_amount_huf"),
+            optional_form_decimal("gross_amount_huf"), Decimal(request.form["payable_amount_huf"].replace(",", ".")),
+            optional_form_decimal("account_balance_huf"), optional_form_decimal("counterfactual_market_amount_huf"),
+            request.form.get("note", "").strip() or None, g.current_user["id"],
+        )
+        if not parameters[2] or end < start:
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO energy_invoices
+           (meter_id,billing_cycle_id,invoice_number,invoice_type,sequence_no,
+            period_start_date,period_end_date,issued_at,performance_at,due_at,
+            net_amount_huf,vat_amount_huf,gross_amount_huf,payable_amount_huf,
+            account_balance_huf,counterfactual_market_amount_huf,note,recorded_by)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlát rögzítettük."
+    )
+    return redirect(url_for("energy") + "#invoices")
+
+
+@app.post("/energy/invoices/<int:invoice_id>/consumption")
+@editor_required
+def create_energy_invoice_consumption(invoice_id: int):
+    validate_csrf()
+    try:
+        start = required_form_date("period_start_date")
+        end = required_form_date("period_end_date")
+        parameters = (
+            invoice_id, start, end, optional_form_decimal("provider_start_reading_m3"),
+            optional_form_decimal("provider_end_reading_m3"), request.form.get("reading_method") or None,
+            Decimal(request.form["billed_consumption_m3"].replace(",", ".")),
+            Decimal(request.form["correction_factor"].replace(",", ".")),
+            Decimal(request.form["corrected_consumption_m3"].replace(",", ".")),
+            Decimal(request.form["heating_value_mj_m3"].replace(",", ".")),
+            Decimal(request.form["heat_quantity_mj"].replace(",", ".")),
+            optional_form_date("last_settled_reading_date"),
+            optional_form_decimal("last_settled_reading_value_m3"),
+            optional_form_decimal("installment_volume_since_settlement_m3"),
+            request.form.get("note", "").strip() or None,
+        )
+        if end < start or any(value < 0 for value in parameters[6:11]):
+            raise ValueError
+    except (KeyError, ValueError, InvalidOperation):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO energy_invoice_consumption
+           (invoice_id,period_start_date,period_end_date,provider_start_reading_m3,
+            provider_end_reading_m3,reading_method,billed_consumption_m3,correction_factor,
+            corrected_consumption_m3,heating_value_mj_m3,heat_quantity_mj,
+            last_settled_reading_date,last_settled_reading_value_m3,
+            installment_volume_since_settlement_m3,note)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters,
+        "A számla fogyasztási részletét rögzítettük."
+    )
+    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+
+
+@app.post("/energy/invoices/<int:invoice_id>/charge-lines")
+@editor_required
+def create_energy_invoice_charge_line(invoice_id: int):
+    validate_csrf()
+    try:
+        parameters = (
+            invoice_id, optional_int(request.form.get("invoice_consumption_id")),
+            request.form["line_category"], request.form["description"].strip(),
+            optional_form_date("period_start_date"), optional_form_date("period_end_date"),
+            optional_form_decimal("quantity"), request.form.get("quantity_unit", "").strip() or None,
+            optional_form_decimal("net_unit_price_huf"), optional_form_decimal("net_amount_huf"),
+            optional_form_decimal("vat_rate_percent"), Decimal(request.form["gross_amount_huf"].replace(",", ".")),
+            int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
+        )
+        if not parameters[3] or parameters[5] is not None and parameters[4] is not None and parameters[5] < parameters[4]:
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    insert_energy_billing_record(
+        """INSERT INTO energy_invoice_charge_lines
+           (invoice_id,invoice_consumption_id,line_category,description,period_start_date,
+            period_end_date,quantity,quantity_unit,net_unit_price_huf,net_amount_huf,
+            vat_rate_percent,gross_amount_huf,sort_order,note)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlatételt rögzítettük."
+    )
+    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
 
 
 @app.post("/poll-now")

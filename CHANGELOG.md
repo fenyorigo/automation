@@ -7,6 +7,12 @@ helyi dátumok.
 
 ### Új funkciók
 
+- Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
+  gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
+  szolgáltatói számla-, fogyasztási és tételsorokkal.
+- Az Energia oldalon felviteli és áttekintő felület készült minden új
+  számlázási törzsadathoz; a saját leolvasás és az MVM becsült fogyasztása
+  külön adatsor marad.
 - Automatikus Zigbee2MQTT eszközfelfedezés és legutolsóérték-kijelzés SONOFF
   routerekhez, beltéri és kültéri hőmérőkhöz.
 - Zigbee temperature, humidity és battery jelentések időbélyeges mentése a

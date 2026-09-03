@@ -138,6 +138,10 @@ MIGRATIONS = (
         "v1_33_zigbee_outdoor_temperature",
         ROOT / "SQL" / "migrations" / "033_home_automation_v1.32_to_v1.33.sql",
     ),
+    (
+        "v1_34_energy_billing",
+        ROOT / "SQL" / "migrations" / "034_home_automation_v1.33_to_v1.34.sql",
+    ),
 )
 
 

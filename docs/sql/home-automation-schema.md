@@ -26,6 +26,14 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `devices`: eszközök, például klíma, ESP32 gateway, termosztát
 - `sensors`: szenzorok, például DS18B20, ConnectLife beltéri hőmérséklet, Computherm hőmérséklet
 - `sensor_readings`: mért értékek idősorokhoz
+- `energy_billing_cycles`: mérőnkénti, nem feltétlenül naptári elszámolási ciklusok
+- `gas_conversion_periods`: időben érvényes korrekciós tényező és fűtőérték
+- `energy_tariff_periods`: kedvezményes és versenypiaci energia-egységárak
+- `energy_allocation_rules`: szolgáltatói részszámla- vagy éves sávmegosztások
+- `energy_fixed_charge_periods`: becsléshez használt, fogyasztástól független díjak
+- `energy_invoices`: szolgáltatói számlafejek és fizetendő összegek
+- `energy_invoice_consumption`: a számlán szereplő becsült vagy tényleges fogyasztási sorok
+- `energy_invoice_charge_lines`: a számla energia-, alapdíj-, szolgáltatás- és korrekciós tételei
 - `sensor_calibrations`: az ESP–DS fizikai kialakításának és kalibrációjának
   időben verziózott története
 - `derived_temperature_readings`: ofszetkompenzált, EMA-szűrt és ritkábban

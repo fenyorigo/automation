@@ -396,6 +396,36 @@ A **Korábbi óraállások** listája a fejlécben **Minden**, **Villanyóra** v
 **Gázóra** értékre szűrhető. A fogyasztás az adott mérő előző óraállásához
 viszonyított különbség marad.
 
+### Számlázási és tarifaadatok
+
+Az Energia oldal alsó részén külön lenyitható űrlapokon rögzíthetők:
+
+- a szolgáltatói elszámolási ciklusok és a hozzájuk tartozó saját kezdőmérés;
+- a gáz korrekciós tényezője és fűtőértéke zárt dátumintervallumokkal;
+- a kedvezményes és versenypiaci, nettó vagy bruttó tarifák;
+- az MVM részszámlás díjsávmegosztása;
+- a tervezéshez használt becsült fix díjak.
+
+Az üres záródátum visszavonásig érvényes rekordot jelent. Az időszakok
+átfedésének tartalmi ellenőrzése a rögzítő feladata; ugyanarra a kezdőnapra és
+azonos típusra a rendszer nem enged második rekordot.
+
+### Szolgáltatói számlák
+
+A számla rögzítése három lépésből áll:
+
+1. a számlafej, dátumok és összesítő pénzösszegek felvitele;
+2. egy vagy több fogyasztási részlet hozzáadása;
+3. a kedvezményes, versenypiaci, alapdíj-, szolgáltatási és korrekciós
+   számlatételek felvitele.
+
+A saját, óráról leolvasott fogyasztás továbbra is kizárólag az
+`energy_meter_readings` idősorban marad. A számlán szereplő MVM-becslés az
+`energy_invoice_consumption` táblába kerül, ezért a két adatsor az éves
+elszámolásig nem keveredik. Részszámlánál az induló és záró szolgáltatói
+mérőállás üresen hagyható; az elszámolt m³, korrigált m³, fűtőérték és MJ
+közvetlenül a számláról vihető be.
+
 ### Téves óraállás javítása
 
 Szerkesztői jogosultsággal a korábbi óraállások listájában minden sor végén
