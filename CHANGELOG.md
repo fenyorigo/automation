@@ -18,6 +18,8 @@ helyi dátumok.
   közvetlenül az Energia oldalon javíthatók.
 - Új globális `ENERGY_MJ_PER_KWH=3.6` átváltási állandó és kWh-egyenérték
   segíti a gáz- és villamos fűtés összehasonlítását.
+- A számlafej és a számlatételek bruttó összege automatikusan számolódik a
+  megadott nettó és ÁFA-adatokból, szerveroldali ellenőrző számítással.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.

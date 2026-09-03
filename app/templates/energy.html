@@ -38,6 +38,29 @@ document.querySelectorAll('.invoice-consumption strong').forEach((element) => {
 });
 const anchoredInvoice = document.querySelector(window.location.hash);
 if (anchoredInvoice instanceof HTMLDetailsElement) anchoredInvoice.open = true;
+document.querySelectorAll('form').forEach((form) => {
+  const net = form.elements.namedItem('net_amount_huf');
+  const gross = form.elements.namedItem('gross_amount_huf');
+  const vatAmount = form.elements.namedItem('vat_amount_huf');
+  const vatRate = form.elements.namedItem('vat_rate_percent');
+  if (!net || !gross || (!vatAmount && !vatRate)) return;
+  gross.required = false;
+  let grossManual = false;
+  const numberValue = (input) => Number.parseFloat(input.value.replace(',', '.'));
+  const calculateGross = () => {
+    if (grossManual) return;
+    const netValue = numberValue(net);
+    const vatValue = numberValue(vatAmount || vatRate);
+    if (!Number.isFinite(netValue) || !Number.isFinite(vatValue)) return;
+    const result = vatAmount ? netValue + vatValue : netValue * (1 + vatValue / 100);
+    gross.value = result.toFixed(2).replace('.', ',');
+  };
+  gross.addEventListener('input', (event) => { if (event.isTrusted) grossManual = true; });
+  [net, vatAmount || vatRate].forEach((input) => input.addEventListener('input', () => {
+    grossManual = false;
+    calculateGross();
+  }));
+});
 document.querySelectorAll('.gas-consumption-form').forEach((form) => {
   const field = (name) => form.elements.namedItem(name);
   const billed = field('billed_consumption_m3');

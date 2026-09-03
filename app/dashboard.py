@@ -2164,6 +2164,31 @@ def complete_gas_consumption_values(
     return correction, corrected, heating_value_mj_m3, heat
 
 
+def complete_invoice_gross(
+    net_amount: Decimal | None,
+    vat_amount: Decimal | None,
+    gross_amount: Decimal | None,
+) -> Decimal | None:
+    if gross_amount is not None:
+        return gross_amount
+    if net_amount is None or vat_amount is None:
+        return None
+    return (net_amount + vat_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def complete_charge_gross(
+    net_amount: Decimal | None,
+    vat_rate_percent: Decimal | None,
+    gross_amount: Decimal | None,
+) -> Decimal:
+    if gross_amount is not None:
+        return gross_amount
+    if net_amount is None or vat_rate_percent is None:
+        raise ValueError("A bruttó összeghez nettó összeg és ÁFA-kulcs szükséges.")
+    multiplier = Decimal("1") + vat_rate_percent / Decimal("100")
+    return (net_amount * multiplier).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
 def insert_energy_billing_record(sql: str, parameters: tuple[Any, ...], message: str) -> None:
     connection = connect_database()
     cursor = connection.cursor()
@@ -2339,13 +2364,18 @@ def create_energy_invoice():
     try:
         start = required_form_date("period_start_date")
         end = required_form_date("period_end_date")
+        net_amount = optional_form_decimal("net_amount_huf")
+        vat_amount = optional_form_decimal("vat_amount_huf")
+        gross_amount = complete_invoice_gross(
+            net_amount, vat_amount, optional_form_decimal("gross_amount_huf")
+        )
         parameters = (
             int(request.form["meter_id"]), optional_int(request.form.get("billing_cycle_id")),
             request.form["invoice_number"].strip(), request.form["invoice_type"],
             optional_int(request.form.get("sequence_no")), start, end,
             optional_form_date("issued_at"), optional_form_date("performance_at"), optional_form_date("due_at"),
-            optional_form_decimal("net_amount_huf"), optional_form_decimal("vat_amount_huf"),
-            optional_form_decimal("gross_amount_huf"), Decimal(request.form["payable_amount_huf"].replace(",", ".")),
+            net_amount, vat_amount, gross_amount,
+            Decimal(request.form["payable_amount_huf"].replace(",", ".")),
             optional_form_decimal("account_balance_huf"), optional_form_decimal("counterfactual_market_amount_huf"),
             request.form.get("note", "").strip() or None, g.current_user["id"],
         )
@@ -2371,13 +2401,17 @@ def edit_energy_invoice(invoice_id: int):
     try:
         start = required_form_date("period_start_date")
         end = required_form_date("period_end_date")
+        net_amount = optional_form_decimal("net_amount_huf")
+        vat_amount = optional_form_decimal("vat_amount_huf")
+        gross_amount = complete_invoice_gross(
+            net_amount, vat_amount, optional_form_decimal("gross_amount_huf")
+        )
         parameters = (
             int(request.form["meter_id"]), optional_int(request.form.get("billing_cycle_id")),
             request.form["invoice_number"].strip(), request.form["invoice_type"],
             optional_int(request.form.get("sequence_no")), start, end,
             optional_form_date("issued_at"), optional_form_date("performance_at"),
-            optional_form_date("due_at"), optional_form_decimal("net_amount_huf"),
-            optional_form_decimal("vat_amount_huf"), optional_form_decimal("gross_amount_huf"),
+            optional_form_date("due_at"), net_amount, vat_amount, gross_amount,
             Decimal(request.form["payable_amount_huf"].replace(",", ".")),
             optional_form_decimal("account_balance_huf"),
             optional_form_decimal("counterfactual_market_amount_huf"),
@@ -2518,13 +2552,18 @@ def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
 def create_energy_invoice_charge_line(invoice_id: int):
     validate_csrf()
     try:
+        net_amount = optional_form_decimal("net_amount_huf")
+        vat_rate = optional_form_decimal("vat_rate_percent")
+        gross_amount = complete_charge_gross(
+            net_amount, vat_rate, optional_form_decimal("gross_amount_huf")
+        )
         parameters = (
             invoice_id, optional_int(request.form.get("invoice_consumption_id")),
             request.form["line_category"], request.form["description"].strip(),
             optional_form_date("period_start_date"), optional_form_date("period_end_date"),
             optional_form_decimal("quantity"), request.form.get("quantity_unit", "").strip() or None,
-            optional_form_decimal("net_unit_price_huf"), optional_form_decimal("net_amount_huf"),
-            optional_form_decimal("vat_rate_percent"), Decimal(request.form["gross_amount_huf"].replace(",", ".")),
+            optional_form_decimal("net_unit_price_huf"), net_amount,
+            vat_rate, gross_amount,
             int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
         )
         if not parameters[3] or parameters[5] is not None and parameters[4] is not None and parameters[5] < parameters[4]:
@@ -2546,14 +2585,18 @@ def create_energy_invoice_charge_line(invoice_id: int):
 def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
     validate_csrf()
     try:
+        net_amount = optional_form_decimal("net_amount_huf")
+        vat_rate = optional_form_decimal("vat_rate_percent")
+        gross_amount = complete_charge_gross(
+            net_amount, vat_rate, optional_form_decimal("gross_amount_huf")
+        )
         parameters = (
             optional_int(request.form.get("invoice_consumption_id")),
             request.form["line_category"], request.form["description"].strip(),
             optional_form_date("period_start_date"), optional_form_date("period_end_date"),
             optional_form_decimal("quantity"), request.form.get("quantity_unit", "").strip() or None,
-            optional_form_decimal("net_unit_price_huf"), optional_form_decimal("net_amount_huf"),
-            optional_form_decimal("vat_rate_percent"),
-            Decimal(request.form["gross_amount_huf"].replace(",", ".")),
+            optional_form_decimal("net_unit_price_huf"), net_amount,
+            vat_rate, gross_amount,
             int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
             line_id, invoice_id,
         )

@@ -435,6 +435,11 @@ A számlafej, minden fogyasztási részlet és minden számlatétel mellett kül
 ceruza jelenik meg szerkesztői jogosultsággal. A ceruzával az adott rekord
 helyben javítható; a mentés nem érinti a számla többi részét.
 
+A számlafejnél a nettó összeg és az ÁFA összege automatikusan kitölti a bruttó
+összeget. A számlatételeknél ugyanez a nettó összeg és az ÁFA százaléka alapján
+történik. Az üresen hagyott bruttó értéket a szerver mentéskor is kiszámítja;
+a szolgáltatói számlán szereplő eltérő kerekítés kézzel felülírható.
+
 A saját, óráról leolvasott fogyasztás továbbra is kizárólag az
 `energy_meter_readings` idősorban marad. A számlán szereplő MVM-becslés az
 `energy_invoice_consumption` táblába kerül, ezért a két adatsor az éves
