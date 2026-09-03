@@ -438,6 +438,9 @@ kitöltődik. A számlán szereplő kerekített érték mindkét mezőben felül
 Az **induló MVM-állás** csak az adott fogyasztási sor induló mérőállása. Nem
 azonos az **utolsó elszámolt mérőállással**: részszámlán az előbbi gyakran
 üres, miközben az utóbbi külön tájékoztató adatként szerepel a számlán.
+Ha a fogyasztási időszakot teljes egészében lefedi egy gázátváltási törzsadat,
+az űrlap annak korrekciós tényezőjét és fűtőértékét is automatikusan betölti.
+Ismeretlen időszaknál a fűtőértéket a számláról kell megadni.
 
 ### Téves óraállás javítása
 
