@@ -2466,7 +2466,7 @@ def add_default_invoice_charge_lines(
            FROM energy_invoice_charge_defaults
            WHERE meter_id=? AND auto_add=1 AND valid_from<=?
              AND (valid_to IS NULL OR valid_to>=?)
-           ORDER BY FIELD(line_category,'base_fee','service'),template_key""",
+           ORDER BY FIELD(line_category,'base_fee','service'),id""",
         (meter_id, effective_at, effective_at),
     )
     defaults = cursor.fetchall()
