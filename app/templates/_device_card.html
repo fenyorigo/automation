@@ -16,6 +16,11 @@
     {% else %}<strong>—</strong><small>nincs friss Computherm-adat</small>{% endif %}
   </div>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
+  {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' %}
+  <div class="contact-state {% if device.zigbee_contact_closed is none %}unknown{% elif device.zigbee_contact_closed %}closed{% else %}open{% endif %}">
+    <span class="contact-state-label">Állapot</span>
+    <strong>{% if device.zigbee_contact_closed is none %}Ismeretlen{% elif device.zigbee_contact_closed %}Csukva{% else %}Nyitva{% endif %}</strong>
+  </div>
   {% elif device.source_system == 'tasmota' %}
   <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c if device.temperature_c is not none else '—' }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}"> W</span></div>
   {% else %}
@@ -45,6 +50,10 @@
     <div><dt>Elem</dt><dd>{% if device.zigbee_battery_percent is not none %}{{ device.zigbee_battery_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
     <div><dt>Jelminőség</dt><dd>{% if device.zigbee_linkquality is not none %}{{ device.zigbee_linkquality|int }} LQI{% else %}—{% endif %}</dd></div>
     <div><dt>Modell</dt><dd>{{ device.zigbee_model or '—' }}</dd></div>
+  </dl>
+  {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' %}
+  <dl class="state-grid contact-details">
+    <div><dt>Tamper</dt><dd>{% if device.zigbee_tamper is none %}—{% elif device.zigbee_tamper %}Riasztás{% else %}Rendben{% endif %}</dd></div>
   </dl>
   {% elif device.source_system == 'shelly_mqtt' %}
   <dl class="state-grid">

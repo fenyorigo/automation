@@ -70,6 +70,13 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .temperature .shelly-warning { color: #7a5a00; }
 .temperature .shelly-delayed { color: #b45a00; }
 .temperature .shelly-offline { color: var(--red); font-weight: 900; }
+.contact-state { display:grid; gap:5px; margin:25px 0 20px; padding:16px; border-radius:12px; background:var(--paper); }
+.contact-state-label { color:var(--muted); font-size:.72rem; font-weight:700; text-transform:uppercase; }
+.contact-state strong { font-size:clamp(2rem,6vw,3rem); line-height:1; }
+.contact-state.closed strong { color:var(--green); }
+.contact-state.open strong { color:#b45a00; }
+.contact-state.unknown strong { color:var(--muted); }
+.contact-details { grid-template-columns:1fr; }
 .temperature-mode-row { display:flex; align-items:center; justify-content:flex-end; gap:12px; margin:0 0 18px; color:var(--muted); font-size:.82rem; font-weight:800; }
 .temperature-mode-switch { flex-wrap:wrap; }
 .temperature-provenance { min-height:34px; margin:-9px 0 16px; color:var(--muted); font-size:.72rem; line-height:1.45; }

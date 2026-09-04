@@ -852,6 +852,12 @@ def load_dashboard(
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='battery') AS zigbee_battery_percent,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='contact') AS zigbee_contact_closed,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='tamper') AS zigbee_tamper,
               (SELECT MAX(msr.observed_at)
                  FROM sensors ms JOIN sensor_readings msr ON msr.sensor_id=ms.id
                 WHERE ms.device_id=d.id AND ms.is_active=1

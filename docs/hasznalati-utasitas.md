@@ -77,6 +77,9 @@ A kártyák az eszköz típusától függően mutathatják:
 - a Bosch 7000i kézi állapotát és szervizadatait.
 - a Zigbee és Shelly hőmérők páratartalmát, elemállapotát, típusát és utolsó
   tényleges mérési idejét.
+- a Zigbee nyitásérzékelőknél hőmérséklet helyett a **Nyitva/Csukva** állapotot
+  és a tamper jelzést. A Zigbee2MQTT `contact=true` értéke csukott,
+  a `contact=false` nyitott állapotot jelent.
 
 A Shelly H&T Gen3 elemes, deep-sleep eszköz; az `/online=false` nem offline
 hiba. A kártya a legutóbbi tényleges mérés kora alapján fokozatosan változik:

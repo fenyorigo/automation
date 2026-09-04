@@ -7,6 +7,9 @@ helyi dátumok.
 
 ### Új funkciók
 
+- A Zigbee/Tuya nyitásérzékelők eszközkártyája hőmérséklet helyett a
+  `Nyitva`/`Csukva` állapotot és a tamper jelzést mutatja.
+
 - Az Energia számlalistája energiatípus, nyitott/lezárt ciklus és év szerint
   szűrhető; alapból a nyitott gázciklus látszik. A korábbi óraállások külön
   energiatípus- és évszűrőt kaptak, és alapból rejtve maradnak.
