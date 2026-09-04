@@ -239,6 +239,13 @@ A saját leolvasást nem szabad az MVM becsült fogyasztási adataival
 helyettesíteni vagy összevonni. A szolgáltatói számlázás és a tényleges
 fizikai fogyasztás később ezek különbségével ellenőrizhető.
 
+A ciklushoz kapcsolt részszámlák kumulált mennyiségét nem kell kézzel
+rögzíteni. A rendszer minden számlamentésnél a részszámlák sorszáma szerint,
+az adott ciklus elejétől összegzi az elszámolt fogyasztást. Ha egy számlán több
+fogyasztási részlet van, a kumulált érték a számla utolsó részletén jelenik
+meg. Egy korábbi fogyasztás, sorszám vagy cikluskapcsolat javítása a későbbi
+összegeket is automatikusan helyesbíti.
+
 ## 11. Elszámolószámla
 
 Az elszámolószámla típusa **Elszámolószámla**. A minta a

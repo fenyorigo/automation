@@ -16,6 +16,7 @@ from dashboard import (
     complete_gas_consumption_values,
     complete_invoice_gross,
     complete_invoice_payable,
+    installment_cumulative_assignments,
     mj_to_kwh,
 )
 
@@ -122,6 +123,24 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
     def test_requires_positive_heating_value(self):
         with self.assertRaises(ValueError):
             complete_gas_consumption_values(Decimal("10"), None, None)
+
+    def test_installment_cumulative_volume_resets_and_accumulates_by_invoice(self):
+        self.assertEqual(
+            installment_cumulative_assignments(
+                [
+                    (10, 101, Decimal("148")),
+                    (10, 102, Decimal("36")),
+                    (11, 103, Decimal("184")),
+                    (12, 104, Decimal("100.5")),
+                ]
+            ),
+            {
+                101: None,
+                102: Decimal("184"),
+                103: Decimal("368"),
+                104: Decimal("468.5"),
+            },
+        )
 
     def test_energy_script_guards_empty_location_hash(self):
         template = (ROOT / "app" / "templates" / "energy.html").read_text(encoding="utf-8")

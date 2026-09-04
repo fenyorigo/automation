@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import csv
 from functools import wraps
+from itertools import groupby
 import io
 import os
 import json
@@ -2178,6 +2179,45 @@ def complete_gas_consumption_values(
     return correction, corrected, heating_value_mj_m3, heat
 
 
+def installment_cumulative_assignments(
+    rows: list[tuple[int, int, Decimal]],
+) -> dict[int, Decimal | None]:
+    """Return the running billed volume on each installment's final detail row."""
+    cumulative = Decimal("0")
+    assignments: dict[int, Decimal | None] = {}
+    for _invoice_id, invoice_rows in groupby(rows, key=lambda row: row[0]):
+        details = list(invoice_rows)
+        cumulative += sum((row[2] for row in details), Decimal("0"))
+        for _row_invoice_id, consumption_id, _billed_m3 in details:
+            assignments[consumption_id] = None
+        assignments[details[-1][1]] = cumulative
+    return assignments
+
+
+def recalculate_installment_cumulative_consumption(
+    cursor: mariadb.Cursor, billing_cycle_id: int | None
+) -> None:
+    """Recalculate all installment running totals within one billing cycle."""
+    if billing_cycle_id is None:
+        return
+    cursor.execute(
+        """SELECT i.id,c.id,c.billed_consumption_m3
+           FROM energy_invoices i
+           JOIN energy_invoice_consumption c ON c.invoice_id=i.id
+           WHERE i.billing_cycle_id=? AND i.invoice_type='installment'
+           ORDER BY CASE WHEN i.sequence_no IS NULL THEN 1 ELSE 0 END,
+                    i.sequence_no,i.period_start_date,i.id,c.period_start_date,c.id""",
+        (billing_cycle_id,),
+    )
+    assignments = installment_cumulative_assignments(cursor.fetchall())
+    for consumption_id, cumulative in assignments.items():
+        cursor.execute(
+            """UPDATE energy_invoice_consumption
+               SET installment_volume_since_settlement_m3=? WHERE id=?""",
+            (cumulative, consumption_id),
+        )
+
+
 def complete_invoice_gross(
     net_amount: Decimal | None,
     vat_amount: Decimal | None,
@@ -2502,8 +2542,13 @@ def edit_energy_invoice(invoice_id: int):
     connection = connect_database()
     cursor = connection.cursor()
     try:
-        cursor.execute("SELECT 1 FROM energy_invoices WHERE id=? FOR UPDATE", (invoice_id,))
-        if cursor.fetchone() is None:
+        cursor.execute(
+            """SELECT billing_cycle_id,invoice_type FROM energy_invoices
+               WHERE id=? FOR UPDATE""",
+            (invoice_id,),
+        )
+        previous_invoice = cursor.fetchone()
+        if previous_invoice is None:
             abort(404)
         cursor.execute(
             """UPDATE energy_invoices SET
@@ -2513,6 +2558,13 @@ def edit_energy_invoice(invoice_id: int):
                account_balance_huf=?,counterfactual_market_amount_huf=?,note=?,recorded_by=?
                WHERE id=?""", parameters,
         )
+        affected_cycles: set[int] = set()
+        if previous_invoice[1] == "installment" and previous_invoice[0] is not None:
+            affected_cycles.add(previous_invoice[0])
+        if parameters[3] == "installment" and parameters[1] is not None:
+            affected_cycles.add(parameters[1])
+        for billing_cycle_id in affected_cycles:
+            recalculate_installment_cumulative_consumption(cursor, billing_cycle_id)
         connection.commit()
     except mariadb.IntegrityError as error:
         connection.rollback()
@@ -2556,16 +2608,44 @@ def create_energy_invoice_consumption(invoice_id: int):
             raise ValueError
     except (KeyError, ValueError, InvalidOperation):
         abort(400)
-    insert_energy_billing_record(
-        """INSERT INTO energy_invoice_consumption
-           (invoice_id,period_start_date,period_end_date,provider_start_reading_m3,
-            provider_end_reading_m3,reading_method,billed_consumption_m3,correction_factor,
-            corrected_consumption_m3,heating_value_mj_m3,heat_quantity_mj,
-            last_settled_reading_date,last_settled_reading_value_m3,
-            installment_volume_since_settlement_m3,note)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters,
-        "A számla fogyasztási részletét rögzítettük."
-    )
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT invoice_type,billing_cycle_id FROM energy_invoices
+               WHERE id=? FOR UPDATE""",
+            (invoice_id,),
+        )
+        invoice_metadata = cursor.fetchone()
+        if invoice_metadata is None:
+            abort(404)
+        cursor.execute(
+            """INSERT INTO energy_invoice_consumption
+               (invoice_id,period_start_date,period_end_date,provider_start_reading_m3,
+                provider_end_reading_m3,reading_method,billed_consumption_m3,correction_factor,
+                corrected_consumption_m3,heating_value_mj_m3,heat_quantity_mj,
+                last_settled_reading_date,last_settled_reading_value_m3,
+                installment_volume_since_settlement_m3,note)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            parameters,
+        )
+        if invoice_metadata[0] == "installment":
+            recalculate_installment_cumulative_consumption(cursor, invoice_metadata[1])
+        connection.commit()
+        session["energy_notice"] = {
+            "kind": "success", "message": "A számla fogyasztási részletét rögzítettük."
+        }
+    except mariadb.IntegrityError as error:
+        connection.rollback()
+        session["energy_notice"] = {
+            "kind": "warning", "message": f"A fogyasztási részlet nem rögzíthető: {error}"
+        }
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
     return redirect(url_for("energy") + f"#invoice-{invoice_id}")
 
 
@@ -2600,10 +2680,14 @@ def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
     cursor = connection.cursor()
     try:
         cursor.execute(
-            "SELECT 1 FROM energy_invoice_consumption WHERE id=? AND invoice_id=? FOR UPDATE",
+            """SELECT i.invoice_type,i.billing_cycle_id
+               FROM energy_invoice_consumption c
+               JOIN energy_invoices i ON i.id=c.invoice_id
+               WHERE c.id=? AND c.invoice_id=? FOR UPDATE""",
             (consumption_id, invoice_id),
         )
-        if cursor.fetchone() is None:
+        invoice_metadata = cursor.fetchone()
+        if invoice_metadata is None:
             abort(404)
         cursor.execute(
             """UPDATE energy_invoice_consumption SET
@@ -2614,6 +2698,8 @@ def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
                installment_volume_since_settlement_m3=?,note=?
                WHERE id=? AND invoice_id=?""", parameters,
         )
+        if invoice_metadata[0] == "installment":
+            recalculate_installment_cumulative_consumption(cursor, invoice_metadata[1])
         connection.commit()
     except Exception:
         connection.rollback()

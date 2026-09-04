@@ -475,6 +475,12 @@ korrigált mennyiség, majd a fűtőérték megadása után a hőmennyiség auto
 kitöltődik. A számlán szereplő kerekített érték mindkét mezőben felülírható. Az
 üresen hagyott számított mezőket a szerver mentéskor is kiszámítja.
 
+Ciklushoz kapcsolt részszámlánál a **Részszámlák kumulált mennyisége** mezőt
+nem kell kézzel megadni. A rendszer a ciklus első részszámlájánál nulláról
+indul, és a sorszám szerinti aktuális, valamint korábbi részszámlák elszámolt
+m³ értékeit összeadja. Fogyasztási adat, részszámlasorszám vagy cikluskapcsolat
+javításakor az érintett ciklus későbbi kumulált értékei is újraszámolódnak.
+
 Az **induló MVM-állás** csak az adott fogyasztási sor induló mérőállása. Nem
 azonos az **utolsó elszámolt mérőállással**: részszámlán az előbbi gyakran
 üres, miközben az utóbbi külön tájékoztató adatként szerepel a számlán.

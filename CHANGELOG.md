@@ -7,6 +7,8 @@ helyi dátumok.
 
 ### Új funkciók
 
+- A ciklushoz rendelt részszámlák kumulált m³ értéke a ciklus elejétől,
+  részszámlasorrendben automatikusan számolódik és javításkor újraszámolódik.
 - A számlalista a részszámlák rögzített sorszámát is kijelzi, például
   `3. részszámla` formában.
 - A történeti gázszámlák rögzítéséhez az `OtthonSOS Plusz` szolgáltatás is
