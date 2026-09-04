@@ -112,6 +112,16 @@ A számlát lenyitva a **Számlatétel hozzáadása** űrlapon minden szolgálta
 sort külön kell rögzíteni. A tételt hozzá kell kapcsolni a megfelelő
 fogyasztási részlethez.
 
+Az energiadíj rögzítésekor külön ellenőrizni kell:
+
+- a **Kategória** mező valóban `Kedvezményes energia` vagy `Versenypiaci
+  energia` legyen; a megnevezés szövege önmagában nem határozza meg a
+  kategóriát;
+- a **Mértékegység** mezőbe `MJ` kerüljön, mert ezt a felület jelenleg nem
+  következteti ki automatikusan;
+- a kapcsolt fogyasztási részlet és a tétel dátumtartománya ugyanahhoz a
+  számlabontáshoz tartozzon.
+
 A mintaszámla négy energiadíjtétele:
 
 | Kapcsolt részlet | Kategória | Mennyiség | Egységár | Nettó | ÁFA | Bruttó |
@@ -141,6 +151,10 @@ rögzíteni.
 | Szolgáltatás | OtthonSOS Komfort | 2025.08.01–2025.08.31 | 1 hó | 790 Ft/hó | 790 Ft | 0% | 790 Ft |
 | Szolgáltatás | OtthonSOS Garancia Médium | 2025.08.01–2025.08.31 | 1 hó | 990 Ft/hó | 990 Ft | 0% | 990 Ft |
 
+A havi alapdíj- és szolgáltatási sorok **Mértékegység** mezőjébe `hó`
+kerüljön. A tétel dátuma a számlán közölt szolgáltatási időszak legyen, ami
+nem feltétlenül egyezik meg a számlafej teljes időszakával.
+
 A becslési törzsadatok között szereplő havi fix összeg kizárólag tervezési
 adat. Nem helyettesíti a számla tényleges alapdíj- és szolgáltatási sorait.
 
@@ -164,6 +178,15 @@ A felvitel után az alábbi egyezőségeket érdemes ellenőrizni:
 Az összes számlatétel bruttó összegének meg kell egyeznie a számlafej
 fizetendő összegével. A fogyasztási részletek MJ-összegének meg kell egyeznie
 az energiadíjtételek MJ-összegével.
+
+Az ellenőrzésnél nem elég csak az összegeket összeadni. Külön át kell nézni:
+
+- minden tétel kezdő- és záródátumát;
+- az energiadíjak `MJ`, a havi fix tételek `hó` mértékegységét;
+- a kedvezményes és versenypiaci kategóriák helyes kiválasztását;
+- hogy az utolsó elszámolt mérőállás dátuma és értéke ugyanazon fogyasztási
+  részleten szerepeljen, a másik részleten pedig mindkettő legyen üres;
+- hogy korábban felvitt tételnél se maradjon tört forintos bruttó összeg.
 
 ## 8. MJ és kWh összehasonlítás
 
@@ -218,4 +241,3 @@ ellenőrizni és dokumentálni.
 
 - MVM: [A lakossági földgáz rezsicsökkentés legfontosabb információi](https://www.mvmnext.hu/lakossagirezsi/legfontosabb-informaciok-gaz)
 - Minta: NKM/MVM Gáz, `2025.07.07–2025.08.06` időszakú 9. részszámla
-
