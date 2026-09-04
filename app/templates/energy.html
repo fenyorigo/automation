@@ -50,7 +50,46 @@ document.querySelectorAll('form').forEach((form) => {
     const category = form.elements.namedItem('line_category');
     const quantity = form.elements.namedItem('quantity');
     const unitPrice = form.elements.namedItem('net_unit_price_huf');
-    const fillVat = () => { vatRate.value = category.value === 'service' ? '0' : '27'; };
+    const quantityUnit = form.elements.namedItem('quantity_unit');
+    let description = form.elements.namedItem('description');
+    const descriptions = {
+      discounted_energy: 'Kedvezményes gázdíj',
+      market_energy: 'Versenypiaci költségeket tükröző ár',
+      base_fee: 'Háztartási alapdíj'
+    };
+    const serviceDescriptions = ['OtthonSOS Komfort', 'OtthonSOS Garancia Médium'];
+    const replaceDescription = (serviceMode) => {
+      const current = description.value;
+      const replacement = document.createElement(serviceMode ? 'select' : 'input');
+      replacement.name = 'description';
+      replacement.required = true;
+      if (serviceMode) {
+        serviceDescriptions.forEach((value) => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = value;
+          option.selected = value === current;
+          replacement.appendChild(option);
+        });
+      } else {
+        replacement.value = current;
+      }
+      description.replaceWith(replacement);
+      description = replacement;
+    };
+    const fillCategoryDefaults = () => {
+      const serviceMode = category.value === 'service';
+      if (serviceMode !== (description.tagName === 'SELECT')) replaceDescription(serviceMode);
+      vatRate.value = serviceMode ? '0' : '27';
+      if (category.value in descriptions) {
+        description.value = descriptions[category.value];
+        description.readOnly = true;
+      } else if (!serviceMode) {
+        description.readOnly = false;
+      }
+      if (category.value === 'discounted_energy' || category.value === 'market_energy') quantityUnit.value = 'MJ';
+      if (category.value === 'base_fee' || serviceMode) quantityUnit.value = 'hó';
+    };
     const calculateLine = () => {
       const quantityValue = numberValue(quantity);
       const priceValue = numberValue(unitPrice);
@@ -63,9 +102,9 @@ document.querySelectorAll('form').forEach((form) => {
         gross.value = Math.round(netValue * (1 + vatValue / 100)).toString();
       }
     };
-    category.addEventListener('change', () => { fillVat(); calculateLine(); });
+    category.addEventListener('change', () => { fillCategoryDefaults(); calculateLine(); });
     [quantity, unitPrice, net, vatRate].forEach((input) => input.addEventListener('input', calculateLine));
-    fillVat();
+    fillCategoryDefaults();
     calculateLine();
     return;
   }

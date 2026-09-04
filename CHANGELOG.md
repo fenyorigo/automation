@@ -30,6 +30,9 @@ helyi dátumok.
   kategória 0%, minden más kategória 27% alapértéket kap.
 - Javítva az Energia oldal üres URL-hivatkozásnál fellépő JavaScript-hibája,
   amely megakadályozta a számlatételek automatikus ÁFA- és összegszámítását.
+- A számlatétel kategóriája automatikusan kitölti a szabványos megnevezést és
+  mértékegységet; szolgáltatásnál legördülőből választhatók az OtthonSOS
+  Komfort és Garancia Médium tételek.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.

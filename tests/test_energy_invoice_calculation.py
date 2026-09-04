@@ -12,6 +12,7 @@ os.environ.setdefault("DB_PASSWORD", "test")
 
 from dashboard import (
     complete_charge_amounts,
+    complete_charge_metadata,
     complete_gas_consumption_values,
     complete_invoice_gross,
     mj_to_kwh,
@@ -19,6 +20,22 @@ from dashboard import (
 
 
 class EnergyInvoiceCalculationTest(unittest.TestCase):
+    def test_charge_category_fills_description_and_unit(self):
+        self.assertEqual(
+            complete_charge_metadata("market_energy", "rossz név", None),
+            ("Versenypiaci költségeket tükröző ár", "MJ"),
+        )
+        self.assertEqual(
+            complete_charge_metadata("base_fee", "", None),
+            ("Háztartási alapdíj", "hó"),
+        )
+
+    def test_service_preserves_selected_name_and_uses_month_unit(self):
+        self.assertEqual(
+            complete_charge_metadata("service", "OtthonSOS Garancia Médium", None),
+            ("OtthonSOS Garancia Médium", "hó"),
+        )
+
     def test_calculates_invoice_gross_from_net_and_vat_amount(self):
         self.assertEqual(
             complete_invoice_gross(Decimal("33849"), Decimal("8659"), None),

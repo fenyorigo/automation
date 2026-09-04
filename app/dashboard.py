@@ -2203,6 +2203,28 @@ def complete_charge_amounts(
     return calculated_net, vat_rate, calculated_gross
 
 
+CHARGE_DESCRIPTION_DEFAULTS = {
+    "discounted_energy": "Kedvezményes gázdíj",
+    "market_energy": "Versenypiaci költségeket tükröző ár",
+    "base_fee": "Háztartási alapdíj",
+}
+SERVICE_DESCRIPTION_OPTIONS = (
+    "OtthonSOS Komfort",
+    "OtthonSOS Garancia Médium",
+)
+
+
+def complete_charge_metadata(
+    category: str, description: str, quantity_unit: str | None
+) -> tuple[str, str | None]:
+    if category in CHARGE_DESCRIPTION_DEFAULTS:
+        unit = "MJ" if category in {"discounted_energy", "market_energy"} else "hó"
+        return CHARGE_DESCRIPTION_DEFAULTS[category], unit
+    if category == "service":
+        return description or SERVICE_DESCRIPTION_OPTIONS[0], "hó"
+    return description, quantity_unit
+
+
 def insert_energy_billing_record(sql: str, parameters: tuple[Any, ...], message: str) -> None:
     connection = connect_database()
     cursor = connection.cursor()
@@ -2569,15 +2591,19 @@ def create_energy_invoice_charge_line(invoice_id: int):
         category = request.form["line_category"]
         quantity = optional_form_decimal("quantity")
         net_unit_price = optional_form_decimal("net_unit_price_huf")
+        description, quantity_unit = complete_charge_metadata(
+            category, request.form.get("description", "").strip(),
+            request.form.get("quantity_unit", "").strip() or None,
+        )
         net_amount, vat_rate, gross_amount = complete_charge_amounts(
             category, quantity, net_unit_price, optional_form_decimal("net_amount_huf"),
             optional_form_decimal("vat_rate_percent"), optional_form_decimal("gross_amount_huf"),
         )
         parameters = (
             invoice_id, optional_int(request.form.get("invoice_consumption_id")),
-            category, request.form["description"].strip(),
+            category, description,
             optional_form_date("period_start_date"), optional_form_date("period_end_date"),
-            quantity, request.form.get("quantity_unit", "").strip() or None,
+            quantity, quantity_unit,
             net_unit_price, net_amount,
             vat_rate, gross_amount,
             int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
@@ -2604,15 +2630,19 @@ def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
         category = request.form["line_category"]
         quantity = optional_form_decimal("quantity")
         net_unit_price = optional_form_decimal("net_unit_price_huf")
+        description, quantity_unit = complete_charge_metadata(
+            category, request.form.get("description", "").strip(),
+            request.form.get("quantity_unit", "").strip() or None,
+        )
         net_amount, vat_rate, gross_amount = complete_charge_amounts(
             category, quantity, net_unit_price, optional_form_decimal("net_amount_huf"),
             optional_form_decimal("vat_rate_percent"), optional_form_decimal("gross_amount_huf"),
         )
         parameters = (
             optional_int(request.form.get("invoice_consumption_id")),
-            category, request.form["description"].strip(),
+            category, description,
             optional_form_date("period_start_date"), optional_form_date("period_end_date"),
-            quantity, request.form.get("quantity_unit", "").strip() or None,
+            quantity, quantity_unit,
             net_unit_price, net_amount,
             vat_rate, gross_amount,
             int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,

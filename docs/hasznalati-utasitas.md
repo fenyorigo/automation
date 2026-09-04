@@ -446,6 +446,10 @@ kerekített bruttó összeg számolódik. A tétel nettó és bruttó összege a
 adatbázisba is egész forintra kerekítve kerül. Az ÁFA alapértéke 27%, a
 **Szolgáltatás** kategóriánál 0%.
 
+A tételkategória az ismert gázdíj- és alapdíj-megnevezést, valamint a hozzá
+tartozó `MJ` vagy `hó` mértékegységet automatikusan kitölti. Szolgáltatásnál
+az OtthonSOS Komfort és OtthonSOS Garancia Médium legördülőből választható.
+
 A saját, óráról leolvasott fogyasztás továbbra is kizárólag az
 `energy_meter_readings` idősorban marad. A számlán szereplő MVM-becslés az
 `energy_invoice_consumption` táblába kerül, ezért a két adatsor az éves
