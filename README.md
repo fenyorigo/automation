@@ -46,6 +46,7 @@ Fill `.env` and `config/devices.json` with local values. Both files containing
 real credentials or device identities are excluded from Git.
 
 See the [Hungarian user guide](docs/hasznalati-utasitas.md),
+[gas invoice entry guide](docs/gázszámla-felvitele.md),
 [polling documentation](docs/polling.md) and
 [ESP32 documentation](docs/esp32.md) for details. The planned deterministic
 heating and cooling rules are documented separately in the

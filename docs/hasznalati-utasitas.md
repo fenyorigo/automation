@@ -424,6 +424,10 @@ a gázfűtés energia- és költségalapú összehasonlításának alapja.
 
 ### Szolgáltatói számlák
 
+A gáz-részszámlák mezőről mezőre történő felvitelét, az augusztus 1-jei
+jogosultsági évváltást és az ellenőrző összegeket a
+[`gázszámla-felvitele.md`](gázszámla-felvitele.md) útmutató foglalja össze.
+
 A számla rögzítése három lépésből áll:
 
 1. a számlafej, dátumok és összesítő pénzösszegek felvitele;

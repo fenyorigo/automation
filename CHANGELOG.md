@@ -7,6 +7,9 @@ helyi dátumok.
 
 ### Új funkciók
 
+- Új `docs/gázszámla-felvitele.md` gyakorlati útmutató készült a
+  részszámlákhoz, az augusztus 1-jei jogosultsági évváltással, számításokkal
+  és ellenőrző összegekkel; az elszámolószámla külön későbbi folyamat marad.
 - Új v1.35 kedvezményes gázjogosultsági modell az augusztus 1.–július 31.
   közötti, idő- és fogyasztásarányosan elszámolt 63 645 MJ-os kerethez; ez a
   szolgáltatói számlázási ciklustól és a havi részszámla-becsléstől külön adat.
