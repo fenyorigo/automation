@@ -1,12 +1,10 @@
 # Gázszámla felvitele
 
-Ez az útmutató az MVM földgáz-részszámlák rögzítését írja le az `automation`
-alkalmazás Energia oldalán. A minta a `2025.07.07–2025.08.06` időszakú
-részszámla, amely átlépi az augusztus 1-jei kedvezményes jogosultsági
-évfordulót.
-
-Az elszámolószámlák feldolgozása nincs ebben a dokumentumban véglegesítve.
-Annak folyamatát egy tényleges elszámolószámla alapján külön dolgozzuk ki.
+Ez az útmutató az MVM földgáz-részszámlák és elszámolószámlák rögzítését írja
+le az `automation` alkalmazás Energia oldalán. A részszámlás minta a
+`2025.07.07–2025.08.06` időszakú számla, amely átlépi az augusztus 1-jei
+kedvezményes jogosultsági évfordulót. Az elszámolási minta a
+`2024.11.09–2025.11.05` éves elszámolás.
 
 ## 1. A három különböző időszak
 
@@ -69,8 +67,10 @@ A mintaszámla fejlécének adatai:
 A nettó összeg és az ÁFA megadása után a bruttó összeg automatikusan
 kitöltődik. Ha a számlán külön **Kerekítés** sor szerepel, annak előjeles
 összegét a számlafej `Kerekítés (Ft)` mezőjébe kell írni, például `-1`. A
-fizetendő összeg a bruttó és a kerekítés összegeként automatikusan számolható.
-A kerekítés nem fogyasztási részlet és nem számlatétel. A számlafej mentése
+szolgáltató bruttó számlaértéke már tartalmazza ezt a korrekciót. A fizetendő
+alapértéke ezért a bruttó összeg marad; a kerekítést nem szabad még egyszer
+hozzáadni vagy levonni. A kerekítés nem fogyasztási részlet és nem
+számlatétel. A számlafej mentése
 után jelennek meg a hozzá tartozó fogyasztási részlet- és tételűrlapok.
 
 ## 4. Fogyasztási részletek
@@ -235,15 +235,43 @@ A saját leolvasást nem szabad az MVM becsült fogyasztási adataival
 helyettesíteni vagy összevonni. A szolgáltatói számlázás és a tényleges
 fizikai fogyasztás később ezek különbségével ellenőrizhető.
 
-## 11. Elszámolószámla – későbbi feladat
+## 11. Elszámolószámla
 
-Az elszámolószámla várhatóan lezárja vagy korrigálja a részszámlák becsült
-fogyasztását, tartalmaz tényleges mérőállást, és módosíthatja a kedvezményes és
-versenypiaci sávok végleges megosztását. A pontos adatfelviteli folyamatot nem
-feltételezzük előre: egy rendelkezésre álló elszámolószámla alapján külön kell
-ellenőrizni és dokumentálni.
+Az elszámolószámla típusa **Elszámolószámla**. A minta a
+`2024.11.09–2025.11.05` időszakú, `800201760021` számú bizonylat.
+
+Az MVM mérési táblájának minden sorát külön fogyasztási részletként kell
+rögzíteni. A mintában ez három részlet: két becsült és egy leolvasott sor. A
+fogyasztási részletek szolgáltatói mérőállásai nem hoznak létre saját
+`energy_meter_readings` rekordot.
+
+A kedvezményes és versenypiaci energiadíjakat a számlán közölt időszaki
+bontásban kell felvinni. Ezután két külön, negatív elszámolási tétel következik:
+
+| Kategória | Nettó | ÁFA | Számított bruttó |
+|---|---:|---:|---:|
+| Elszámolt részszámlák energiadíja | -367 415 Ft | 27% | -466 617 Ft |
+| Elszámolt részszámlák alapdíja | -8 426 Ft | 27% | -10 701 Ft |
+
+Ezek nem támogatások és nem új fogyasztások: a korábban kiszámlázott összegek
+elszámolási jóváírásai. Az összeget a számlán látható negatív előjellel kell
+rögzíteni; a megnevezést és a 27%-os ÁFÁ-t a kategória automatikusan kitölti.
+
+Az elszámolószámla utolsó oldalán felsorolt részszámlákat az **Elszámolt
+részszámla hozzáadása** űrlapon kell felvenni. A szolgáltatói számlaszám és a
+pozitív számla-végösszeg tárolandó. Ha az adott részszámla már szerepel az
+alkalmazásban, az egyező számlaszám alapján automatikusan összekapcsolódik;
+egyébként a kapcsolat később a ceruzával beállítható. A szolgáltatói listát nem
+szabad a két negatív díjtételből újraszámolni, mert a számlánkénti kerekítések
+miatt eltérés lehet.
+
+A mintában 11 elszámolt részszámla szerepel, összesen `477 316 Ft` értékben.
+Ez két forinttal eltér a két, 27%-os negatív elszámolási sor külön kerekített
+bruttó összegének `477 318 Ft` összegétől. Mindkét szolgáltatói adatot eredeti
+formájában kell megőrizni.
 
 ## Források
 
 - MVM: [A lakossági földgáz rezsicsökkentés legfontosabb információi](https://www.mvmnext.hu/lakossagirezsi/legfontosabb-informaciok-gaz)
 - Minta: NKM/MVM Gáz, `2025.07.07–2025.08.06` időszakú 9. részszámla
+- Minta: MVM Gáz, `2024.11.09–2025.11.05` időszakú éves elszámolószámla

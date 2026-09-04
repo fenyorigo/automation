@@ -447,8 +447,14 @@ adatbázisba is egész forintra kerekítve kerül. Az ÁFA alapértéke 27%, a
 **Szolgáltatás** kategóriánál 0%.
 
 A számlán külön feltüntetett pozitív vagy negatív **Kerekítés** a számlafej
-`Kerekítés (Ft)` mezőjébe kerül. A fizetendő összeg a bruttó számlaérték és a
-kerekítés összege; a kerekítést nem kell külön számlatételként rögzíteni.
+`Kerekítés (Ft)` mezőjébe kerül. A szolgáltató bruttó számlaértéke ezt már
+tartalmazza, ezért a kerekítés nem módosítja még egyszer a fizetendőt, és nem
+kell külön számlatételként rögzíteni.
+
+Elszámolószámlán a korábbi részszámlák energiadíj- és alapdíj-jóváírásához a
+két külön elszámolási kategória használható. A számla utolsó oldalán felsorolt
+részszámlák száma és végösszege külön is rögzíthető; az alkalmazás az egyező
+számlaszámú, már felvitt részszámlához automatikusan kapcsolatot készít.
 
 A tételkategória az ismert gázdíj- és alapdíj-megnevezést, valamint a hozzá
 tartozó `MJ` vagy `hó` mértékegységet automatikusan kitölti. Szolgáltatásnál

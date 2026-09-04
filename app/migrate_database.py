@@ -154,6 +154,10 @@ MIGRATIONS = (
         "v1_37_invoice_rounding",
         ROOT / "SQL" / "migrations" / "037_home_automation_v1.36_to_v1.37.sql",
     ),
+    (
+        "v1_38_settlement_invoice_reconciliation",
+        ROOT / "SQL" / "migrations" / "038_home_automation_v1.37_to_v1.38.sql",
+    ),
 )
 
 

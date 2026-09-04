@@ -7,9 +7,14 @@ helyi dátumok.
 
 ### Új funkciók
 
+- Az elszámolószámlák külön energiadíj- és alapdíj-jóváírási kategóriát
+  kaptak. Külön táblában és szerkeszthető felületen rögzíthető az elszámolásban
+  felsorolt részszámlák száma és végösszege, automatikus számlaszám-alapú
+  kapcsolással.
 - Új `docs/gázszámla-felvitele.md` gyakorlati útmutató készült a
   részszámlákhoz, az augusztus 1-jei jogosultsági évváltással, számításokkal
-  és ellenőrző összegekkel; az elszámolószámla külön későbbi folyamat marad.
+  és ellenőrző összegekkel; az útmutató már az éves elszámolószámla
+  jóváírásait és részszámlalistáját is tartalmazza.
 - A gázszámla-útmutató külön ellenőrző pontokat kapott a kategóriákhoz,
   dátumokhoz, mértékegységekhez, páros mérőállásmezőkhöz és kerekítésekhez.
 - Új v1.35 kedvezményes gázjogosultsági modell az augusztus 1.–július 31.
@@ -34,7 +39,8 @@ helyi dátumok.
   mértékegységet; szolgáltatásnál legördülőből választhatók az OtthonSOS
   Komfort és Garancia Médium tételek.
 - Új v1.37 számlafej-szintű kerekítési mező kezeli a pozitív vagy negatív
-  `Kerekítés` sort, és ebből automatikusan számolja a fizetendő összeget.
+  `Kerekítés` sort. A kerekítés tájékoztató adat, mert a szolgáltatói bruttó
+  számlaérték már tartalmazza; nem módosítja másodszor a fizetendő összeget.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.

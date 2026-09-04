@@ -1474,6 +1474,20 @@ def load_energy_billing() -> dict[str, Any]:
                    WHERE invoice_id=? ORDER BY sort_order,id""", (invoice["id"],)
             )
             invoice["charge_lines"] = rows_as_dicts(cursor)
+            cursor.execute(
+                """SELECT s.*,i.invoice_type AS linked_invoice_type,
+                          i.period_start_date AS linked_period_start,
+                          i.period_end_date AS linked_period_end
+                   FROM energy_invoice_settled_installments s
+                   LEFT JOIN energy_invoices i ON i.id=s.settled_invoice_id
+                   WHERE s.settlement_invoice_id=? ORDER BY s.sort_order,s.id""",
+                (invoice["id"],),
+            )
+            invoice["settled_installments"] = rows_as_dicts(cursor)
+            invoice["settled_installment_total_huf"] = sum(
+                (row["gross_amount_huf"] for row in invoice["settled_installments"]),
+                Decimal("0"),
+            )
         return {
             "billing_cycles": cycles, "conversion_periods": conversions,
             "tariff_periods": tariffs, "allocation_rules": allocations,
@@ -1856,7 +1870,7 @@ def energy() -> str:
     except (KeyError, TypeError, ValueError):
         edit_reading_id = None
     edit_ids = {}
-    for key in ("edit_invoice", "edit_consumption", "edit_charge"):
+    for key in ("edit_invoice", "edit_consumption", "edit_charge", "edit_settled_installment"):
         try:
             edit_ids[key] = int(request.args[key])
         except (KeyError, TypeError, ValueError):
@@ -2178,14 +2192,15 @@ def complete_invoice_gross(
 
 def complete_invoice_payable(
     gross_amount: Decimal | None,
-    rounding_amount: Decimal,
+    _rounding_amount: Decimal,
     payable_amount: Decimal | None,
 ) -> Decimal:
+    """Use the provider's final gross total; invoice rounding is already included in it."""
     if payable_amount is not None:
         return payable_amount
     if gross_amount is None:
         raise ValueError("A fizetendő összeghez bruttó összeg szükséges.")
-    return (gross_amount + rounding_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return gross_amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def complete_charge_amounts(
@@ -2219,6 +2234,8 @@ CHARGE_DESCRIPTION_DEFAULTS = {
     "discounted_energy": "Kedvezményes gázdíj",
     "market_energy": "Versenypiaci költségeket tükröző ár",
     "base_fee": "Háztartási alapdíj",
+    "settled_energy_offset": "Részszámlákban elszámolt energiadíj",
+    "settled_base_fee_offset": "Részszámlákban elszámolt alapdíj",
 }
 SERVICE_DESCRIPTION_OPTIONS = (
     "OtthonSOS Komfort",
@@ -2230,7 +2247,12 @@ def complete_charge_metadata(
     category: str, description: str, quantity_unit: str | None
 ) -> tuple[str, str | None]:
     if category in CHARGE_DESCRIPTION_DEFAULTS:
-        unit = "MJ" if category in {"discounted_energy", "market_energy"} else "hó"
+        if category in {"discounted_energy", "market_energy"}:
+            unit = "MJ"
+        elif category == "base_fee":
+            unit = "hó"
+        else:
+            unit = None
         return CHARGE_DESCRIPTION_DEFAULTS[category], unit
     if category == "service":
         return description or SERVICE_DESCRIPTION_OPTIONS[0], "hó"
@@ -2702,6 +2724,143 @@ def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
         cursor.close()
         connection.close()
     session["energy_notice"] = {"kind": "success", "message": "A számlatételt javítottuk."}
+    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+
+
+def matching_installment_invoice_id(
+    cursor: mariadb.Cursor,
+    settlement_invoice_id: int,
+    provider_invoice_number: str,
+    requested_invoice_id: int | None,
+) -> int | None:
+    cursor.execute(
+        "SELECT meter_id,invoice_type FROM energy_invoices WHERE id=?",
+        (settlement_invoice_id,),
+    )
+    parent = cursor.fetchone()
+    if parent is None or parent[1] != "settlement":
+        raise ValueError("Az elszámolt részszámla csak elszámolószámlához kapcsolható.")
+    if requested_invoice_id is not None:
+        cursor.execute(
+            """SELECT id FROM energy_invoices
+               WHERE id=? AND meter_id=? AND invoice_type='installment'
+                 AND invoice_number=?""",
+            (requested_invoice_id, parent[0], provider_invoice_number),
+        )
+    else:
+        cursor.execute(
+            """SELECT id FROM energy_invoices
+               WHERE meter_id=? AND invoice_type='installment' AND invoice_number=?""",
+            (parent[0], provider_invoice_number),
+        )
+    row = cursor.fetchone()
+    if requested_invoice_id is not None and row is None:
+        raise ValueError("A kiválasztott részszámla száma vagy mérője nem egyezik.")
+    return int(row[0]) if row is not None else None
+
+
+@app.post("/energy/invoices/<int:invoice_id>/settled-installments")
+@editor_required
+def create_energy_invoice_settled_installment(invoice_id: int):
+    validate_csrf()
+    try:
+        provider_invoice_number = request.form["provider_invoice_number"].strip()
+        gross_amount = Decimal(request.form["gross_amount_huf"].replace(",", ".")).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+        requested_invoice_id = optional_int(request.form.get("settled_invoice_id"))
+        sort_order = int(request.form.get("sort_order", "0"))
+        note = request.form.get("note", "").strip() or None
+        if not provider_invoice_number or gross_amount < 0 or sort_order < 0:
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        linked_invoice_id = matching_installment_invoice_id(
+            cursor, invoice_id, provider_invoice_number, requested_invoice_id
+        )
+        cursor.execute(
+            """INSERT INTO energy_invoice_settled_installments
+               (settlement_invoice_id,settled_invoice_id,provider_invoice_number,
+                gross_amount_huf,sort_order,note)
+               VALUES (?,?,?,?,?,?)""",
+            (invoice_id, linked_invoice_id, provider_invoice_number, gross_amount, sort_order, note),
+        )
+        connection.commit()
+    except (mariadb.IntegrityError, ValueError) as error:
+        connection.rollback()
+        session["energy_notice"] = {
+            "kind": "warning", "message": f"Az elszámolt részszámla nem rögzíthető: {error}"
+        }
+        return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["energy_notice"] = {
+        "kind": "success", "message": "Az elszámolt részszámlát rögzítettük."
+    }
+    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+
+
+@app.post("/energy/invoices/<int:invoice_id>/settled-installments/<int:installment_id>/edit")
+@editor_required
+def edit_energy_invoice_settled_installment(invoice_id: int, installment_id: int):
+    validate_csrf()
+    try:
+        provider_invoice_number = request.form["provider_invoice_number"].strip()
+        gross_amount = Decimal(request.form["gross_amount_huf"].replace(",", ".")).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+        requested_invoice_id = optional_int(request.form.get("settled_invoice_id"))
+        sort_order = int(request.form.get("sort_order", "0"))
+        note = request.form.get("note", "").strip() or None
+        if not provider_invoice_number or gross_amount < 0 or sort_order < 0:
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT 1 FROM energy_invoice_settled_installments
+               WHERE id=? AND settlement_invoice_id=? FOR UPDATE""",
+            (installment_id, invoice_id),
+        )
+        if cursor.fetchone() is None:
+            abort(404)
+        linked_invoice_id = matching_installment_invoice_id(
+            cursor, invoice_id, provider_invoice_number, requested_invoice_id
+        )
+        cursor.execute(
+            """UPDATE energy_invoice_settled_installments SET
+               settled_invoice_id=?,provider_invoice_number=?,gross_amount_huf=?,
+               sort_order=?,note=? WHERE id=? AND settlement_invoice_id=?""",
+            (linked_invoice_id, provider_invoice_number, gross_amount, sort_order,
+             note, installment_id, invoice_id),
+        )
+        connection.commit()
+    except (mariadb.IntegrityError, ValueError) as error:
+        connection.rollback()
+        session["energy_notice"] = {
+            "kind": "warning", "message": f"Az elszámolt részszámla nem javítható: {error}"
+        }
+        return redirect(
+            url_for("energy", edit_settled_installment=installment_id) + f"#invoice-{invoice_id}"
+        )
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["energy_notice"] = {
+        "kind": "success", "message": "Az elszámolt részszámlát javítottuk."
+    }
     return redirect(url_for("energy") + f"#invoice-{invoice_id}")
 
 

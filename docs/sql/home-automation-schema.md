@@ -37,6 +37,9 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
   fizetendő összegek
 - `energy_invoice_consumption`: a számlán szereplő becsült vagy tényleges fogyasztási sorok
 - `energy_invoice_charge_lines`: a számla energia-, alapdíj-, szolgáltatás- és korrekciós tételei
+- `energy_invoice_settled_installments`: az elszámolószámlán felsorolt
+  részszámlák szolgáltatói száma, végösszege és opcionális kapcsolata a már
+  rögzített részszámlához
 - `sensor_calibrations`: az ESP–DS fizikai kialakításának és kalibrációjának
   időben verziózott története
 - `derived_temperature_readings`: ofszetkompenzált, EMA-szűrt és ritkábban

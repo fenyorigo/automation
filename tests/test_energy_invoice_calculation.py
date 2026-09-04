@@ -43,10 +43,28 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
             Decimal("42508.00"),
         )
 
-    def test_calculates_payable_with_invoice_rounding(self):
+    def test_invoice_rounding_is_already_in_provider_gross(self):
         self.assertEqual(
-            complete_invoice_payable(Decimal("42509"), Decimal("-1"), None),
+            complete_invoice_payable(Decimal("42508"), Decimal("-1"), None),
             Decimal("42508.00"),
+        )
+
+    def test_settlement_offsets_fill_provider_descriptions_without_unit(self):
+        self.assertEqual(
+            complete_charge_metadata("settled_energy_offset", "", "MJ"),
+            ("Részszámlákban elszámolt energiadíj", None),
+        )
+        self.assertEqual(
+            complete_charge_metadata("settled_base_fee_offset", "", "hó"),
+            ("Részszámlákban elszámolt alapdíj", None),
+        )
+
+    def test_settlement_offset_keeps_negative_amounts(self):
+        self.assertEqual(
+            complete_charge_amounts(
+                "settled_energy_offset", None, None, Decimal("-367415"), None, None,
+            ),
+            (Decimal("-367415"), Decimal("27"), Decimal("-466617")),
         )
 
     def test_calculates_charge_net_and_gross_as_whole_forints(self):
@@ -105,6 +123,8 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
             "window.location.hash ? document.querySelector(window.location.hash) : null",
             template,
         )
+        self.assertIn("settled_energy_offset", template)
+        self.assertIn("create_energy_invoice_settled_installment", template)
 
 
 if __name__ == "__main__":
