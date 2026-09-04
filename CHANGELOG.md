@@ -26,6 +26,8 @@ helyi dátumok.
 - A számlatételek nettó összege a mennyiség és egységár szorzatából, a bruttó
   ebből és az ÁFA-kulcsból egész forintra kerekítve készül; a szolgáltatás
   kategória 0%, minden más kategória 27% alapértéket kap.
+- Javítva az Energia oldal üres URL-hivatkozásnál fellépő JavaScript-hibája,
+  amely megakadályozta a számlatételek automatikus ÁFA- és összegszámítását.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.

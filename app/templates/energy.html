@@ -36,7 +36,7 @@ document.querySelectorAll('.invoice-consumption strong').forEach((element) => {
     if (Number.isFinite(mj)) element.textContent += ` ≈ ${(mj / energyMjPerKwh).toFixed(2).replace('.', ',')} kWh`;
   }
 });
-const anchoredInvoice = document.querySelector(window.location.hash);
+const anchoredInvoice = window.location.hash ? document.querySelector(window.location.hash) : null;
 if (anchoredInvoice instanceof HTMLDetailsElement) anchoredInvoice.open = true;
 document.querySelectorAll('form').forEach((form) => {
   const net = form.elements.namedItem('net_amount_huf');

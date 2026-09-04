@@ -75,6 +75,13 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             complete_gas_consumption_values(Decimal("10"), None, None)
 
+    def test_energy_script_guards_empty_location_hash(self):
+        template = (ROOT / "app" / "templates" / "energy.html").read_text(encoding="utf-8")
+        self.assertIn(
+            "window.location.hash ? document.querySelector(window.location.hash) : null",
+            template,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
