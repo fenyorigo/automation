@@ -162,6 +162,10 @@ MIGRATIONS = (
         "v1_39_plain_invoice_amounts",
         ROOT / "SQL" / "migrations" / "039_home_automation_v1.38_to_v1.39.sql",
     ),
+    (
+        "v1_40_energy_invoice_defaults",
+        ROOT / "SQL" / "migrations" / "040_home_automation_v1.39_to_v1.40.sql",
+    ),
 )
 
 

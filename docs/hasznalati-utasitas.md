@@ -392,9 +392,9 @@ A következő novemberi leolvasás automatikusan új számlázási időszakot ke
 Ehhez a gázadat nem kap becsült jelölést; novemberi kezdőadat hiányában az
 összesítés nem számítható.
 
-A **Korábbi óraállások** listája a fejlécben **Minden**, **Villanyóra** vagy
-**Gázóra** értékre szűrhető. A fogyasztás az adott mérő előző óraállásához
-viszonyított különbség marad.
+A **Korábbi óraállások** listája alapból rejtett. Külön kiválasztható a gáz,
+a villany vagy minden mérő, továbbá a naptári év. A fogyasztás az adott mérő
+előző óraállásához viszonyított különbség marad.
 
 ### Számlázási és tarifaadatok
 
@@ -406,10 +406,12 @@ Az Energia oldal alsó részén külön lenyitható űrlapokon rögzíthetők:
 - az MVM részszámlás díjsávmegosztása;
 - az augusztus 1.–július 31. közötti kedvezményes gázjogosultsági év;
 - a tervezéshez használt becsült fix díjak.
+- az új részszámlákra automatikusan másolt alapdíj- és szolgáltatástételek.
 
-Az üres záródátum visszavonásig érvényes rekordot jelent. Az időszakok
-átfedésének tartalmi ellenőrzése a rögzítő feladata; ugyanarra a kezdőnapra és
-azonos típusra a rendszer nem enged második rekordot.
+Az üres záródátum visszavonásig érvényes rekordot jelent. Új gázátváltási,
+tarifa- vagy automatikus számlatétel-érték rögzítésekor a rendszer az azonos
+típusú előző rekordot az új kezdőnap előtti nappal lezárja. Ugyanarra a
+kezdőnapra és azonos típusra nem enged második rekordot.
 
 A kedvezményes gázkeret külön törzsadat: jelenleg 63 645 MJ, tájékoztatóan
 legalább 1729 m³ egy augusztus 1-jétől a következő július 31-éig tartó évre.
@@ -428,6 +430,9 @@ A gáz-részszámlák mezőről mezőre történő felvitelét, az augusztus 1-j
 jogosultsági évváltást és az ellenőrző összegeket a
 [`gázszámla-felvitele.md`](gázszámla-felvitele.md) útmutató foglalja össze.
 
+A számlalista energiatípus, nyitott/lezárt elszámolási ciklus és naptári év
+szerint szűrhető. Alaphelyzetben a nyitott gázciklus számlái látszanak.
+
 A számla rögzítése három lépésből áll:
 
 1. a számlafej, dátumok és összesítő pénzösszegek felvitele;
@@ -444,7 +449,7 @@ A számlafejnél a nettó összeg és az ÁFA összege automatikusan kitölti a 
 forintra kerekített nettó összeg, majd ebből az ÁFA-kulccsal egész forintra
 kerekített bruttó összeg számolódik. A tétel nettó és bruttó összege az
 adatbázisba is egész forintra kerekítve kerül. Az ÁFA alapértéke 27%, a
-**Szolgáltatás** kategóriánál 0%.
+**Szolgáltatás** kategória pedig külön jelölt áfamentes tétel.
 
 A számlán külön feltüntetett pozitív vagy negatív **Kerekítés** a számlafej
 `Kerekítés (Ft)` mezőjébe kerül. A szolgáltató bruttó számlaértéke ezt már
@@ -469,6 +474,12 @@ tartozó `MJ` vagy `hó` mértékegységet automatikusan kitölti. Szolgáltatá
 az OtthonSOS Plusz, OtthonSOS Komfort és OtthonSOS Garancia Médium
 legördülőből választható. A történeti számlán szereplő konkrét szolgáltatást
 kell kiválasztani.
+
+Új gáz-részszámla létrehozásakor a számla zárónapjának hónapjára a hatályos
+Háztartási alapdíj, OtthonSOS Komfort és OtthonSOS Garancia Médium sor
+automatikusan létrejön. Ezek számlatételek, ezért utólag szerkeszthetők. A
+kedvezményes és versenypiaci Ft/MJ egységár a tétel dátuma alapján töltődik,
+de a két kategória **MJ-mennyiségét mindig a számláról kell beírni**.
 
 A saját, óráról leolvasott fogyasztás továbbra is kizárólag az
 `energy_meter_readings` idősorban marad. A számlán szereplő MVM-becslés az

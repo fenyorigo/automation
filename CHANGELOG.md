@@ -7,6 +7,17 @@ helyi dátumok.
 
 ### Új funkciók
 
+- Az Energia számlalistája energiatípus, nyitott/lezárt ciklus és év szerint
+  szűrhető; alapból a nyitott gázciklus látszik. A korábbi óraállások külön
+  energiatípus- és évszűrőt kaptak, és alapból rejtve maradnak.
+- A gáz korrekciós/fűtőérték és tarifa törzsadat új értéke automatikusan
+  lezárja a korábbi hatályt. A számlázási időszak alapján a fogyasztási
+  részlet és az energiadíj egységára ezekből töltődik, miközben a két
+  díjsáv MJ-mennyisége továbbra is kézi, számla szerinti adat.
+- Hatályos automatikus számlatétel-törzs készült. Új gáz-részszámlán a
+  Háztartási alapdíj és a két aktív OtthonSOS szolgáltatás automatikusan
+  létrejön; a szolgáltatások áfamentessége elkülönül a 0%-os adókulcstól.
+
 - A `Támogatás/túlfizetés` és az új `Késedelmi kamat` számlatétel egyszerű,
   előjeles bruttó összegként, nettó-, ÁFA- és mennyiségi adatok nélkül vihető
   fel.
@@ -41,7 +52,7 @@ helyi dátumok.
   megadott nettó és ÁFA-adatokból, szerveroldali ellenőrző számítással.
 - A számlatételek nettó összege a mennyiség és egységár szorzatából, a bruttó
   ebből és az ÁFA-kulcsból egész forintra kerekítve készül; a szolgáltatás
-  kategória 0%, minden más kategória 27% alapértéket kap.
+  kategória áfamentes, minden más szokásos kategória 27% alapértéket kap.
 - Javítva az Energia oldal üres URL-hivatkozásnál fellépő JavaScript-hibája,
   amely megakadályozta a számlatételek automatikus ÁFA- és összegszámítását.
 - A számlatétel kategóriája automatikusan kitölti a szabványos megnevezést és

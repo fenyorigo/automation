@@ -25,6 +25,8 @@ The project currently provides:
 - event-driven Shelly H&T Gen3 temperature, humidity and battery history over
   the local Mosquitto broker, with deep-sleep-aware freshness;
 - read-only Nous/Tasmota power, voltage and cumulative-energy polling;
+- filtered gas/electricity invoice and meter-reading history, with
+  effective-dated gas conversion, tariffs and automatic fixed invoice lines;
 - explicit Europe/Budapest display time while retaining UTC database storage;
 - schema migrations and macOS/Fedora service definitions;
 - an ESP32 firmware prototype with Wi-Fi provisioning and HTTP measurement API;

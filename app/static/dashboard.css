@@ -281,6 +281,12 @@ dd.power-on { color: #d05a16; }
 .energy-year-total strong { margin:4px 0; font-size:1rem; color:var(--ink); }
 .energy-history-filter label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .energy-history-filter select { display:block; min-width:150px; min-height:40px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
+.energy-history-filter { display:none; }
+.energy-list-filter { display:flex; flex-wrap:wrap; align-items:end; gap:10px; margin:12px 0 16px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--paper); }
+.energy-list-filter label { color:var(--muted); font-size:.7rem; font-weight:700; }
+.energy-list-filter select { display:block; min-width:150px; min-height:40px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
+.energy-list-filter button { min-height:40px; margin:0; padding:0 14px; }
+.energy-reading-list-filter { margin-bottom:16px; }
 .energy-config-sections,.invoice-list,.invoice-child-forms { display:grid; gap:10px; margin-top:14px; }
 .energy-config-sections>details,.invoice-entry,.invoice-list>details,.invoice-child-forms>details { padding:13px; border:1px solid var(--line); border-radius:12px; background:var(--paper); }
 .energy-config-sections summary,.invoice-entry summary,.invoice-list>details>summary,.invoice-child-forms summary { cursor:pointer; font-weight:800; }

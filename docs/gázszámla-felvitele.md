@@ -145,21 +145,25 @@ kerekített nettó összeget számol. Ebből és az ÁFA-kulcsból szintén egé
 forintra kerekített bruttó összeg készül. Az adatbázis a kerekített nettó és
 bruttó összeget tárolja.
 
-Az ÁFA alapértéke 27%. A **Szolgáltatás** kategória kivétel: ott 0% az
-alapérték.
+Az ÁFA alapértéke 27%. A **Szolgáltatás** kategória kivétel: a szolgáltatás
+áfamentes, amit az alkalmazás külön adózási módként tárol és `Mentes` felirattal
+jelenít meg. Ez nem azonos a 0%-os ÁFA-kulccsal.
 
 ## 6. Fix és áfamentes tételek
 
-A fix díjak is számlatételek; nem kell és nem szabad őket automatikusan a
-becsült havi fix díjból létrehozni. A számlán ténylegesen szereplő sorokat kell
-rögzíteni.
+A fix díjak is számlatételek. Új gáz-részszámla mentésekor az alkalmazás a
+számla zárónapjának naptári hónapjára automatikusan létrehozza a hatályos
+**Háztartási alapdíj**, **OtthonSOS Komfort** és **OtthonSOS Garancia Médium**
+sorokat. Ezeket mindig össze kell vetni a számlával, és szükség esetén a
+ceruzával javítani. Elszámoló- és korrekciós számlán nem jönnek létre
+automatikusan.
 
 | Kategória | Megnevezés | Időszak | Mennyiség | Egységár | Nettó | ÁFA | Bruttó |
 |---|---|---|---:|---:|---:|---:|---:|
 | Alapdíj | Háztartási alapdíj | 2025.08.01–2025.08.31 | 1 hó | 766 Ft/hó | 766 Ft | 27% | 973 Ft |
-| Szolgáltatás | OtthonSOS Plusz | a számlán megadott hónap | 1 hó | 590 Ft/hó | 590 Ft | 0% | 590 Ft |
-| Szolgáltatás | OtthonSOS Komfort | 2025.08.01–2025.08.31 | 1 hó | 790 Ft/hó | 790 Ft | 0% | 790 Ft |
-| Szolgáltatás | OtthonSOS Garancia Médium | 2025.08.01–2025.08.31 | 1 hó | 990 Ft/hó | 990 Ft | 0% | 990 Ft |
+| Szolgáltatás | OtthonSOS Plusz | a számlán megadott hónap | 1 hó | 590 Ft/hó | 590 Ft | Mentes | 590 Ft |
+| Szolgáltatás | OtthonSOS Komfort | 2025.08.01–2025.08.31 | 1 hó | 790 Ft/hó | 790 Ft | Mentes | 790 Ft |
+| Szolgáltatás | OtthonSOS Garancia Médium | 2025.08.01–2025.08.31 | 1 hó | 990 Ft/hó | 990 Ft | Mentes | 990 Ft |
 
 Az **Alapdíj** kategória automatikusan a `Háztartási alapdíj` megnevezést
 kapja. A **Szolgáltatás** kategóriánál legördülőből választható az
@@ -171,8 +175,28 @@ Komfort és a Garancia Médium külön sor. Minden szolgáltatásnál automatiku
 szolgáltatási időszak legyen, ami nem feltétlenül egyezik meg a számlafej
 teljes időszakával.
 
-A becslési törzsadatok között szereplő havi fix összeg kizárólag tervezési
-adat. Nem helyettesíti a számla tényleges alapdíj- és szolgáltatási sorait.
+A **Fix becslési díjak** összege továbbra is kizárólag tervezési adat. Az
+automatikus számlatételek ettől külön, tételes és időben hatályos
+törzsadatokból készülnek.
+
+### Hatályos törzsadatok
+
+A fűtőérték, a kedvezményes és piaci egységár, valamint az automatikus
+számlatételek értékei a **Számlázási és tarifaadatok** részen kezelhetők. Új
+érték felvitelekor meg kell adni a hatály kezdetét; a rendszer ugyanannak az
+adatnak az előző időszakát automatikusan az új kezdőnap előtti nappal zárja.
+A régi érték nem íródik felül, ezért egy korábbi számla mindig a saját
+időszakában érvényes adatokkal ellenőrizhető.
+
+A gázfogyasztási részlet dátumai alapján a korrekciós tényező és a fűtőérték,
+az energiadíjtétel dátuma és kategóriája alapján pedig a nettó Ft/MJ egységár
+automatikusan kitöltődik. A **kedvezményes és versenypiaci MJ-mennyiséget
+továbbra is a számláról, kézzel kell beírni**; azt az alkalmazás nem becsüli.
+
+A jelenleg ismert fűtőérték `2025.12.06` végéig `35,37 MJ/m³`,
+`2025.12.07`-től pedig `35,40 MJ/m³`. Ezért a `35,37` nem általános jelenlegi
+állandó, hanem történeti érték; az alkalmazás mindig a tétel napjára hatályos
+rekordot választja.
 
 ## 7. Ellenőrző összegek
 
@@ -238,6 +262,7 @@ fogyasztási részletet és tételt nem módosítja.
 | Energia-, alapdíj- és szolgáltatási tétel | `energy_invoice_charge_lines` |
 | Korrekció és fűtőérték | `gas_conversion_periods` |
 | Kedvezményes és piaci tarifa | `energy_tariff_periods` |
+| Automatikus alapdíj- és szolgáltatássablon | `energy_invoice_charge_defaults` |
 | Augusztus–júliusi kedvezményes keret | `energy_entitlement_periods` |
 | MVM havi becsült sávmegosztása | `energy_allocation_rules` |
 

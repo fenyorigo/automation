@@ -18,6 +18,7 @@ from dashboard import (
     complete_invoice_payable,
     installment_cumulative_assignments,
     mj_to_kwh,
+    month_date_range,
 )
 
 
@@ -83,12 +84,19 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
             (Decimal("9834"), Decimal("27"), Decimal("12489")),
         )
 
-    def test_service_defaults_to_zero_vat(self):
+    def test_service_is_stored_as_vat_exempt(self):
         self.assertEqual(
             complete_charge_amounts(
                 "service", Decimal("1"), Decimal("790"), None, None, None,
             ),
-            (Decimal("790"), Decimal("0"), Decimal("790")),
+            (Decimal("790"), None, Decimal("790")),
+        )
+
+    def test_invoice_defaults_use_calendar_month_of_invoice_end(self):
+        from datetime import date
+        self.assertEqual(
+            month_date_range(date(2026, 2, 6)),
+            (date(2026, 2, 1), date(2026, 2, 28)),
         )
 
     def test_support_and_late_interest_are_plain_gross_amounts(self):
@@ -180,6 +188,9 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
         self.assertIn("invoice.sequence_no ~ '. részszámla'", template)
         self.assertIn("option.value = 'late_interest'", template)
         self.assertIn("category.value === 'support' || category.value === 'late_interest'", template)
+        self.assertIn("energyTariffPeriods", template)
+        self.assertIn("Ne jelenjenek meg", template)
+        self.assertIn("Automatikus számlatételek", template)
 
 
 if __name__ == "__main__":

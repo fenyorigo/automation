@@ -18,6 +18,7 @@ import threading
 import unicodedata
 import urllib.error
 import urllib.request
+from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
@@ -1322,7 +1323,8 @@ def billing_period_consumption(
 
 
 def load_energy_readings(
-    energy_type: str = "all",
+    energy_type: str = "none",
+    reading_year: int | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     year = local_now().year
     year_started_at = datetime(year, 1, 1, tzinfo=LOCAL_TIMEZONE).astimezone(UTC).replace(tzinfo=None)
@@ -1390,11 +1392,19 @@ def load_energy_readings(
                 )
                 meter["year_consumption_started_at"] = meter["billing_started_at"]
                 meter["year_consumption_estimated"] = False
-        reading_filter = ""
-        parameters: tuple[Any, ...] = ()
+        if energy_type == "none":
+            return meters, []
+        filters: list[str] = []
+        parameters_list: list[Any] = []
         if energy_type in {"electricity", "gas"}:
-            reading_filter = "WHERE m.energy_type=?"
-            parameters = (energy_type,)
+            filters.append("m.energy_type=?")
+            parameters_list.append(energy_type)
+        if reading_year is not None:
+            reading_year_start = datetime(reading_year, 1, 1, tzinfo=LOCAL_TIMEZONE).astimezone(UTC).replace(tzinfo=None)
+            reading_year_end = datetime(reading_year + 1, 1, 1, tzinfo=LOCAL_TIMEZONE).astimezone(UTC).replace(tzinfo=None)
+            filters.append("r.recorded_at>=? AND r.recorded_at<?")
+            parameters_list.extend((reading_year_start, reading_year_end))
+        reading_filter = f"WHERE {' AND '.join(filters)}" if filters else ""
         cursor.execute(
             f"""SELECT r.id,r.meter_id,r.recorded_at,r.reading_value,r.entry_source,r.note,
                       m.display_name,m.energy_type,m.unit,
@@ -1406,7 +1416,7 @@ def load_energy_readings(
                LEFT JOIN app_users u ON u.id=r.recorded_by
                {reading_filter}
                ORDER BY r.recorded_at DESC,r.id DESC LIMIT 200""",
-            parameters,
+            tuple(parameters_list),
         )
         return meters, rows_as_dicts(cursor)
     finally:
@@ -1414,7 +1424,11 @@ def load_energy_readings(
         connection.close()
 
 
-def load_energy_billing() -> dict[str, Any]:
+def load_energy_billing(
+    invoice_energy_type: str = "gas",
+    invoice_cycle_status: str = "open",
+    invoice_year: int | None = None,
+) -> dict[str, Any]:
     connection = connect_database()
     cursor = connection.cursor()
     try:
@@ -1451,15 +1465,36 @@ def load_energy_billing() -> dict[str, Any]:
         )
         fixed_charges = rows_as_dicts(cursor)
         cursor.execute(
+            """SELECT d.*,m.display_name AS meter_name
+               FROM energy_invoice_charge_defaults d
+               JOIN energy_meters m ON m.id=d.meter_id
+               ORDER BY d.valid_from DESC,d.template_key"""
+        )
+        charge_defaults = rows_as_dicts(cursor)
+        cursor.execute(
             """SELECT e.*,m.display_name AS meter_name FROM energy_entitlement_periods e
                JOIN energy_meters m ON m.id=e.meter_id ORDER BY e.valid_from DESC"""
         )
         entitlement_periods = rows_as_dicts(cursor)
+        invoice_filters: list[str] = []
+        invoice_parameters: list[Any] = []
+        if invoice_energy_type in {"electricity", "gas"}:
+            invoice_filters.append("m.energy_type=?")
+            invoice_parameters.append(invoice_energy_type)
+        if invoice_cycle_status in {"open", "settled"}:
+            invoice_filters.append("c.status=?")
+            invoice_parameters.append(invoice_cycle_status)
+        if invoice_year is not None:
+            invoice_filters.append("YEAR(i.period_end_date)=?")
+            invoice_parameters.append(invoice_year)
+        invoice_where = f"WHERE {' AND '.join(invoice_filters)}" if invoice_filters else ""
         cursor.execute(
-            """SELECT i.*,m.display_name AS meter_name,c.cycle_start
+            f"""SELECT i.*,m.display_name AS meter_name,m.energy_type,c.cycle_start,c.status AS cycle_status
                FROM energy_invoices i JOIN energy_meters m ON m.id=i.meter_id
                LEFT JOIN energy_billing_cycles c ON c.id=i.billing_cycle_id
+               {invoice_where}
                ORDER BY i.period_end_date DESC,i.id DESC"""
+            , tuple(invoice_parameters)
         )
         invoices = rows_as_dicts(cursor)
         for invoice in invoices:
@@ -1489,11 +1524,30 @@ def load_energy_billing() -> dict[str, Any]:
                 (row["gross_amount_huf"] for row in invoice["settled_installments"]),
                 Decimal("0"),
             )
+        cursor.execute(
+            """SELECT DISTINCT YEAR(period_end_date) AS invoice_year
+               FROM energy_invoices ORDER BY invoice_year DESC"""
+        )
+        invoice_years = [int(row[0]) for row in cursor.fetchall()]
+        cursor.execute(
+            """SELECT id,meter_id,invoice_number,invoice_type,period_start_date,period_end_date
+               FROM energy_invoices WHERE invoice_type='installment'
+               ORDER BY period_end_date DESC,id DESC"""
+        )
+        installment_candidates = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT DISTINCT YEAR(DATE_ADD(recorded_at,INTERVAL 1 HOUR)) AS reading_year
+               FROM energy_meter_readings ORDER BY reading_year DESC"""
+        )
+        reading_years = [int(row[0]) for row in cursor.fetchall()]
         return {
             "billing_cycles": cycles, "conversion_periods": conversions,
             "tariff_periods": tariffs, "allocation_rules": allocations,
             "fixed_charge_periods": fixed_charges,
+            "invoice_charge_defaults": charge_defaults,
             "entitlement_periods": entitlement_periods, "invoices": invoices,
+            "installment_candidates": installment_candidates,
+            "invoice_years": invoice_years, "reading_years": reading_years,
         }
     finally:
         cursor.close()
@@ -1862,10 +1916,24 @@ def poll_status():
 
 @app.get("/energy")
 def energy() -> str:
-    energy_type = request.args.get("meter", "all")
-    if energy_type not in {"all", "electricity", "gas"}:
-        energy_type = "all"
-    meters, readings = load_energy_readings(energy_type)
+    reading_energy_type = request.args.get("reading_energy", "none")
+    if reading_energy_type not in {"none", "all", "electricity", "gas"}:
+        reading_energy_type = "none"
+    try:
+        reading_year = int(request.args["reading_year"]) if request.args.get("reading_year") else None
+    except ValueError:
+        reading_year = None
+    invoice_energy_type = request.args.get("invoice_energy", "gas")
+    if invoice_energy_type not in {"all", "electricity", "gas"}:
+        invoice_energy_type = "gas"
+    invoice_cycle_status = request.args.get("invoice_status", "open")
+    if invoice_cycle_status not in {"all", "open", "settled"}:
+        invoice_cycle_status = "open"
+    try:
+        invoice_year = int(request.args["invoice_year"]) if request.args.get("invoice_year") else None
+    except ValueError:
+        invoice_year = None
+    meters, readings = load_energy_readings(reading_energy_type, reading_year)
     try:
         edit_reading_id = int(request.args["edit"])
     except (KeyError, TypeError, ValueError):
@@ -1881,11 +1949,16 @@ def energy() -> str:
         now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
         current_year=local_now().year,
         energy_mj_per_kwh=Decimal(os.getenv("ENERGY_MJ_PER_KWH", "3.6").replace(",", ".")),
-        energy_type=energy_type,
+        reading_energy_type=reading_energy_type,
+        energy_type=reading_energy_type,
+        reading_year=reading_year,
+        invoice_energy_type=invoice_energy_type,
+        invoice_cycle_status=invoice_cycle_status,
+        invoice_year=invoice_year,
         edit_reading_id=edit_reading_id,
         **edit_ids,
         notice=session.pop("energy_notice", None),
-        **load_energy_billing(),
+        **load_energy_billing(invoice_energy_type, invoice_cycle_status, invoice_year),
     )
 
 
@@ -2255,15 +2328,16 @@ def complete_charge_amounts(
         if gross_amount is None:
             raise ValueError("Ehhez a tételhez az egyszerű összeget kell megadni.")
         return None, None, gross_amount.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-    vat_rate = vat_rate_percent
-    if vat_rate is None:
-        vat_rate = Decimal("0") if category == "service" else Decimal("27")
+    is_exempt = category == "service"
+    vat_rate = None if is_exempt else vat_rate_percent
+    if vat_rate is None and not is_exempt:
+        vat_rate = Decimal("27")
     calculated_net = net_amount
     if quantity is not None and net_unit_price is not None:
         calculated_net = quantity * net_unit_price
     if calculated_net is not None:
         calculated_net = calculated_net.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        multiplier = Decimal("1") + vat_rate / Decimal("100")
+        multiplier = Decimal("1") if is_exempt else Decimal("1") + vat_rate / Decimal("100")
         calculated_gross = (calculated_net * multiplier).quantize(
             Decimal("1"), rounding=ROUND_HALF_UP
         )
@@ -2272,6 +2346,157 @@ def complete_charge_amounts(
     else:
         raise ValueError("A bruttó összeghez nettó összeg és ÁFA-kulcs szükséges.")
     return calculated_net, vat_rate, calculated_gross
+
+
+def month_date_range(value: date) -> tuple[date, date]:
+    return date(value.year, value.month, 1), date(value.year, value.month, monthrange(value.year, value.month)[1])
+
+
+def close_previous_effective_period(
+    cursor: mariadb.Cursor,
+    period_kind: str,
+    meter_id: int,
+    valid_from: date,
+    discriminator: str | None = None,
+) -> date | None:
+    """Close the preceding value and cap this value before an already known future one."""
+    definitions = {
+        "conversion": ("gas_conversion_periods", None),
+        "tariff": ("energy_tariff_periods", "tariff_tier"),
+        "charge_default": ("energy_invoice_charge_defaults", "template_key"),
+    }
+    table, discriminator_column = definitions[period_kind]
+    extra = f" AND {discriminator_column}=?" if discriminator_column else ""
+    key_parameters: tuple[Any, ...] = (meter_id, discriminator) if discriminator_column else (meter_id,)
+    cursor.execute(
+        f"""UPDATE {table} SET valid_to=DATE_SUB(?,INTERVAL 1 DAY)
+            WHERE meter_id=?{extra} AND valid_from<?
+              AND (valid_to IS NULL OR valid_to>=?)""",
+        (valid_from, *key_parameters, valid_from, valid_from),
+    )
+    cursor.execute(
+        f"""SELECT MIN(valid_from) FROM {table}
+            WHERE meter_id=?{extra} AND valid_from>?""",
+        (*key_parameters, valid_from),
+    )
+    next_start = cursor.fetchone()[0]
+    return next_start - timedelta(days=1) if next_start is not None else None
+
+
+def active_gas_conversion(
+    cursor: mariadb.Cursor, meter_id: int, start: date, end: date
+) -> tuple[Decimal, Decimal] | None:
+    cursor.execute(
+        """SELECT correction_factor,heating_value_mj_m3
+           FROM gas_conversion_periods
+           WHERE meter_id=? AND valid_from<=?
+             AND (valid_to IS NULL OR valid_to>=?)
+           ORDER BY valid_from DESC LIMIT 1""",
+        (meter_id, start, end),
+    )
+    return cursor.fetchone()
+
+
+def gas_conversion_defaults_for_invoice(
+    invoice_id: int,
+    start: date,
+    end: date,
+    correction: Decimal | None,
+    heating_value: Decimal | None,
+) -> tuple[Decimal | None, Decimal | None]:
+    if correction is not None and heating_value is not None:
+        return correction, heating_value
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("SELECT meter_id FROM energy_invoices WHERE id=?", (invoice_id,))
+        invoice = cursor.fetchone()
+        if invoice is None:
+            abort(404)
+        defaults = active_gas_conversion(cursor, invoice[0], start, end)
+        if defaults:
+            correction = correction if correction is not None else defaults[0]
+            heating_value = heating_value if heating_value is not None else defaults[1]
+        return correction, heating_value
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def active_tariff_price(
+    cursor: mariadb.Cursor, meter_id: int, category: str, effective_at: date
+) -> Decimal | None:
+    tier = {"discounted_energy": "discounted", "market_energy": "market"}.get(category)
+    if tier is None:
+        return None
+    cursor.execute(
+        """SELECT unit_price FROM energy_tariff_periods
+           WHERE meter_id=? AND tariff_tier=? AND valid_from<=?
+             AND (valid_to IS NULL OR valid_to>=?)
+           ORDER BY valid_from DESC LIMIT 1""",
+        (meter_id, tier, effective_at, effective_at),
+    )
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def tariff_default_for_invoice(
+    invoice_id: int, category: str, effective_at: date | None
+) -> Decimal | None:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("SELECT meter_id,period_start_date FROM energy_invoices WHERE id=?", (invoice_id,))
+        invoice = cursor.fetchone()
+        if invoice is None:
+            abort(404)
+        return active_tariff_price(cursor, invoice[0], category, effective_at or invoice[1])
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def add_default_invoice_charge_lines(
+    cursor: mariadb.Cursor, invoice_id: int, meter_id: int, effective_at: date
+) -> int:
+    period_start, period_end = month_date_range(effective_at)
+    cursor.execute(
+        """SELECT id,line_category,description,quantity,quantity_unit,
+                  net_unit_price_huf,tax_treatment,vat_rate_percent,gross_unit_price_huf
+           FROM energy_invoice_charge_defaults
+           WHERE meter_id=? AND auto_add=1 AND valid_from<=?
+             AND (valid_to IS NULL OR valid_to>=?)
+           ORDER BY FIELD(line_category,'base_fee','service'),template_key""",
+        (meter_id, effective_at, effective_at),
+    )
+    defaults = cursor.fetchall()
+    for sort_order, item in enumerate(defaults, start=100):
+        default_id, category, description, quantity, quantity_unit, net_unit, tax_treatment, vat_rate, gross_unit = item
+        net_amount: Decimal | None
+        if net_unit is not None:
+            net_amount = (quantity * net_unit).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        else:
+            net_amount = None
+        if tax_treatment == "exempt":
+            gross_amount = (quantity * (gross_unit or net_unit)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            if net_amount is None:
+                net_amount = gross_amount
+            vat_rate = None
+        else:
+            gross_amount = (net_amount * (Decimal("1") + vat_rate / Decimal("100"))).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        cursor.execute(
+            """INSERT INTO energy_invoice_charge_lines
+               (invoice_id,line_category,description,period_start_date,period_end_date,
+                quantity,quantity_unit,net_unit_price_huf,net_amount_huf,vat_rate_percent,
+                tax_treatment,charge_default_id,gross_amount_huf,sort_order)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (invoice_id, category, description, period_start, period_end, quantity,
+             quantity_unit, net_unit, net_amount, vat_rate, tax_treatment, default_id,
+             gross_amount, sort_order),
+        )
+    return len(defaults)
 
 
 CHARGE_DESCRIPTION_DEFAULTS = {
@@ -2365,11 +2590,27 @@ def create_gas_conversion_period():
             raise ValueError
     except (KeyError, ValueError, InvalidOperation):
         abort(400)
-    insert_energy_billing_record(
-        """INSERT INTO gas_conversion_periods
-           (meter_id,valid_from,valid_to,correction_factor,heating_value_mj_m3,data_source,note,recorded_by)
-           VALUES (?,?,?,?,?,?,?,?)""", parameters, "A gáz átváltási időszakát rögzítettük."
-    )
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        automatic_end = close_previous_effective_period(cursor, "conversion", parameters[0], parameters[1])
+        valid_to = parameters[2]
+        if automatic_end is not None and (valid_to is None or valid_to > automatic_end):
+            valid_to = automatic_end
+        cursor.execute(
+            """INSERT INTO gas_conversion_periods
+               (meter_id,valid_from,valid_to,correction_factor,heating_value_mj_m3,data_source,note,recorded_by)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (parameters[0], parameters[1], valid_to, *parameters[3:]),
+        )
+        connection.commit()
+        session["energy_notice"] = {"kind": "success", "message": "A gáz átváltási időszakát rögzítettük; a korábbi érték hatályát lezártuk."}
+    except mariadb.IntegrityError as error:
+        connection.rollback()
+        session["energy_notice"] = {"kind": "warning", "message": f"Az adat nem rögzíthető: {error}"}
+    finally:
+        cursor.close()
+        connection.close()
     return redirect(url_for("energy") + "#billing-data")
 
 
@@ -2389,11 +2630,87 @@ def create_energy_tariff_period():
             raise ValueError
     except (KeyError, ValueError, InvalidOperation):
         abort(400)
-    insert_energy_billing_record(
-        """INSERT INTO energy_tariff_periods
-           (meter_id,tariff_tier,valid_from,valid_to,unit_price,price_unit,tax_basis,note,recorded_by)
-           VALUES (?,?,?,?,?,?,?,?,?)""", parameters, "A tarifa-időszakot rögzítettük."
-    )
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        automatic_end = close_previous_effective_period(
+            cursor, "tariff", parameters[0], parameters[2], parameters[1]
+        )
+        valid_to = parameters[3]
+        if automatic_end is not None and (valid_to is None or valid_to > automatic_end):
+            valid_to = automatic_end
+        cursor.execute(
+            """INSERT INTO energy_tariff_periods
+               (meter_id,tariff_tier,valid_from,valid_to,unit_price,price_unit,tax_basis,note,recorded_by)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (parameters[0], parameters[1], parameters[2], valid_to, *parameters[4:]),
+        )
+        connection.commit()
+        session["energy_notice"] = {"kind": "success", "message": "A tarifa-időszakot rögzítettük; a korábbi érték hatályát lezártuk."}
+    except mariadb.IntegrityError as error:
+        connection.rollback()
+        session["energy_notice"] = {"kind": "warning", "message": f"Az adat nem rögzíthető: {error}"}
+    finally:
+        cursor.close()
+        connection.close()
+    return redirect(url_for("energy") + "#billing-data")
+
+
+@app.post("/energy/invoice-charge-defaults")
+@editor_required
+def create_energy_invoice_charge_default():
+    validate_csrf()
+    try:
+        meter_id = int(request.form["meter_id"])
+        template_key = request.form["template_key"].strip()
+        category = request.form["line_category"]
+        description = request.form["description"].strip()
+        valid_from = required_form_date("valid_from")
+        valid_to = optional_form_date("valid_to")
+        quantity = optional_form_decimal("quantity") or Decimal("1")
+        quantity_unit = request.form.get("quantity_unit", "").strip() or "hó"
+        net_unit_price = optional_form_decimal("net_unit_price_huf")
+        tax_treatment = request.form["tax_treatment"]
+        vat_rate = optional_form_decimal("vat_rate_percent")
+        gross_unit_price = optional_form_decimal("gross_unit_price_huf")
+        if (
+            not template_key or not description or category not in {"base_fee", "service"}
+            or tax_treatment not in {"rate", "exempt"} or quantity <= 0
+            or net_unit_price is None and gross_unit_price is None
+            or tax_treatment == "rate" and vat_rate is None
+            or valid_to is not None and valid_to < valid_from
+        ):
+            raise ValueError
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        abort(400)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        automatic_end = close_previous_effective_period(
+            cursor, "charge_default", meter_id, valid_from, template_key
+        )
+        if automatic_end is not None and (valid_to is None or valid_to > automatic_end):
+            valid_to = automatic_end
+        cursor.execute(
+            """INSERT INTO energy_invoice_charge_defaults
+               (meter_id,template_key,line_category,description,valid_from,valid_to,
+                quantity,quantity_unit,net_unit_price_huf,tax_treatment,vat_rate_percent,
+                gross_unit_price_huf,auto_add,note,recorded_by)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (meter_id, template_key, category, description, valid_from, valid_to,
+             quantity, quantity_unit, net_unit_price, tax_treatment,
+             None if tax_treatment == "exempt" else vat_rate, gross_unit_price,
+             int(request.form.get("auto_add") == "1"),
+             request.form.get("note", "").strip() or None, g.current_user["id"]),
+        )
+        connection.commit()
+        session["energy_notice"] = {"kind": "success", "message": "A számlatétel törzsadatát rögzítettük; a korábbi érték hatályát lezártuk."}
+    except mariadb.IntegrityError as error:
+        connection.rollback()
+        session["energy_notice"] = {"kind": "warning", "message": f"Az adat nem rögzíthető: {error}"}
+    finally:
+        cursor.close()
+        connection.close()
     return redirect(url_for("energy") + "#billing-data")
 
 
@@ -2503,14 +2820,36 @@ def create_energy_invoice():
             raise ValueError
     except (KeyError, TypeError, ValueError, InvalidOperation):
         abort(400)
-    insert_energy_billing_record(
-        """INSERT INTO energy_invoices
-           (meter_id,billing_cycle_id,invoice_number,invoice_type,sequence_no,
-            period_start_date,period_end_date,issued_at,performance_at,due_at,
-            net_amount_huf,vat_amount_huf,gross_amount_huf,rounding_amount_huf,payable_amount_huf,
-            account_balance_huf,counterfactual_market_amount_huf,note,recorded_by)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlát rögzítettük."
-    )
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """INSERT INTO energy_invoices
+               (meter_id,billing_cycle_id,invoice_number,invoice_type,sequence_no,
+                period_start_date,period_end_date,issued_at,performance_at,due_at,
+                net_amount_huf,vat_amount_huf,gross_amount_huf,rounding_amount_huf,payable_amount_huf,
+                account_balance_huf,counterfactual_market_amount_huf,note,recorded_by)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            parameters,
+        )
+        invoice_id = cursor.lastrowid
+        added_defaults = 0
+        if parameters[3] == "installment":
+            added_defaults = add_default_invoice_charge_lines(cursor, invoice_id, parameters[0], end)
+        connection.commit()
+        message = "A számlát rögzítettük."
+        if added_defaults:
+            message += f" {added_defaults} hatályos fix tételt automatikusan hozzáadtunk."
+        session["energy_notice"] = {"kind": "success", "message": message}
+    except mariadb.IntegrityError as error:
+        connection.rollback()
+        session["energy_notice"] = {"kind": "warning", "message": f"A számla nem rögzíthető: {error}"}
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
     return redirect(url_for("energy") + "#invoices")
 
 
@@ -2594,10 +2933,15 @@ def create_energy_invoice_consumption(invoice_id: int):
         start = required_form_date("period_start_date")
         end = required_form_date("period_end_date")
         billed_m3 = Decimal(request.form["billed_consumption_m3"].replace(",", "."))
-        correction, corrected_m3, heating_value, heat_quantity = complete_gas_consumption_values(
-            billed_m3,
+        correction_input, heating_input = gas_conversion_defaults_for_invoice(
+            invoice_id, start, end,
             optional_form_decimal("correction_factor"),
             optional_form_decimal("heating_value_mj_m3"),
+        )
+        correction, corrected_m3, heating_value, heat_quantity = complete_gas_consumption_values(
+            billed_m3,
+            correction_input,
+            heating_input,
             optional_form_decimal("corrected_consumption_m3"),
             optional_form_decimal("heat_quantity_mj"),
         )
@@ -2663,9 +3007,13 @@ def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
         start = required_form_date("period_start_date")
         end = required_form_date("period_end_date")
         billed_m3 = Decimal(request.form["billed_consumption_m3"].replace(",", "."))
-        correction, corrected_m3, heating_value, heat_quantity = complete_gas_consumption_values(
-            billed_m3, optional_form_decimal("correction_factor"),
+        correction_input, heating_input = gas_conversion_defaults_for_invoice(
+            invoice_id, start, end,
+            optional_form_decimal("correction_factor"),
             optional_form_decimal("heating_value_mj_m3"),
+        )
+        correction, corrected_m3, heating_value, heat_quantity = complete_gas_consumption_values(
+            billed_m3, correction_input, heating_input,
             optional_form_decimal("corrected_consumption_m3"),
             optional_form_decimal("heat_quantity_mj"),
         )
@@ -2725,6 +3073,9 @@ def create_energy_invoice_charge_line(invoice_id: int):
         category = request.form["line_category"]
         quantity = optional_form_decimal("quantity")
         net_unit_price = optional_form_decimal("net_unit_price_huf")
+        period_start = optional_form_date("period_start_date")
+        if net_unit_price is None:
+            net_unit_price = tariff_default_for_invoice(invoice_id, category, period_start)
         description, quantity_unit = complete_charge_metadata(
             category, request.form.get("description", "").strip(),
             request.form.get("quantity_unit", "").strip() or None,
@@ -2736,10 +3087,10 @@ def create_energy_invoice_charge_line(invoice_id: int):
         parameters = (
             invoice_id, optional_int(request.form.get("invoice_consumption_id")),
             category, description,
-            optional_form_date("period_start_date"), optional_form_date("period_end_date"),
+            period_start, optional_form_date("period_end_date"),
             quantity, quantity_unit,
             net_unit_price, net_amount,
-            vat_rate, gross_amount,
+            vat_rate, "exempt" if category == "service" else "rate", gross_amount,
             int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
         )
         if not parameters[3] or parameters[5] is not None and parameters[4] is not None and parameters[5] < parameters[4]:
@@ -2750,8 +3101,8 @@ def create_energy_invoice_charge_line(invoice_id: int):
         """INSERT INTO energy_invoice_charge_lines
            (invoice_id,invoice_consumption_id,line_category,description,period_start_date,
             period_end_date,quantity,quantity_unit,net_unit_price_huf,net_amount_huf,
-            vat_rate_percent,gross_amount_huf,sort_order,note)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlatételt rögzítettük."
+            vat_rate_percent,tax_treatment,gross_amount_huf,sort_order,note)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlatételt rögzítettük."
     )
     return redirect(url_for("energy") + f"#invoice-{invoice_id}")
 
@@ -2764,6 +3115,9 @@ def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
         category = request.form["line_category"]
         quantity = optional_form_decimal("quantity")
         net_unit_price = optional_form_decimal("net_unit_price_huf")
+        period_start = optional_form_date("period_start_date")
+        if net_unit_price is None:
+            net_unit_price = tariff_default_for_invoice(invoice_id, category, period_start)
         description, quantity_unit = complete_charge_metadata(
             category, request.form.get("description", "").strip(),
             request.form.get("quantity_unit", "").strip() or None,
@@ -2775,10 +3129,10 @@ def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
         parameters = (
             optional_int(request.form.get("invoice_consumption_id")),
             category, description,
-            optional_form_date("period_start_date"), optional_form_date("period_end_date"),
+            period_start, optional_form_date("period_end_date"),
             quantity, quantity_unit,
             net_unit_price, net_amount,
-            vat_rate, gross_amount,
+            vat_rate, "exempt" if category == "service" else "rate", gross_amount,
             int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
             line_id, invoice_id,
         )
@@ -2806,7 +3160,7 @@ def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
             """UPDATE energy_invoice_charge_lines SET
                invoice_consumption_id=?,line_category=?,description=?,period_start_date=?,
                period_end_date=?,quantity=?,quantity_unit=?,net_unit_price_huf=?,net_amount_huf=?,
-               vat_rate_percent=?,gross_amount_huf=?,sort_order=?,note=?
+               vat_rate_percent=?,tax_treatment=?,gross_amount_huf=?,sort_order=?,note=?
                WHERE id=? AND invoice_id=?""", parameters,
         )
         connection.commit()
