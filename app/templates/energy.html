@@ -85,7 +85,7 @@ document.querySelectorAll('form').forEach((form) => {
       settled_energy_offset: 'Részszámlákban elszámolt energiadíj',
       settled_base_fee_offset: 'Részszámlákban elszámolt alapdíj'
     };
-    const serviceDescriptions = ['OtthonSOS Komfort', 'OtthonSOS Garancia Médium'];
+    const serviceDescriptions = ['OtthonSOS Komfort', 'OtthonSOS Garancia Médium', 'OtthonSOS Plusz'];
     const replaceDescription = (serviceMode) => {
       const current = description.value;
       const replacement = document.createElement(serviceMode ? 'select' : 'input');

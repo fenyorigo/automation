@@ -7,6 +7,8 @@ helyi dátumok.
 
 ### Új funkciók
 
+- A történeti gázszámlák rögzítéséhez az `OtthonSOS Plusz` szolgáltatás is
+  kiválasztható a számlatétel legördülőjében.
 - Az elszámolószámlák külön energiadíj- és alapdíj-jóváírási kategóriát
   kaptak. Külön táblában és szerkeszthető felületen rögzíthető az elszámolásban
   felsorolt részszámlák száma és végösszege, automatikus számlaszám-alapú

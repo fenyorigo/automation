@@ -151,13 +151,17 @@ rögzíteni.
 | Kategória | Megnevezés | Időszak | Mennyiség | Egységár | Nettó | ÁFA | Bruttó |
 |---|---|---|---:|---:|---:|---:|---:|
 | Alapdíj | Háztartási alapdíj | 2025.08.01–2025.08.31 | 1 hó | 766 Ft/hó | 766 Ft | 27% | 973 Ft |
+| Szolgáltatás | OtthonSOS Plusz | a számlán megadott hónap | 1 hó | 590 Ft/hó | 590 Ft | 0% | 590 Ft |
 | Szolgáltatás | OtthonSOS Komfort | 2025.08.01–2025.08.31 | 1 hó | 790 Ft/hó | 790 Ft | 0% | 790 Ft |
 | Szolgáltatás | OtthonSOS Garancia Médium | 2025.08.01–2025.08.31 | 1 hó | 990 Ft/hó | 990 Ft | 0% | 990 Ft |
 
 Az **Alapdíj** kategória automatikusan a `Háztartási alapdíj` megnevezést
 kapja. A **Szolgáltatás** kategóriánál legördülőből választható az
-`OtthonSOS Komfort` vagy az `OtthonSOS Garancia Médium`. Mindkét kategóriánál
-automatikusan `hó` lesz a mértékegység. A tétel dátuma a számlán közölt
+`OtthonSOS Plusz`, az `OtthonSOS Komfort` vagy az
+`OtthonSOS Garancia Médium`. A 2024. november–2025. márciusi történeti
+számlákon az 590 Ft-os `OtthonSOS Plusz` szerepel; a későbbi számlákon a
+Komfort és a Garancia Médium külön sor. Minden szolgáltatásnál automatikusan
+`hó` lesz a mértékegység. A tétel dátuma a számlán közölt
 szolgáltatási időszak legyen, ami nem feltétlenül egyezik meg a számlafej
 teljes időszakával.
 

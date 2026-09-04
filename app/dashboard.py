@@ -2240,6 +2240,7 @@ CHARGE_DESCRIPTION_DEFAULTS = {
 SERVICE_DESCRIPTION_OPTIONS = (
     "OtthonSOS Komfort",
     "OtthonSOS Garancia Médium",
+    "OtthonSOS Plusz",
 )
 
 

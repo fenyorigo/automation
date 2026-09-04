@@ -458,7 +458,9 @@ számlaszámú, már felvitt részszámlához automatikusan kapcsolatot készít
 
 A tételkategória az ismert gázdíj- és alapdíj-megnevezést, valamint a hozzá
 tartozó `MJ` vagy `hó` mértékegységet automatikusan kitölti. Szolgáltatásnál
-az OtthonSOS Komfort és OtthonSOS Garancia Médium legördülőből választható.
+az OtthonSOS Plusz, OtthonSOS Komfort és OtthonSOS Garancia Médium
+legördülőből választható. A történeti számlán szereplő konkrét szolgáltatást
+kell kiválasztani.
 
 A saját, óráról leolvasott fogyasztás továbbra is kizárólag az
 `energy_meter_readings` idősorban marad. A számlán szereplő MVM-becslés az

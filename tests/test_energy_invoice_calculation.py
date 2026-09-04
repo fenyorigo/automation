@@ -37,6 +37,12 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
             ("OtthonSOS Garancia Médium", "hó"),
         )
 
+    def test_historic_service_preserves_otthonsos_plusz(self):
+        self.assertEqual(
+            complete_charge_metadata("service", "OtthonSOS Plusz", None),
+            ("OtthonSOS Plusz", "hó"),
+        )
+
     def test_calculates_invoice_gross_from_net_and_vat_amount(self):
         self.assertEqual(
             complete_invoice_gross(Decimal("33849"), Decimal("8659"), None),
