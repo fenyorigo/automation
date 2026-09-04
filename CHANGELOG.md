@@ -20,6 +20,9 @@ helyi dátumok.
   segíti a gáz- és villamos fűtés összehasonlítását.
 - A számlafej és a számlatételek bruttó összege automatikusan számolódik a
   megadott nettó és ÁFA-adatokból, szerveroldali ellenőrző számítással.
+- A számlatételek nettó összege a mennyiség és egységár szorzatából, a bruttó
+  ebből és az ÁFA-kulcsból egész forintra kerekítve készül; a szolgáltatás
+  kategória 0%, minden más kategória 27% alapértéket kap.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.

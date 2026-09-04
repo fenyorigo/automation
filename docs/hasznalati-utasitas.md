@@ -436,9 +436,11 @@ ceruza jelenik meg szerkesztői jogosultsággal. A ceruzával az adott rekord
 helyben javítható; a mentés nem érinti a számla többi részét.
 
 A számlafejnél a nettó összeg és az ÁFA összege automatikusan kitölti a bruttó
-összeget. A számlatételeknél ugyanez a nettó összeg és az ÁFA százaléka alapján
-történik. Az üresen hagyott bruttó értéket a szerver mentéskor is kiszámítja;
-a szolgáltatói számlán szereplő eltérő kerekítés kézzel felülírható.
+összeget. A számlatételeknél a mennyiség és a nettó egységár alapján egész
+forintra kerekített nettó összeg, majd ebből az ÁFA-kulccsal egész forintra
+kerekített bruttó összeg számolódik. A tétel nettó és bruttó összege az
+adatbázisba is egész forintra kerekítve kerül. Az ÁFA alapértéke 27%, a
+**Szolgáltatás** kategóriánál 0%.
 
 A saját, óráról leolvasott fogyasztás továbbra is kizárólag az
 `energy_meter_readings` idősorban marad. A számlán szereplő MVM-becslés az

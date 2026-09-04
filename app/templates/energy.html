@@ -45,8 +45,31 @@ document.querySelectorAll('form').forEach((form) => {
   const vatRate = form.elements.namedItem('vat_rate_percent');
   if (!net || !gross || (!vatAmount && !vatRate)) return;
   gross.required = false;
-  let grossManual = false;
   const numberValue = (input) => Number.parseFloat(input.value.replace(',', '.'));
+  if (vatRate) {
+    const category = form.elements.namedItem('line_category');
+    const quantity = form.elements.namedItem('quantity');
+    const unitPrice = form.elements.namedItem('net_unit_price_huf');
+    const fillVat = () => { vatRate.value = category.value === 'service' ? '0' : '27'; };
+    const calculateLine = () => {
+      const quantityValue = numberValue(quantity);
+      const priceValue = numberValue(unitPrice);
+      if (Number.isFinite(quantityValue) && Number.isFinite(priceValue)) {
+        net.value = Math.round(quantityValue * priceValue).toString();
+      }
+      const netValue = numberValue(net);
+      const vatValue = numberValue(vatRate);
+      if (Number.isFinite(netValue) && Number.isFinite(vatValue)) {
+        gross.value = Math.round(netValue * (1 + vatValue / 100)).toString();
+      }
+    };
+    category.addEventListener('change', () => { fillVat(); calculateLine(); });
+    [quantity, unitPrice, net, vatRate].forEach((input) => input.addEventListener('input', calculateLine));
+    fillVat();
+    calculateLine();
+    return;
+  }
+  let grossManual = false;
   const calculateGross = () => {
     if (grossManual) return;
     const netValue = numberValue(net);

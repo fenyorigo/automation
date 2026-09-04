@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "app"))
 os.environ.setdefault("DB_PASSWORD", "test")
 
 from dashboard import (
-    complete_charge_gross,
+    complete_charge_amounts,
     complete_gas_consumption_values,
     complete_invoice_gross,
     mj_to_kwh,
@@ -25,16 +25,29 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
             Decimal("42508.00"),
         )
 
-    def test_calculates_charge_gross_from_net_and_vat_rate(self):
+    def test_calculates_charge_net_and_gross_as_whole_forints(self):
         self.assertEqual(
-            complete_charge_gross(Decimal("9834"), Decimal("27"), None),
-            Decimal("12489.18"),
+            complete_charge_amounts(
+                "discounted_energy", Decimal("4359"), Decimal("2.256"),
+                None, None, None,
+            ),
+            (Decimal("9834"), Decimal("27"), Decimal("12489")),
         )
 
-    def test_explicit_gross_overrides_calculation(self):
+    def test_service_defaults_to_zero_vat(self):
         self.assertEqual(
-            complete_charge_gross(Decimal("9834"), Decimal("27"), Decimal("12489")),
-            Decimal("12489"),
+            complete_charge_amounts(
+                "service", Decimal("1"), Decimal("790"), None, None, None,
+            ),
+            (Decimal("790"), Decimal("0"), Decimal("790")),
+        )
+
+    def test_explicit_amounts_are_stored_as_whole_forints(self):
+        self.assertEqual(
+            complete_charge_amounts(
+                "other", None, None, Decimal("100.49"), Decimal("27"), Decimal("999.99"),
+            ),
+            (Decimal("100"), Decimal("27"), Decimal("127")),
         )
 
     def test_converts_mj_to_kwh_with_global_factor(self):

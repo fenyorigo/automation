@@ -2176,17 +2176,31 @@ def complete_invoice_gross(
     return (net_amount + vat_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def complete_charge_gross(
+def complete_charge_amounts(
+    category: str,
+    quantity: Decimal | None,
+    net_unit_price: Decimal | None,
     net_amount: Decimal | None,
     vat_rate_percent: Decimal | None,
     gross_amount: Decimal | None,
-) -> Decimal:
-    if gross_amount is not None:
-        return gross_amount
-    if net_amount is None or vat_rate_percent is None:
+) -> tuple[Decimal | None, Decimal, Decimal]:
+    vat_rate = vat_rate_percent
+    if vat_rate is None:
+        vat_rate = Decimal("0") if category == "service" else Decimal("27")
+    calculated_net = net_amount
+    if quantity is not None and net_unit_price is not None:
+        calculated_net = quantity * net_unit_price
+    if calculated_net is not None:
+        calculated_net = calculated_net.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        multiplier = Decimal("1") + vat_rate / Decimal("100")
+        calculated_gross = (calculated_net * multiplier).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+    elif gross_amount is not None:
+        calculated_gross = gross_amount.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    else:
         raise ValueError("A bruttó összeghez nettó összeg és ÁFA-kulcs szükséges.")
-    multiplier = Decimal("1") + vat_rate_percent / Decimal("100")
-    return (net_amount * multiplier).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return calculated_net, vat_rate, calculated_gross
 
 
 def insert_energy_billing_record(sql: str, parameters: tuple[Any, ...], message: str) -> None:
@@ -2552,17 +2566,19 @@ def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
 def create_energy_invoice_charge_line(invoice_id: int):
     validate_csrf()
     try:
-        net_amount = optional_form_decimal("net_amount_huf")
-        vat_rate = optional_form_decimal("vat_rate_percent")
-        gross_amount = complete_charge_gross(
-            net_amount, vat_rate, optional_form_decimal("gross_amount_huf")
+        category = request.form["line_category"]
+        quantity = optional_form_decimal("quantity")
+        net_unit_price = optional_form_decimal("net_unit_price_huf")
+        net_amount, vat_rate, gross_amount = complete_charge_amounts(
+            category, quantity, net_unit_price, optional_form_decimal("net_amount_huf"),
+            optional_form_decimal("vat_rate_percent"), optional_form_decimal("gross_amount_huf"),
         )
         parameters = (
             invoice_id, optional_int(request.form.get("invoice_consumption_id")),
-            request.form["line_category"], request.form["description"].strip(),
+            category, request.form["description"].strip(),
             optional_form_date("period_start_date"), optional_form_date("period_end_date"),
-            optional_form_decimal("quantity"), request.form.get("quantity_unit", "").strip() or None,
-            optional_form_decimal("net_unit_price_huf"), net_amount,
+            quantity, request.form.get("quantity_unit", "").strip() or None,
+            net_unit_price, net_amount,
             vat_rate, gross_amount,
             int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
         )
@@ -2585,17 +2601,19 @@ def create_energy_invoice_charge_line(invoice_id: int):
 def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
     validate_csrf()
     try:
-        net_amount = optional_form_decimal("net_amount_huf")
-        vat_rate = optional_form_decimal("vat_rate_percent")
-        gross_amount = complete_charge_gross(
-            net_amount, vat_rate, optional_form_decimal("gross_amount_huf")
+        category = request.form["line_category"]
+        quantity = optional_form_decimal("quantity")
+        net_unit_price = optional_form_decimal("net_unit_price_huf")
+        net_amount, vat_rate, gross_amount = complete_charge_amounts(
+            category, quantity, net_unit_price, optional_form_decimal("net_amount_huf"),
+            optional_form_decimal("vat_rate_percent"), optional_form_decimal("gross_amount_huf"),
         )
         parameters = (
             optional_int(request.form.get("invoice_consumption_id")),
-            request.form["line_category"], request.form["description"].strip(),
+            category, request.form["description"].strip(),
             optional_form_date("period_start_date"), optional_form_date("period_end_date"),
-            optional_form_decimal("quantity"), request.form.get("quantity_unit", "").strip() or None,
-            optional_form_decimal("net_unit_price_huf"), net_amount,
+            quantity, request.form.get("quantity_unit", "").strip() or None,
+            net_unit_price, net_amount,
             vat_rate, gross_amount,
             int(request.form.get("sort_order", "0")), request.form.get("note", "").strip() or None,
             line_id, invoice_id,
