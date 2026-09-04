@@ -2176,6 +2176,18 @@ def complete_invoice_gross(
     return (net_amount + vat_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+def complete_invoice_payable(
+    gross_amount: Decimal | None,
+    rounding_amount: Decimal,
+    payable_amount: Decimal | None,
+) -> Decimal:
+    if payable_amount is not None:
+        return payable_amount
+    if gross_amount is None:
+        raise ValueError("A fizetendő összeghez bruttó összeg szükséges.")
+    return (gross_amount + rounding_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
 def complete_charge_amounts(
     category: str,
     quantity: Decimal | None,
@@ -2405,13 +2417,16 @@ def create_energy_invoice():
         gross_amount = complete_invoice_gross(
             net_amount, vat_amount, optional_form_decimal("gross_amount_huf")
         )
+        rounding_amount = optional_form_decimal("rounding_amount_huf") or Decimal("0")
+        payable_amount = complete_invoice_payable(
+            gross_amount, rounding_amount, optional_form_decimal("payable_amount_huf")
+        )
         parameters = (
             int(request.form["meter_id"]), optional_int(request.form.get("billing_cycle_id")),
             request.form["invoice_number"].strip(), request.form["invoice_type"],
             optional_int(request.form.get("sequence_no")), start, end,
             optional_form_date("issued_at"), optional_form_date("performance_at"), optional_form_date("due_at"),
-            net_amount, vat_amount, gross_amount,
-            Decimal(request.form["payable_amount_huf"].replace(",", ".")),
+            net_amount, vat_amount, gross_amount, rounding_amount, payable_amount,
             optional_form_decimal("account_balance_huf"), optional_form_decimal("counterfactual_market_amount_huf"),
             request.form.get("note", "").strip() or None, g.current_user["id"],
         )
@@ -2423,9 +2438,9 @@ def create_energy_invoice():
         """INSERT INTO energy_invoices
            (meter_id,billing_cycle_id,invoice_number,invoice_type,sequence_no,
             period_start_date,period_end_date,issued_at,performance_at,due_at,
-            net_amount_huf,vat_amount_huf,gross_amount_huf,payable_amount_huf,
+            net_amount_huf,vat_amount_huf,gross_amount_huf,rounding_amount_huf,payable_amount_huf,
             account_balance_huf,counterfactual_market_amount_huf,note,recorded_by)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlát rögzítettük."
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlát rögzítettük."
     )
     return redirect(url_for("energy") + "#invoices")
 
@@ -2442,13 +2457,17 @@ def edit_energy_invoice(invoice_id: int):
         gross_amount = complete_invoice_gross(
             net_amount, vat_amount, optional_form_decimal("gross_amount_huf")
         )
+        rounding_amount = optional_form_decimal("rounding_amount_huf") or Decimal("0")
+        payable_amount = complete_invoice_payable(
+            gross_amount, rounding_amount, optional_form_decimal("payable_amount_huf")
+        )
         parameters = (
             int(request.form["meter_id"]), optional_int(request.form.get("billing_cycle_id")),
             request.form["invoice_number"].strip(), request.form["invoice_type"],
             optional_int(request.form.get("sequence_no")), start, end,
             optional_form_date("issued_at"), optional_form_date("performance_at"),
             optional_form_date("due_at"), net_amount, vat_amount, gross_amount,
-            Decimal(request.form["payable_amount_huf"].replace(",", ".")),
+            rounding_amount, payable_amount,
             optional_form_decimal("account_balance_huf"),
             optional_form_decimal("counterfactual_market_amount_huf"),
             request.form.get("note", "").strip() or None, g.current_user["id"], invoice_id,
@@ -2467,7 +2486,7 @@ def edit_energy_invoice(invoice_id: int):
             """UPDATE energy_invoices SET
                meter_id=?,billing_cycle_id=?,invoice_number=?,invoice_type=?,sequence_no=?,
                period_start_date=?,period_end_date=?,issued_at=?,performance_at=?,due_at=?,
-               net_amount_huf=?,vat_amount_huf=?,gross_amount_huf=?,payable_amount_huf=?,
+               net_amount_huf=?,vat_amount_huf=?,gross_amount_huf=?,rounding_amount_huf=?,payable_amount_huf=?,
                account_balance_huf=?,counterfactual_market_amount_huf=?,note=?,recorded_by=?
                WHERE id=?""", parameters,
         )

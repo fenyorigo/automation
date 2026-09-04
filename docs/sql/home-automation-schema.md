@@ -33,7 +33,8 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `energy_entitlement_periods`: az augusztus 1.–július 31. közötti kedvezményes
   gázjogosultsági évek MJ-kerete és tájékoztató m³-mennyisége
 - `energy_fixed_charge_periods`: becsléshez használt, fogyasztástól független díjak
-- `energy_invoices`: szolgáltatói számlafejek és fizetendő összegek
+- `energy_invoices`: szolgáltatói számlafejek, számlaszintű kerekítés és
+  fizetendő összegek
 - `energy_invoice_consumption`: a számlán szereplő becsült vagy tényleges fogyasztási sorok
 - `energy_invoice_charge_lines`: a számla energia-, alapdíj-, szolgáltatás- és korrekciós tételei
 - `sensor_calibrations`: az ESP–DS fizikai kialakításának és kalibrációjának

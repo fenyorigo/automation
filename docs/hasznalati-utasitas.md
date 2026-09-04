@@ -446,6 +446,10 @@ kerekített bruttó összeg számolódik. A tétel nettó és bruttó összege a
 adatbázisba is egész forintra kerekítve kerül. Az ÁFA alapértéke 27%, a
 **Szolgáltatás** kategóriánál 0%.
 
+A számlán külön feltüntetett pozitív vagy negatív **Kerekítés** a számlafej
+`Kerekítés (Ft)` mezőjébe kerül. A fizetendő összeg a bruttó számlaérték és a
+kerekítés összege; a kerekítést nem kell külön számlatételként rögzíteni.
+
 A tételkategória az ismert gázdíj- és alapdíj-megnevezést, valamint a hozzá
 tartozó `MJ` vagy `hó` mértékegységet automatikusan kitölti. Szolgáltatásnál
 az OtthonSOS Komfort és OtthonSOS Garancia Médium legördülőből választható.

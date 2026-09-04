@@ -150,6 +150,10 @@ MIGRATIONS = (
         "v1_36_invoice_gas_conversion_seed",
         ROOT / "SQL" / "migrations" / "036_home_automation_v1.35_to_v1.36.sql",
     ),
+    (
+        "v1_37_invoice_rounding",
+        ROOT / "SQL" / "migrations" / "037_home_automation_v1.36_to_v1.37.sql",
+    ),
 )
 
 

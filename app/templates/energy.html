@@ -29,6 +29,9 @@ const gasConversionPeriods = [
 {% for period in conversion_periods %}{from: '{{ period.valid_from }}', to: '{{ period.valid_to or '' }}', factor: '{{ period.correction_factor }}', heating: '{{ period.heating_value_mj_m3 }}'}{{ ',' if not loop.last }}{% endfor %}
 ];
 const energyMjPerKwh = Number('{{ energy_mj_per_kwh }}');
+const invoiceRoundingAmounts = {
+{% for invoice in invoices %}'{{ invoice.id }}': '{{ invoice.rounding_amount_huf }}'{{ ',' if not loop.last }}{% endfor %}
+};
 document.querySelectorAll('.invoice-consumption strong').forEach((element) => {
   const match = element.textContent.match(/→\s*([\d.,]+)\s*MJ/);
   if (match && Number.isFinite(energyMjPerKwh) && energyMjPerKwh > 0) {
@@ -38,6 +41,28 @@ document.querySelectorAll('.invoice-consumption strong').forEach((element) => {
 });
 const anchoredInvoice = window.location.hash ? document.querySelector(window.location.hash) : null;
 if (anchoredInvoice instanceof HTMLDetailsElement) anchoredInvoice.open = true;
+document.querySelectorAll('form').forEach((form) => {
+  if (!form.elements.namedItem('vat_amount_huf') || form.elements.namedItem('rounding_amount_huf')) return;
+  const payable = form.elements.namedItem('payable_amount_huf');
+  const match = form.action.match(/\/energy\/invoices\/(\d+)\/edit$/);
+  const label = document.createElement('label');
+  label.textContent = 'Kerekítés (Ft)';
+  const input = document.createElement('input');
+  input.name = 'rounding_amount_huf';
+  input.inputMode = 'decimal';
+  input.value = match ? (invoiceRoundingAmounts[match[1]] || '0') : '0';
+  label.appendChild(input);
+  form.insertBefore(label, payable.closest('label'));
+});
+Object.entries(invoiceRoundingAmounts).forEach(([id, amount]) => {
+  if (Number(amount) === 0) return;
+  const summary = document.querySelector(`#invoice-${id} .invoice-summary`);
+  if (summary) {
+    const value = document.createElement('span');
+    value.textContent = `Kerekítés: ${amount} Ft`;
+    summary.appendChild(value);
+  }
+});
 document.querySelectorAll('form').forEach((form) => {
   const net = form.elements.namedItem('net_amount_huf');
   const gross = form.elements.namedItem('gross_amount_huf');
@@ -109,6 +134,17 @@ document.querySelectorAll('form').forEach((form) => {
     return;
   }
   let grossManual = false;
+  const rounding = form.elements.namedItem('rounding_amount_huf');
+  const payable = form.elements.namedItem('payable_amount_huf');
+  if (payable) payable.required = false;
+  const calculatePayable = () => {
+    if (!rounding || !payable) return;
+    const grossValue = numberValue(gross);
+    const roundingValue = numberValue(rounding);
+    if (Number.isFinite(grossValue) && Number.isFinite(roundingValue)) {
+      payable.value = (grossValue + roundingValue).toFixed(2).replace('.', ',');
+    }
+  };
   const calculateGross = () => {
     if (grossManual) return;
     const netValue = numberValue(net);
@@ -116,8 +152,10 @@ document.querySelectorAll('form').forEach((form) => {
     if (!Number.isFinite(netValue) || !Number.isFinite(vatValue)) return;
     const result = vatAmount ? netValue + vatValue : netValue * (1 + vatValue / 100);
     gross.value = result.toFixed(2).replace('.', ',');
+    calculatePayable();
   };
-  gross.addEventListener('input', (event) => { if (event.isTrusted) grossManual = true; });
+  gross.addEventListener('input', (event) => { if (event.isTrusted) grossManual = true; calculatePayable(); });
+  if (rounding) rounding.addEventListener('input', calculatePayable);
   [net, vatAmount || vatRate].forEach((input) => input.addEventListener('input', () => {
     grossManual = false;
     calculateGross();

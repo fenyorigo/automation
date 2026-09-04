@@ -15,6 +15,7 @@ from dashboard import (
     complete_charge_metadata,
     complete_gas_consumption_values,
     complete_invoice_gross,
+    complete_invoice_payable,
     mj_to_kwh,
 )
 
@@ -39,6 +40,12 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
     def test_calculates_invoice_gross_from_net_and_vat_amount(self):
         self.assertEqual(
             complete_invoice_gross(Decimal("33849"), Decimal("8659"), None),
+            Decimal("42508.00"),
+        )
+
+    def test_calculates_payable_with_invoice_rounding(self):
+        self.assertEqual(
+            complete_invoice_payable(Decimal("42509"), Decimal("-1"), None),
             Decimal("42508.00"),
         )
 

@@ -61,13 +61,17 @@ A mintaszámla fejlécének adatai:
 | Nettó összeg | 33 849 Ft |
 | ÁFA | 8 659 Ft |
 | Bruttó összeg | 42 508 Ft |
+| Kerekítés | 0 Ft |
 | Fizetendő összeg | 42 508 Ft |
 | Folyószámla-egyenleg | 42 508 Ft |
 | Rezsicsökkentés nélküli összeg | 182 082 Ft |
 
 A nettó összeg és az ÁFA megadása után a bruttó összeg automatikusan
-kitöltődik. A számlafej mentése után jelennek meg a hozzá tartozó fogyasztási
-részlet- és tételűrlapok.
+kitöltődik. Ha a számlán külön **Kerekítés** sor szerepel, annak előjeles
+összegét a számlafej `Kerekítés (Ft)` mezőjébe kell írni, például `-1`. A
+fizetendő összeg a bruttó és a kerekítés összegeként automatikusan számolható.
+A kerekítés nem fogyasztási részlet és nem számlatétel. A számlafej mentése
+után jelennek meg a hozzá tartozó fogyasztási részlet- és tételűrlapok.
 
 ## 4. Fogyasztási részletek
 

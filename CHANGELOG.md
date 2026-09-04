@@ -33,6 +33,8 @@ helyi dátumok.
 - A számlatétel kategóriája automatikusan kitölti a szabványos megnevezést és
   mértékegységet; szolgáltatásnál legördülőből választhatók az OtthonSOS
   Komfort és Garancia Médium tételek.
+- Új v1.37 számlafej-szintű kerekítési mező kezeli a pozitív vagy negatív
+  `Kerekítés` sort, és ebből automatikusan számolja a fizetendő összeget.
 - Új v1.34 energia-számlázási modell elszámolási ciklusokkal, időben érvényes
   gázátváltással, tarifákkal, sávmegosztással, fix becslési díjakkal, valamint
   szolgáltatói számla-, fogyasztási és tételsorokkal.
