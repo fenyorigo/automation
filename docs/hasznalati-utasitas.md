@@ -451,6 +451,10 @@ A számlán külön feltüntetett pozitív vagy negatív **Kerekítés** a szám
 tartalmazza, ezért a kerekítés nem módosítja még egyszer a fizetendőt, és nem
 kell külön számlatételként rögzíteni.
 
+A számlalistában a sorszámmal rendelkező részszámlák típusa például
+`1. részszámla` vagy `2. részszámla` alakban jelenik meg, így az időszakok
+között gyorsabban megtalálható a keresett számla.
+
 Elszámolószámlán a korábbi részszámlák energiadíj- és alapdíj-jóváírásához a
 két külön elszámolási kategória használható. A számla utolsó oldalán felsorolt
 részszámlák száma és végösszege külön is rögzíthető; az alkalmazás az egyező

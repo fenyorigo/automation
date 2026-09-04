@@ -7,6 +7,8 @@ helyi dátumok.
 
 ### Új funkciók
 
+- A számlalista a részszámlák rögzített sorszámát is kijelzi, például
+  `3. részszámla` formában.
 - A történeti gázszámlák rögzítéséhez az `OtthonSOS Plusz` szolgáltatás is
   kiválasztható a számlatétel legördülőjében.
 - Az elszámolószámlák külön energiadíj- és alapdíj-jóváírási kategóriát

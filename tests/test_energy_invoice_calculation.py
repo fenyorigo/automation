@@ -131,6 +131,7 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
         )
         self.assertIn("settled_energy_offset", template)
         self.assertIn("create_energy_invoice_settled_installment", template)
+        self.assertIn("invoice.sequence_no ~ '. részszámla'", template)
 
 
 if __name__ == "__main__":
