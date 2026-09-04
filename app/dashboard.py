@@ -2250,7 +2250,11 @@ def complete_charge_amounts(
     net_amount: Decimal | None,
     vat_rate_percent: Decimal | None,
     gross_amount: Decimal | None,
-) -> tuple[Decimal | None, Decimal, Decimal]:
+) -> tuple[Decimal | None, Decimal | None, Decimal]:
+    if category in {"support", "late_interest"}:
+        if gross_amount is None:
+            raise ValueError("Ehhez a tételhez az egyszerű összeget kell megadni.")
+        return None, None, gross_amount.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
     vat_rate = vat_rate_percent
     if vat_rate is None:
         vat_rate = Decimal("0") if category == "service" else Decimal("27")
@@ -2276,6 +2280,8 @@ CHARGE_DESCRIPTION_DEFAULTS = {
     "base_fee": "Háztartási alapdíj",
     "settled_energy_offset": "Részszámlákban elszámolt energiadíj",
     "settled_base_fee_offset": "Részszámlákban elszámolt alapdíj",
+    "support": "Támogatás, túlfizetés",
+    "late_interest": "Késedelmi kamat",
 }
 SERVICE_DESCRIPTION_OPTIONS = (
     "OtthonSOS Komfort",

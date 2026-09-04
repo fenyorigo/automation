@@ -158,6 +158,10 @@ MIGRATIONS = (
         "v1_38_settlement_invoice_reconciliation",
         ROOT / "SQL" / "migrations" / "038_home_automation_v1.37_to_v1.38.sql",
     ),
+    (
+        "v1_39_plain_invoice_amounts",
+        ROOT / "SQL" / "migrations" / "039_home_automation_v1.38_to_v1.39.sql",
+    ),
 )
 
 

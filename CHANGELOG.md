@@ -7,6 +7,9 @@ helyi dátumok.
 
 ### Új funkciók
 
+- A `Támogatás/túlfizetés` és az új `Késedelmi kamat` számlatétel egyszerű,
+  előjeles bruttó összegként, nettó-, ÁFA- és mennyiségi adatok nélkül vihető
+  fel.
 - A ciklushoz rendelt részszámlák kumulált m³ értéke a ciklus elejétől,
   részszámlasorrendben automatikusan számolódik és javításkor újraszámolódik.
 - A számlalista a részszámlák rögzített sorszámát is kijelzi, például

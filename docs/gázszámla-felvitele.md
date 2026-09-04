@@ -73,6 +73,12 @@ hozzáadni vagy levonni. A kerekítés nem fogyasztási részlet és nem
 számlatétel. A számlafej mentése
 után jelennek meg a hozzá tartozó fogyasztási részlet- és tételűrlapok.
 
+A **Támogatás/túlfizetés** és a **Késedelmi kamat** egyszerű összegjellegű
+tételek. A kategória kiválasztása után csak a számlán szereplő előjeles
+**Bruttó összeget** kell megadni (`-8` vagy `8`); nincs mennyiségük,
+egységáruk, nettó összegük vagy százalékos ÁFA-kulcsuk. Ezek a fizetendő
+összeget módosíthatják, miközben a számlafej bruttó számlaértéke változatlan.
+
 ## 4. Fogyasztási részletek
 
 A lenyitott számlán az **Újabb fogyasztási időszak hozzáadása** űrlappal

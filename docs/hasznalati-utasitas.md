@@ -451,6 +451,10 @@ A számlán külön feltüntetett pozitív vagy negatív **Kerekítés** a szám
 tartalmazza, ezért a kerekítés nem módosítja még egyszer a fizetendőt, és nem
 kell külön számlatételként rögzíteni.
 
+A **Támogatás/túlfizetés** és **Késedelmi kamat** kategóriák egyszerű,
+előjeles összegként rögzíthetők. Ezeknél kizárólag a bruttó összeget kell
+kitölteni; a mennyiség-, egységár-, nettó- és ÁFA-mezők nem alkalmazhatók.
+
 A számlalistában a sorszámmal rendelkező részszámlák típusa például
 `1. részszámla` vagy `2. részszámla` alakban jelenik meg, így az időszakok
 között gyorsabban megtalálható a keresett számla.

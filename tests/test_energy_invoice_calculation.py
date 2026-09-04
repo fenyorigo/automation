@@ -91,6 +91,33 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
             (Decimal("790"), Decimal("0"), Decimal("790")),
         )
 
+    def test_support_and_late_interest_are_plain_gross_amounts(self):
+        for category, amount, expected in (
+            ("support", "-8.4", Decimal("-8")),
+            ("late_interest", "8.4", Decimal("8")),
+        ):
+            with self.subTest(category=category):
+                self.assertEqual(
+                    complete_charge_amounts(
+                        category, None, None, None, None, Decimal(amount),
+                    ),
+                    (None, None, expected),
+                )
+
+    def test_plain_amount_requires_gross_value(self):
+        with self.assertRaises(ValueError):
+            complete_charge_amounts("support", None, None, None, None, None)
+
+    def test_plain_amount_categories_fill_descriptions_without_unit(self):
+        self.assertEqual(
+            complete_charge_metadata("support", "", "MJ"),
+            ("Támogatás, túlfizetés", None),
+        )
+        self.assertEqual(
+            complete_charge_metadata("late_interest", "", "hó"),
+            ("Késedelmi kamat", None),
+        )
+
     def test_explicit_amounts_are_stored_as_whole_forints(self):
         self.assertEqual(
             complete_charge_amounts(
@@ -151,6 +178,8 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
         self.assertIn("settled_energy_offset", template)
         self.assertIn("create_energy_invoice_settled_installment", template)
         self.assertIn("invoice.sequence_no ~ '. részszámla'", template)
+        self.assertIn("option.value = 'late_interest'", template)
+        self.assertIn("category.value === 'support' || category.value === 'late_interest'", template)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,14 @@
 </div></section>
 
 </main><script>
+document.querySelectorAll('select[name="line_category"]').forEach((select) => {
+  if (!select.querySelector('option[value="late_interest"]')) {
+    const option = document.createElement('option');
+    option.value = 'late_interest';
+    option.textContent = 'Késedelmi kamat';
+    select.appendChild(option);
+  }
+});
 const gasConversionPeriods = [
 {% for period in conversion_periods %}{from: '{{ period.valid_from }}', to: '{{ period.valid_to or '' }}', factor: '{{ period.correction_factor }}', heating: '{{ period.heating_value_mj_m3 }}'}{{ ',' if not loop.last }}{% endfor %}
 ];
@@ -83,7 +91,9 @@ document.querySelectorAll('form').forEach((form) => {
       market_energy: 'Versenypiaci költségeket tükröző ár',
       base_fee: 'Háztartási alapdíj',
       settled_energy_offset: 'Részszámlákban elszámolt energiadíj',
-      settled_base_fee_offset: 'Részszámlákban elszámolt alapdíj'
+      settled_base_fee_offset: 'Részszámlákban elszámolt alapdíj',
+      support: 'Támogatás, túlfizetés',
+      late_interest: 'Késedelmi kamat'
     };
     const serviceDescriptions = ['OtthonSOS Komfort', 'OtthonSOS Garancia Médium', 'OtthonSOS Plusz'];
     const replaceDescription = (serviceMode) => {
@@ -106,9 +116,16 @@ document.querySelectorAll('form').forEach((form) => {
       description = replacement;
     };
     const fillCategoryDefaults = () => {
+      if (description.value === descriptions.late_interest) category.value = 'late_interest';
       const serviceMode = category.value === 'service';
+      const simpleAmountMode = category.value === 'support' || category.value === 'late_interest';
       if (serviceMode !== (description.tagName === 'SELECT')) replaceDescription(serviceMode);
-      vatRate.value = serviceMode ? '0' : '27';
+      vatRate.value = simpleAmountMode ? '' : (serviceMode ? '0' : '27');
+      [quantity, quantityUnit, unitPrice, net, vatRate].forEach((input) => {
+        input.disabled = simpleAmountMode;
+        if (simpleAmountMode) input.value = '';
+      });
+      gross.required = simpleAmountMode;
       if (category.value in descriptions) {
         description.value = descriptions[category.value];
         description.readOnly = true;
@@ -120,6 +137,7 @@ document.querySelectorAll('form').forEach((form) => {
       if (category.value === 'settled_energy_offset' || category.value === 'settled_base_fee_offset') quantityUnit.value = '';
     };
     const calculateLine = () => {
+      if (category.value === 'support' || category.value === 'late_interest') return;
       const quantityValue = numberValue(quantity);
       const priceValue = numberValue(unitPrice);
       if (Number.isFinite(quantityValue) && Number.isFinite(priceValue)) {
