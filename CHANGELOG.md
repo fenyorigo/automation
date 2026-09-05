@@ -20,7 +20,9 @@ helyi dátumok.
   valamint helyiség szerint szűrhető.
 - A kezdőlap aktuális külső referencia-kártyája már nem jelöl minden forrást
   szolgáltatói mérésnek: a lábléc külön saját Zigbee-mérést, webes időjárási
-  adatot, helyi szenzort vagy kézi mérést jelez.
+  adatot, helyi szenzort vagy kézi mérést jelez. Saját Zigbee/ESP32 forrásnál
+  a külön összesítő rejtve marad, mert az eszközkártya már tartalmazza az
+  értéket; webes tartalékforrásnál továbbra is megjelenik.
 
 - Az Energia számlalistája energiatípus, nyitott/lezárt ciklus és év szerint
   szűrhető; alapból a nyitott gázciklus látszik. A korábbi óraállások külön

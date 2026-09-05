@@ -1,6 +1,10 @@
 import unittest
 
-from dashboard import OUTDOOR_MEASUREMENT_LABELS, OUTDOOR_SOURCE_BADGES
+from dashboard import (
+    OUTDOOR_MEASUREMENT_LABELS,
+    OUTDOOR_SOURCE_BADGES,
+    outdoor_summary_source,
+)
 
 
 class OutdoorSourceLabelTest(unittest.TestCase):
@@ -18,6 +22,14 @@ class OutdoorSourceLabelTest(unittest.TestCase):
             OUTDOOR_MEASUREMENT_LABELS["wunderground_pws"],
             "Webes időjárási adat",
         )
+
+    def test_device_backed_source_does_not_get_duplicate_summary_card(self) -> None:
+        zigbee = {"source_type": "zigbee2mqtt", "display_name": "Kültéri hőmérő"}
+        self.assertIsNone(outdoor_summary_source(zigbee))
+
+    def test_web_fallback_keeps_summary_card(self) -> None:
+        open_meteo = {"source_type": "open_meteo", "display_name": "Open-Meteo"}
+        self.assertIs(outdoor_summary_source(open_meteo), open_meteo)
 
 
 if __name__ == "__main__":

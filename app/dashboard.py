@@ -1176,6 +1176,15 @@ def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]
         connection.close()
 
 
+def outdoor_summary_source(
+    selected: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Hide a reference card when the selected source already has a device card."""
+    if selected is None or selected.get("source_type") in {"zigbee2mqtt", "esp32"}:
+        return None
+    return selected
+
+
 def load_ventilation_log(
     status_filter: str = "active", room_filter: int | None = None
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -1837,6 +1846,7 @@ def dashboard() -> str:
     attempt_origin = session.get("dashboard_poll_origin", "all")
     devices, attempts = load_dashboard(attempt_origin)
     _, outdoor_temperature = load_outdoor_sources()
+    outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")
     if requested_view in {"device", "room"}:
         session["dashboard_view"] = requested_view
@@ -1882,9 +1892,9 @@ def dashboard() -> str:
         view_mode=view_mode,
         temperature_mode=temperature_mode,
         has_active_esp32=has_active_esp32,
-        outdoor_temperature=outdoor_temperature,
+        outdoor_temperature=outdoor_summary,
         device_groups=load_device_groups(devices),
-        room_groups=load_room_groups(devices, outdoor_temperature),
+        room_groups=load_room_groups(devices, outdoor_summary),
     )
 
 

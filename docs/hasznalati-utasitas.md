@@ -121,8 +121,10 @@ megjelenik. A kártya forrásbélyege megkülönbözteti a saját **Zigbee eszk�
 mérését a **Webes lekérdezés** útján érkező időjárási adattól; helyi ESP32 és
 kézi forrás esetén ezek saját jelölése látható. A kártya alsó felirata is a
 forráshoz igazodik: például **Saját Zigbee-mérés** vagy **Webes időjárási adat**.
-Ez az aktuális külső referencia összesítője; ugyanaz a fizikai Zigbee hőmérő a
-Zigbee eszközök között külön nyilvántartási kártyán is megjelenik.
+Saját, friss Zigbee vagy ESP32 kültéri eszköznél nem készül külön összesítő
+kártya, mert az eszköz saját nyilvántartási kártyája már mutatja az értéket.
+Külön külső referencia-kártya akkor jelenik meg, ha a saját forrás nem friss,
+és a kiválasztás például az Open-Meteo webes tartalékforrásra vált.
 
 ## 3. Mérési előzmények
 
