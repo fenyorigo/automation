@@ -85,13 +85,13 @@
       <section class="device-type-group outdoor-summary-group" data-device-source="outdoor">
         <div class="device-type-heading">
           <div><p class="eyebrow">Zónán kívüli</p><h2>Külső hőmérséklet</h2></div>
-          <span>aktuális szolgáltatói adat</span>
+          <span>aktuális külső referencia</span>
         </div>
         <div class="device-grid">
           <article class="outdoor-temperature-card" data-polling-enabled="true">
             <div class="card-heading"><div><p class="source">Külső hőmérséklet</p><h3>{{ outdoor_temperature.display_name }}</h3></div><span class="badge outdoor-source">{{ outdoor_temperature.source_badge }}</span></div>
             <div class="temperature"><span class="temperature-value">{{ outdoor_temperature.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
-            <footer class="card-footer"><span>Szolgáltatói mérés</span><time>{{ outdoor_temperature.observed_at|local_time }}</time></footer>
+            <footer class="card-footer"><span>{{ outdoor_temperature.measurement_label }}</span><time>{{ outdoor_temperature.observed_at|local_time }}</time></footer>
           </article>
         </div>
       </section>
@@ -124,12 +124,12 @@
         {% for zone in room_groups %}
         <section class="zone-block" data-zone-block><div class="zone-heading"><p class="eyebrow">Zóna</p><h2>{{ zone.name }}</h2></div>
           {% for room in zone.rooms %}
-          <section class="room-block" data-room-id="{{ room.room_id if room.room_id is not none else 'unassigned' }}"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{% if room.outdoor_temperature %}aktuális szolgáltatói adat{% else %}{{ room.devices|length }} eszköz{% endif %}</span></div>
+          <section class="room-block" data-room-id="{{ room.room_id if room.room_id is not none else 'unassigned' }}"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{% if room.outdoor_temperature %}aktuális külső referencia{% else %}{{ room.devices|length }} eszköz{% endif %}</span></div>
             {% if room.outdoor_temperature %}
             <article class="outdoor-temperature-card">
               <div class="card-heading"><div><p class="source">Külső hőmérséklet</p><h3>{{ room.outdoor_temperature.display_name }}</h3></div><span class="badge outdoor-source">{{ room.outdoor_temperature.source_badge }}</span></div>
               <div class="temperature"><span class="temperature-value">{{ room.outdoor_temperature.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
-              <footer class="card-footer"><span>Szolgáltatói mérés</span><time>{{ room.outdoor_temperature.observed_at|local_time }}</time></footer>
+              <footer class="card-footer"><span>{{ room.outdoor_temperature.measurement_label }}</span><time>{{ room.outdoor_temperature.observed_at|local_time }}</time></footer>
             </article>
             {% endif %}
             {% if room.devices %}<div class="device-grid">{% for device in room.devices %}{% include '_device_card.html' %}{% endfor %}</div>

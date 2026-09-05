@@ -18,6 +18,9 @@ helyi dátumok.
   forrásoldali időbélyeggel bekerül a közös `sensor_readings` táblába.
 - A szellőztetési napló alapból csak az aktív eseményeket mutatja, és állapot,
   valamint helyiség szerint szűrhető.
+- A kezdőlap aktuális külső referencia-kártyája már nem jelöl minden forrást
+  szolgáltatói mérésnek: a lábléc külön saját Zigbee-mérést, webes időjárási
+  adatot, helyi szenzort vagy kézi mérést jelez.
 
 - Az Energia számlalistája energiatípus, nyitott/lezárt ciklus és év szerint
   szűrhető; alapból a nyitott gázciklus látszik. A korábbi óraállások külön

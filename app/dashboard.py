@@ -127,6 +127,14 @@ OUTDOOR_SOURCE_BADGES = {
     "manual": "Kézi adat",
 }
 
+OUTDOOR_MEASUREMENT_LABELS = {
+    "zigbee2mqtt": "Saját Zigbee-mérés",
+    "open_meteo": "Webes időjárási adat",
+    "wunderground_pws": "Webes időjárási adat",
+    "esp32": "Saját szenzormérés",
+    "manual": "Kézi mérés",
+}
+
 
 def shelly_freshness_status(
     last_measurement_at: datetime | None,
@@ -1158,6 +1166,9 @@ def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]
         if selected is not None:
             selected["source_badge"] = OUTDOOR_SOURCE_BADGES.get(
                 selected["source_type"], selected["source_type"]
+            )
+            selected["measurement_label"] = OUTDOOR_MEASUREMENT_LABELS.get(
+                selected["source_type"], "Külső mérés"
             )
         return sources, selected
     finally:
