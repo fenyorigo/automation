@@ -520,7 +520,9 @@ megjelenik egy toll ikon. Erre kattintva javítható a mérő, a mérés időpon
 az óraállás és a megjegyzés. A **Javítás mentése** után az érintett, valamint
 az időrendben utána következő sor fogyasztási különbsége automatikusan az új
 értékből számolódik. A javított rekord forrása kézi bejegyzésre változik, és a
-rendszer eltárolja a javítást végző felhasználót.
+rendszer eltárolja a javítást végző felhasználót. A toll megnyitásakor a lista
+automatikusan a rekord valódi energiatípusára és évére vált, így a szerkesztő
+akkor is látható marad, ha előtte más szűrés volt kiválasztva.
 
 ### Kézi hőmérsékletmérések
 

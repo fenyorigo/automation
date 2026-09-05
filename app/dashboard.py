@@ -1481,6 +1481,31 @@ def load_energy_readings(
         connection.close()
 
 
+def load_energy_reading_edit_context(reading_id: int) -> tuple[str, int] | None:
+    """Return the list filters which make a selected reading visible for editing."""
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT m.energy_type,r.recorded_at
+               FROM energy_meter_readings r
+               JOIN energy_meters m ON m.id=r.meter_id
+               WHERE r.id=?""",
+            (reading_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        recorded_at = row[1]
+        if not isinstance(recorded_at, datetime):
+            raise TypeError("Unexpected energy reading timestamp")
+        local_year = recorded_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE).year
+        return str(row[0]), local_year
+    finally:
+        cursor.close()
+        connection.close()
+
+
 def load_energy_billing(
     invoice_energy_type: str = "gas",
     invoice_cycle_status: str = "open",
@@ -1974,6 +1999,10 @@ def poll_status():
 
 @app.get("/energy")
 def energy() -> str:
+    try:
+        edit_reading_id = int(request.args["edit"])
+    except (KeyError, TypeError, ValueError):
+        edit_reading_id = None
     reading_energy_type = request.args.get("reading_energy", "none")
     if reading_energy_type not in {"none", "all", "electricity", "gas"}:
         reading_energy_type = "none"
@@ -1981,6 +2010,11 @@ def energy() -> str:
         reading_year = int(request.args["reading_year"]) if request.args.get("reading_year") else None
     except ValueError:
         reading_year = None
+    if edit_reading_id is not None:
+        edit_context = load_energy_reading_edit_context(edit_reading_id)
+        if edit_context is None:
+            abort(404)
+        reading_energy_type, reading_year = edit_context
     invoice_energy_type = request.args.get("invoice_energy", "gas")
     if invoice_energy_type not in {"all", "electricity", "gas"}:
         invoice_energy_type = "gas"
@@ -1992,10 +2026,6 @@ def energy() -> str:
     except ValueError:
         invoice_year = None
     meters, readings = load_energy_readings(reading_energy_type, reading_year)
-    try:
-        edit_reading_id = int(request.args["edit"])
-    except (KeyError, TypeError, ValueError):
-        edit_reading_id = None
     edit_ids = {}
     for key in ("edit_invoice", "edit_consumption", "edit_charge", "edit_settled_installment"):
         try:
@@ -2249,9 +2279,14 @@ def edit_energy_reading(reading_id: int):
         )
         if cursor.fetchone() is None:
             abort(404)
-        cursor.execute("SELECT 1 FROM energy_meters WHERE id=? AND is_active=1", (meter_id,))
-        if cursor.fetchone() is None:
+        cursor.execute(
+            "SELECT energy_type FROM energy_meters WHERE id=? AND is_active=1",
+            (meter_id,),
+        )
+        meter_row = cursor.fetchone()
+        if meter_row is None:
             abort(400)
+        reading_energy_type = str(meter_row[0])
         cursor.execute(
             """UPDATE energy_meter_readings
                SET meter_id=?,recorded_at=?,reading_value=?,entry_source='manual',
@@ -2265,7 +2300,15 @@ def edit_energy_reading(reading_id: int):
         session["energy_notice"] = {
             "kind": "warning", "message": "Ehhez a mérőhöz erre az időpontra már van óraállás."
         }
-        return redirect(url_for("energy", edit=reading_id) + f"#reading-{reading_id}")
+        reading_year = datetime.fromisoformat(recorded_at).replace(tzinfo=UTC).astimezone(
+            LOCAL_TIMEZONE
+        ).year
+        return redirect(
+            url_for(
+                "energy", edit=reading_id, reading_energy=reading_energy_type,
+                reading_year=reading_year,
+            ) + f"#reading-{reading_id}"
+        )
     except Exception:
         connection.rollback()
         raise
@@ -2273,7 +2316,14 @@ def edit_energy_reading(reading_id: int):
         cursor.close()
         connection.close()
     session["energy_notice"] = {"kind": "success", "message": "Az óraállást javítottuk."}
-    return redirect(url_for("energy") + f"#reading-{reading_id}")
+    reading_year = datetime.fromisoformat(recorded_at).replace(tzinfo=UTC).astimezone(
+        LOCAL_TIMEZONE
+    ).year
+    return redirect(
+        url_for(
+            "energy", reading_energy=reading_energy_type, reading_year=reading_year,
+        ) + f"#reading-{reading_id}"
+    )
 
 
 def required_form_date(name: str) -> date:

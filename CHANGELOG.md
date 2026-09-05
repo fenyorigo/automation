@@ -5,6 +5,12 @@ helyi dátumok.
 
 ## Kiadatlan
 
+### Javítások
+
+- Az óraállás ceruza ikonja ismét megnyitja a szerkesztőt: az Energia oldal a
+  kiválasztott rekord valódi energiatípusát és évét automatikusan láthatóvá
+  teszi, és mentés után is ennél a sornál marad.
+
 ### Új funkciók
 
 - A közös poller új `network_device` illesztője DNS-, ICMP-ping- és HTTP-
