@@ -246,6 +246,8 @@ A `VENTILATION_LONG_THRESHOLD_MINUTES` (alapból 5 perc) választja szét a röv
 `VENTILATION_CONTACT_CLOSE_DELAY_SECONDS` (alapból 30 másodperc) a zárási
 késleltetés. Mindkettő szerkeszthető a Globális beállítások oldalon; a Zigbee
 collector legfeljebb öt másodpercen belül újraolvassa őket a `.env` fájlból.
+A `/ventilation` lista alapból az aktív eseményekre szűr; a felületen az összes
+esemény és külön helyiség is kiválasztható.
 
 ## Kézi klímahasználati napló
 

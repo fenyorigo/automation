@@ -16,6 +16,8 @@ helyi dátumok.
   megőrzi eredetét, de átadható az érzékelő alapú automatikus lezárásnak.
 - A Zigbee `contact` állapot első ismert értéke és minden valódi változása
   forrásoldali időbélyeggel bekerül a közös `sensor_readings` táblába.
+- A szellőztetési napló alapból csak az aktív eseményeket mutatja, és állapot,
+  valamint helyiség szerint szűrhető.
 
 - Az Energia számlalistája energiatípus, nyitott/lezárt ciklus és év szerint
   szűrhető; alapból a nyitott gázciklus látszik. A korábbi óraállások külön

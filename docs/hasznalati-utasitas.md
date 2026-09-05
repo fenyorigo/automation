@@ -579,6 +579,10 @@ napló a lezárt eseményt az esemény kezdetekor érvényes, alapból 5 perces 
 alapján **Rövid** vagy **Hosszú** címkével mutatja. Mindkét határ a Globális
 beállítások oldalon módosítható.
 
+A napló alapnézete csak az aktív szellőztetéseket mutatja. Az **Állapot**
+legördülőben a **Mind** értékkel a lezárt események is megjeleníthetők, a
+**Helyiség** legördülővel pedig egyetlen szobára szűkíthető a lista.
+
 ## 12. Klíma
 
 Ez az oldal tényleges eszközvezérlést, programozott futást, eseménynaplót és

@@ -1165,7 +1165,9 @@ def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]
         connection.close()
 
 
-def load_ventilation_log() -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def load_ventilation_log(
+    status_filter: str = "active", room_filter: int | None = None
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     connection = connect_database()
     cursor = connection.cursor()
     try:
@@ -1176,8 +1178,16 @@ def load_ventilation_log() -> tuple[list[dict[str, Any]], list[dict[str, Any]], 
                ORDER BY priority,display_name"""
         )
         sources = rows_as_dicts(cursor)
+        filters: list[str] = []
+        parameters: list[Any] = []
+        if status_filter == "active":
+            filters.append("v.ended_at IS NULL")
+        if room_filter is not None:
+            filters.append("v.room_id=?")
+            parameters.append(room_filter)
+        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
         cursor.execute(
-            """SELECT v.id,v.room_id,r.name AS room_name,v.started_at,v.ended_at,
+            f"""SELECT v.id,v.room_id,r.name AS room_name,v.started_at,v.ended_at,
                       v.started_outdoor_temperature_c,
                       ss.display_name AS started_source_name,
                       v.ended_outdoor_temperature_c,
@@ -1195,7 +1205,9 @@ def load_ventilation_log() -> tuple[list[dict[str, Any]], list[dict[str, Any]], 
                LEFT JOIN app_users u ON u.id=v.created_by
                LEFT JOIN devices sd ON sd.id=v.started_by_device_id
                LEFT JOIN devices ed ON ed.id=v.ended_by_device_id
-               ORDER BY v.started_at DESC,v.id DESC LIMIT 100"""
+               {where_clause}
+               ORDER BY v.started_at DESC,v.id DESC LIMIT 100""",
+            tuple(parameters),
         )
         return rooms, sources, rows_as_dicts(cursor)
     finally:
@@ -3616,10 +3628,15 @@ def create_deterministic_report():
 
 @app.get("/ventilation")
 def ventilation() -> str:
-    rooms, sources, events = load_ventilation_log()
+    status_filter = request.args.get("status", "active")
+    if status_filter not in {"active", "all"}:
+        status_filter = "active"
+    room_filter = request.args.get("room", type=int)
+    rooms, sources, events = load_ventilation_log(status_filter, room_filter)
     _, selected_outdoor = load_outdoor_sources()
     return render_template(
         "ventilation.html", rooms=rooms, sources=sources, events=events,
+        status_filter=status_filter, room_filter=room_filter,
         selected_outdoor=selected_outdoor,
         now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
         notice=session.pop("ventilation_notice", None),
