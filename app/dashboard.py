@@ -101,6 +101,7 @@ SOURCE_LABELS = {
     "linux_system": "Linux rendszer",
     "zigbee2mqtt": "Zigbee2MQTT",
     "shelly_mqtt": "Shelly MQTT",
+    "network_device": "Hálózati felügyelet",
 }
 
 DEVICE_GROUPS = (
@@ -112,6 +113,7 @@ DEVICE_GROUPS = (
     ("linux_system", "Linux szerverek"),
     ("zigbee2mqtt", "Zigbee eszközök"),
     ("shelly_mqtt", "Shelly MQTT hőmérők"),
+    ("network_device", "Hálózati eszközök"),
 )
 
 COMPUTHERM_LOCATION = {
@@ -715,7 +717,7 @@ def sync_device_config(values: dict[str, Any]) -> None:
             None,
         )
         if entry is None:
-            if source_system not in {"esp32", "tasmota", "linux_system"}:
+            if source_system not in {"esp32", "tasmota", "linux_system", "network_device"}:
                 return
             entry = {"source_system": source_system, "device_id": source_device_id}
             document["devices"].append(entry)
@@ -835,7 +837,7 @@ def load_dashboard(
         cursor.execute(
             """
             SELECT
-              d.id, d.name, d.hostname, d.source_system, d.device_type,d.model,
+              d.id, d.name, d.hostname, d.expected_ip, d.source_system, d.device_type,d.model,
               dt.name AS device_type_name,
               d.room_id, r.name AS room_name, z.name AS zone_name,
               d.managed_manually, d.manual_power_state, d.access_mode,
@@ -934,6 +936,7 @@ def load_dashboard(
                 ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1) AS load_15m,
               ds.power, ds.mode, ds.target_temperature_c, ds.fan_speed,
               ds.online AS reported_online, ds.active, ds.observed_at AS state_at,
+              ds.raw_state AS state_raw,
               pa.success AS poll_success, pa.attempted_at AS last_poll_at,
               pa.duration_ms, pa.error_code, pa.error_message
             FROM devices d
@@ -1036,6 +1039,15 @@ def load_dashboard(
             device["online"] = (
                 None if device["is_manual_visual"] else bool(device["poll_success"])
             )
+        if device["source_system"] == "network_device":
+            try:
+                network_state = json.loads(device["state_raw"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                network_state = {}
+            device["network_ping_ok"] = network_state.get("ping_ok")
+            device["network_http_ok"] = network_state.get("http_ok")
+            device["network_http_status"] = network_state.get("http_status")
+            device["network_resolved_ip"] = network_state.get("resolved_ip")
         device["measurement_is_stale"] = bool(
             device["measurement_at"]
             and datetime.now(UTC).replace(tzinfo=None) - device["measurement_at"]

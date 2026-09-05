@@ -7,6 +7,11 @@ helyi dátumok.
 
 ### Új funkciók
 
+- A közös poller új `network_device` illesztője DNS-, ICMP-ping- és HTTP-
+  ellenőrzéssel felügyeli a helyi hálózati végpontokat. Elsőként a Xerox B235
+  nyomtató került be 10 perces ciklussal és külön eszközkártyával.
+- Új `docs/teendok.md` tartja nyilván a későbbre halasztott kontrollált Zigbee
+  bridge-áramtalanítási próbát és a hozzá kapcsolódó megbízhatósági feladatokat.
 - A Zigbee/Tuya nyitásérzékelők eszközkártyája hőmérséklet helyett a
   `Nyitva`/`Csukva` állapotot és a tamper jelzést mutatja.
 - A helyiséghez rendelt Zigbee/Tuya nyitásérzékelők automatikusan vezetik a

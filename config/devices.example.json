@@ -58,6 +58,15 @@
       "ssh_identity_file": "/var/lib/automation/.ssh/id_ed25519_system_metrics",
       "ssh_known_hosts_file": "/var/lib/automation/.ssh/known_hosts",
       "enabled": true
+    },
+    {
+      "source_system": "network_device",
+      "hostname": "printer.home",
+      "expected_ip": "192.0.2.60",
+      "mac_address": "",
+      "device_id": "printer",
+      "display_name": "Hálózati nyomtató",
+      "enabled": true
     }
   ]
 }

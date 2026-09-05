@@ -170,6 +170,10 @@ MIGRATIONS = (
         "v1_41_contact_ventilation",
         ROOT / "SQL" / "migrations" / "041_home_automation_v1.40_to_v1.41.sql",
     ),
+    (
+        "v1_42_network_printer_monitoring",
+        ROOT / "SQL" / "migrations" / "042_home_automation_v1.41_to_v1.42.sql",
+    ),
 )
 
 

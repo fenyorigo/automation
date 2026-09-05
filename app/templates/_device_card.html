@@ -21,6 +21,10 @@
     <span class="contact-state-label">Állapot</span>
     <strong>{% if device.zigbee_contact_closed is none %}Ismeretlen{% elif device.zigbee_contact_closed %}Csukva{% else %}Nyitva{% endif %}</strong>
   </div>
+  {% elif device.source_system == 'network_device' %}
+  <div class="manual-state {{ 'powered' if device.online else 'stopped' }}">
+    <span class="manual-state-label">Hálózati állapot</span><strong>{{ 'Elérhető' if device.online else 'Nem elérhető' }}</strong>
+  </div>
   {% elif device.source_system == 'tasmota' %}
   <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c if device.temperature_c is not none else '—' }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}"> W</span></div>
   {% else %}
@@ -74,6 +78,13 @@
     <div><dt>Load 1 perc</dt><dd>{{ device.load_1m|round(2) if device.load_1m is not none else '—' }}</dd></div>
     <div><dt>Load 5 perc</dt><dd>{{ device.load_5m|round(2) if device.load_5m is not none else '—' }}</dd></div>
     <div><dt>Load 15 perc</dt><dd>{{ device.load_15m|round(2) if device.load_15m is not none else '—' }}</dd></div>
+  </dl>
+  {% elif device.source_system == 'network_device' %}
+  <dl class="state-grid">
+    <div><dt>Ping</dt><dd>{% if device.network_ping_ok is sameas true %}Válaszol{% elif device.network_ping_ok is sameas false %}Nem válaszol{% else %}—{% endif %}</dd></div>
+    <div><dt>Webfelület</dt><dd>{% if device.network_http_ok is sameas true %}Elérhető{% elif device.network_http_ok is sameas false %}Nem elérhető{% else %}—{% endif %}</dd></div>
+    <div><dt>HTTP</dt><dd>{{ device.network_http_status or '—' }}</dd></div>
+    <div><dt>Feloldott IP</dt><dd>{{ device.network_resolved_ip or device.expected_ip or '—' }}</dd></div>
   </dl>
   {% elif device.source_system not in ['esp32', 'manual'] %}
   <dl class="state-grid">

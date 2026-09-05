@@ -2,9 +2,9 @@
 
 ## Áttekintés
 
-Az alkalmazás egy közös pollingkörben kezeli az ESP32, Computherm és
-ConnectLife eszközöket. Az eszközök elsődleges hálózati címe a hostname; az
-`expected_ip` csak diagnosztikai adat.
+Az alkalmazás egy közös pollingkörben kezeli az ESP32, Computherm, ConnectLife,
+Nous/Tasmota, Linux és általános hálózati eszközöket. Az eszközök elsődleges
+hálózati címe a hostname; az `expected_ip` csak diagnosztikai adat.
 
 A géppel olvasható leltár:
 
@@ -142,6 +142,15 @@ A teljes, normalizált JSON megtekintéséhez hagyjuk el a `--summary` kapcsoló
   `shellyhtg3-` kezdetű első topicszintet fogadja el. A hőmérsékletet,
   páratartalmat, elemszázalékot és elemfeszültséget egymástól független,
   időbélyeges `sensor_readings` sorokként tárolja.
+- Hálózati eszköz: a `network_device` illesztő minden esedékes körben feloldja
+  a hostnevet, egy ICMP-pinget küld és lekéri a `http://<hostname>/` címet.
+  Az eszköz akkor számít elérhetőnek, ha a webfelület 2xx vagy 3xx választ ad;
+  a ping eredménye ettől független diagnosztikai adat. Minden próba időpontja,
+  futási ideje és esetleges hibája a `poll_attempts` táblába kerül, a sikeres
+  állapot részletei pedig a `device_states.raw_state` mezőbe.
+
+Az első ilyen eszköz a Xerox B235 nyomtató: `xeroxb235.home`
+(`192.168.0.2`). Az alapértelmezett lekérdezési időköz 10 perc.
 
 A Shelly H&T Gen3 deep-sleep működése miatt az `/online=false` nem hiba. A
 dashboard a legutóbbi tényleges mérésből számít négylépcsős frissességet:

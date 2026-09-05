@@ -41,6 +41,7 @@ class DeviceConfig:
     mac_address: str
     device_id: str
     enabled: bool = True
+    display_name: str | None = None
     connectlife_name: str | None = None
     auid: str | None = None
     device_type_code: str | None = None
@@ -236,6 +237,69 @@ def poll_tasmota(config: DeviceConfig, timeout: float) -> PollResult:
         return failed(config, "http_unreachable", error)
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
         return failed(config, "invalid_response", error)
+
+
+def poll_network_device(config: DeviceConfig, timeout: float) -> PollResult:
+    """Check a local network endpoint without changing its state."""
+    started = time.monotonic()
+    target = config.hostname
+    try:
+        addresses = {
+            item[4][0]
+            for item in socket.getaddrinfo(target, 80, type=socket.SOCK_STREAM)
+        }
+    except OSError as error:
+        return failed(config, "dns_failed", error)
+    resolved_ip = sorted(addresses)[0] if addresses else None
+
+    ping_timeout = max(1, math.ceil(timeout))
+    try:
+        ping = subprocess.run(
+            ["ping", "-c", "1", "-W", str(ping_timeout), target],
+            capture_output=True,
+            text=True,
+            timeout=timeout + 1,
+            check=False,
+        )
+        ping_ok = ping.returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        ping_ok = False
+
+    url = f"http://{target}/"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            http_status = int(response.status)
+        http_ok = 200 <= http_status < 400
+        if not http_ok:
+            raise ValueError(f"Unexpected HTTP status: {http_status}")
+    except urllib.error.HTTPError as error:
+        return failed(config, "http_status", f"HTTP {error.code}")
+    except urllib.error.URLError as error:
+        return failed(config, "http_unreachable", error)
+    except (OSError, ValueError) as error:
+        return failed(config, "http_failed", error)
+
+    return PollResult(
+        source_system=config.source_system,
+        device_id=config.device_id,
+        hostname=config.hostname,
+        observed_at=utc_now(),
+        success=True,
+        duration_ms=round((time.monotonic() - started) * 1000),
+        state={
+            "online": True,
+            "active": True,
+            "raw": {
+                "resolved_ip": resolved_ip,
+                "expected_ip": config.expected_ip or None,
+                "ping_ok": ping_ok,
+                "http_ok": http_ok,
+                "http_status": http_status,
+                "url": url,
+            },
+        },
+        identity={"resolved_ip": resolved_ip, "mac_address": config.mac_address},
+    )
 
 
 def _read_temperature_file(path: Path) -> float | None:
@@ -476,7 +540,9 @@ async def poll_connectlife(configs: list[DeviceConfig]) -> list[PollResult]:
 async def poll_all(devices: list[DeviceConfig], timeout: float) -> list[PollResult]:
     local = [
         item for item in devices
-        if item.source_system in {"esp32", "computherm", "tasmota", "linux_system"}
+        if item.source_system in {
+            "esp32", "computherm", "tasmota", "linux_system", "network_device"
+        }
     ]
     connectlife = [item for item in devices if item.source_system == "connectlife"]
     tasks = []
@@ -486,6 +552,7 @@ async def poll_all(devices: list[DeviceConfig], timeout: float) -> list[PollResu
             "computherm": poll_computherm,
             "tasmota": poll_tasmota,
             "linux_system": poll_linux_system,
+            "network_device": poll_network_device,
         }[item.source_system]
         tasks.append(asyncio.to_thread(function, item, timeout))
     local_results = await asyncio.gather(*tasks)

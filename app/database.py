@@ -18,6 +18,7 @@ DEVICE_METADATA = {
     "connectlife": ("climate", "Hisense ConnectLife"),
     "tasmota": ("power_meter", "NOUS A1T / Tasmota"),
     "linux_system": ("server", "Linux system"),
+    "network_device": ("printer", "Xerox B235"),
 }
 
 
@@ -154,7 +155,7 @@ class Database:
                 config.hostname,
                 config.expected_ip,
                 config.mac_address,
-                config.connectlife_name or config.device_id,
+                config.display_name or config.connectlife_name or config.device_id,
                 device_type,
                 model,
             ),
@@ -166,7 +167,17 @@ class Database:
         row = cursor.fetchone()
         if row is None:
             raise RuntimeError(f"Device upsert failed for {config.device_id}")
-        return int(row[0])
+        device_id = int(row[0])
+        if config.source_system == "network_device":
+            cursor.execute(
+                """UPDATE devices
+                   SET device_type_id=(SELECT id FROM device_types WHERE code='printer'),
+                       manufacturer_id=(SELECT id FROM manufacturers WHERE code='xerox'),
+                       capability_mode='read_only',access_mode='network',control_enabled=0
+                   WHERE id=?""",
+                (device_id,),
+            )
+        return device_id
 
     @staticmethod
     def _upsert_sensor(

@@ -5,7 +5,7 @@ Current application release: **1.1.0**.
 Local-first home climate and energy monitoring and control for ESP32/DS18B20
 sensors, Zigbee2MQTT-based SONOFF sensors, local-MQTT Shelly H&T Gen3 sensors,
 Computherm thermostats, Hisense appliances through ConnectLife and Nous/Tasmota
-power meters.
+power meters, plus local network endpoints such as the Xerox B235 printer.
 
 The project currently provides:
 
@@ -25,6 +25,7 @@ The project currently provides:
 - event-driven Shelly H&T Gen3 temperature, humidity and battery history over
   the local Mosquitto broker, with deep-sleep-aware freshness;
 - read-only Nous/Tasmota power, voltage and cumulative-energy polling;
+- DNS, ping and HTTP availability monitoring for local network devices;
 - filtered gas/electricity invoice and meter-reading history, with
   effective-dated gas conversion, tariffs and automatic fixed invoice lines;
 - explicit Europe/Budapest display time while retaining UTC database storage;
@@ -57,6 +58,7 @@ Shelly H&T Gen3 MQTT setup and diagnostics are documented in the
 [Shelly MQTT guide](docs/shelly-mqtt.md).
 Nous power-meter setup and voltage calibration are described in the
 [Nous/Tasmota guide](docs/nous-tasmota.md).
+Deferred operational checks are tracked in the [task list](docs/teendok.md).
 The ongoing ESP32/DS18B20 physical-response experiments are recorded in the
 [calibration measurement log](docs/esp32-ds18b20-kalibracios-meresek.md).
 Release history is maintained in [CHANGELOG.md](CHANGELOG.md).
