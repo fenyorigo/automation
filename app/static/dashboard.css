@@ -59,6 +59,7 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .badge.online { background: var(--green-soft); color: var(--green); }
 .badge.offline { background: var(--red-soft); color: var(--red); }
 .badge.warning { background: #fff3bf; color: #7a5a00; }
+.badge.contact-stale { background: #fff3bf; color: #171717; }
 .badge.delayed { background: #ffe1bf; color: #9a4d00; }
 .badge.manual { background: #ece6d5; color: #765c20; }
 .badge.mqtt-sensor-type { margin-top: 8px; background: #e9e4f5; color: #59438a; }

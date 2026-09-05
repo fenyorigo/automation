@@ -173,6 +173,24 @@ az első ismert állapotnál és valódi állapotváltáskor kerül a `sensor_re
 táblába. Értéke `0 = nyitva`, `1 = csukva`; az `observed_at` a Zigbee2MQTT
 `last_seen` időpontja, ennek hiányában az MQTT-üzenet fogadási ideje.
 
+A nyitásérzékelőknél a régi `last_seen` önmagában nem jelent kiesést, mert az
+elemes eszköz változatlan állapotban órákig vagy akár egy napnál tovább sem
+feltétlenül küld üzenetet. Két óránál régebbi állapotjelzés ezért sárga,
+**Régi állapotjelzés** bélyeget kap, miközben az utolsó ismert nyitva/csukva
+érték megmarad. Piros, **Zigbee eszköz nem elérhető** állapotot csak a
+Zigbee2MQTT explicit `availability=offline` jelzése okoz. Ez a kivétel csak a
+nyitásérzékelőkre vonatkozik; a periodikusan jelentő Zigbee hőmérők meglévő
+frissességi ellenőrzése változatlan.
+
+A Zigbee2MQTT availability-figyelése engedélyezett. Az aktív, hálózati
+táplálású eszközök határa 10 perc, a passzív, elemes eszközöké 2880 perc
+(48 óra). A passzív eszközt a Zigbee2MQTT nem tudja felébreszteni vagy
+megbízhatóan pingelni, ezért az `offline` állapotot az elmaradt jelentésekből,
+késleltetve állapítja meg. A Nous/Tuya nyitásérzékelők jelenlegi reporting
+beállítása `min=3600`, `max=65000` másodperc és `change=0`; a 48 órás határ
+több mint két maximális jelentési ciklust hagy. A reporting-beállítás nem
+helyettesíti a tényleges események és a Zigbee2MQTT availability figyelését.
+
 Az idősoros mentés bevezetésekor a collector a cache aktuális értékeiből
 eszközönként és tulajdonságonként egy kezdőpontot készít. A cache nem tartalmaz
 előzményeket, ezért a bevezetés előtti teljes Zigbee-idősor nem rekonstruálható.

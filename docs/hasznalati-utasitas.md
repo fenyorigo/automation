@@ -126,6 +126,16 @@ kártya, mert az eszköz saját nyilvántartási kártyája már mutatja az ért
 Külön külső referencia-kártya akkor jelenik meg, ha a saját forrás nem friss,
 és a kiválasztás például az Open-Meteo webes tartalékforrásra vált.
 
+A Zigbee nyitásérzékelők változatlan ajtó- vagy ablakállapotnál hosszú ideig
+nem kötelesek új üzenetet küldeni. A két óránál régebbi utolsó állapot ezért
+sárga, fekete betűs **Régi állapotjelzés**, nem pedig piros offline hiba. A
+piros **Zigbee eszköz nem elérhető** bélyeg azt jelenti, hogy maga a
+Zigbee2MQTT jelölte az eszközt `offline` állapotúnak. A sárga kártyán látható
+nyitva/csukva érték az utolsó ismert állapot. Az elemes eszközöknél ez az
+offline döntés 48 óra üzenetcsend után születik meg; addig a régi állapot
+sárga marad. Ez késleltetett kiesésészlelés, mert az alvó érzékelő nem
+pingelhető megbízhatóan.
+
 ## 3. Mérési előzmények
 
 Ezen az oldalon a hőmérsékleti idősorok vizsgálhatók.

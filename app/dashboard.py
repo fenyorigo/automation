@@ -155,6 +155,36 @@ def shelly_freshness_status(
         return "delayed", "Jelentés késik", True
     return "offline", "Nincs friss mérés", False
 
+
+def zigbee_freshness_status(
+    device_type: str,
+    zigbee_type: str | None,
+    availability: str | None,
+    last_message_at: datetime | None,
+    now_utc: datetime | None = None,
+) -> tuple[str, str, bool]:
+    """Separate explicit Zigbee unavailability from normal sleeping contacts."""
+    if str(availability or "").casefold() == "offline":
+        return "offline", "Zigbee eszköz nem elérhető", False
+
+    now = now_utc or datetime.now(UTC).replace(tzinfo=None)
+    freshness_limit = (
+        timedelta(hours=2)
+        if str(zigbee_type or "").casefold() == "enddevice"
+        else timedelta(minutes=2)
+    )
+    fresh = bool(
+        last_message_at
+        and max(now - last_message_at, timedelta(0)) <= freshness_limit
+    )
+    if device_type == "contact_sensor":
+        if fresh:
+            return "online", "Zigbee", True
+        return "warning", "Régi állapotjelzés", True
+    if fresh:
+        return "online", "Zigbee", True
+    return "offline", "Nincs friss Zigbee-adat", False
+
 HISTORY_RANGES = {
     "1h": 1,
     "2h": 2,
@@ -1009,18 +1039,19 @@ def load_dashboard(
         )
         device["is_manual_visual"] = device["access_mode"] == "manual_visual"
         if device["source_system"] == "zigbee2mqtt":
-            freshness_limit = (
-                timedelta(hours=2)
-                if str(device["zigbee_type"] or "").casefold() == "enddevice"
-                else timedelta(minutes=2)
-            )
-            mqtt_fresh = bool(
-                device["mqtt_message_at"]
-                and datetime.now(UTC).replace(tzinfo=None) - device["mqtt_message_at"]
-                <= freshness_limit
-            )
-            device["online"] = (
-                device["zigbee_availability"] != "offline" and mqtt_fresh
+            (
+                device["zigbee_status_class"],
+                device["zigbee_status_label"],
+                device["online"],
+            ) = zigbee_freshness_status(
+                str(device["device_type"]),
+                device["zigbee_type"],
+                device["zigbee_availability"],
+                (
+                    device["zigbee_last_seen"]
+                    if device["device_type"] == "contact_sensor"
+                    else device["mqtt_message_at"]
+                ),
             )
             if device["zigbee_temperature_c"] is not None:
                 device["temperature_c"] = device["zigbee_temperature_c"]

@@ -7,6 +7,11 @@ helyi dátumok.
 
 ### Javítások
 
+- A nyitásérzékelők régi `last_seen` időpontja többé nem jelent piros
+  elérhetetlenséget: sárga, fekete betűs „Régi állapotjelzés” látszik. Piros
+  hibát csak a Zigbee2MQTT explicit `availability=offline` állapota okoz.
+- A Zigbee2MQTT availability-figyelése aktív: a hálózati eszközök 10 perc, az
+  elemes végberendezések 48 óra üzenetcsend után minősülnek offline-nak.
 - Az óraállás ceruza ikonja ismét megnyitja a szerkesztőt: az Energia oldal a
   kiválasztott rekord valódi energiatípusát és évét automatikusan láthatóvá
   teszi, és mentés után is ennél a sornál marad.
