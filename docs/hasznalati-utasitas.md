@@ -562,6 +562,8 @@ Aktív, helyiséghez rendelt Nous/Tuya nyitásérzékelőnél nincs szükség k�
 indításra: az első nyitott jel automatikusan indítja az eseményt. Egy helyiség
 több nyílászárója közös eseményt alkot; amíg bármelyik nyitva van, a
 szellőztetés aktív marad.
+Egy már futó kézi esemény nem vész el és nem alakul át automatikussá: megtartja
+a kezdőadatait, de a hozzárendelt érzékelő a továbbiakban lezárhatja.
 
 ### Lezárás
 

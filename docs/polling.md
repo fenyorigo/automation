@@ -237,6 +237,9 @@ helyiséghez, az első nyitás indít, és csak az utolsó nyílászáró zárá
 le. A csukott jelzést a collector alapból 30 másodpercig visszaellenőrzi. Ha
 közben ismét nyitott állapot érkezik, az esemény folytatódik: így a nyitott és
 bukó állás közötti rövid, kényszerű becsukás nem darabolja fel a naplót.
+Ha a helyiségben már fut kézzel indított esemény, az megőrzi kézi eredetét és
+kezdőadatait, de a rendszer hozzárendeli az érzékelőt, így a tényleges zárás
+attól kezdve automatikusan lezárhatja.
 
 A `VENTILATION_LONG_THRESHOLD_MINUTES` (alapból 5 perc) választja szét a rövid
 és hosszú szellőztetést. A határ eseményenként is eltárolódik. A

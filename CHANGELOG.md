@@ -12,7 +12,8 @@ helyi dátumok.
 - A helyiséghez rendelt Zigbee/Tuya nyitásérzékelők automatikusan vezetik a
   szellőztetési naplót. A késleltetett lezárás egy eseményben tartja a bukó és
   nyitott állás közti, pillanatnyi becsukással járó váltást; a rövid/hosszú
-  határ és a zárási késleltetés globálisan állítható.
+  határ és a zárási késleltetés globálisan állítható. A már futó kézi esemény
+  megőrzi eredetét, de átadható az érzékelő alapú automatikus lezárásnak.
 - A Zigbee `contact` állapot első ismert értéke és minden valódi változása
   forrásoldali időbélyeggel bekerül a közös `sensor_readings` táblába.
 

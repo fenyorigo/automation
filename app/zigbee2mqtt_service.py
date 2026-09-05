@@ -434,7 +434,8 @@ class ZigbeeRepository:
             return
         room_id = int(device[0])
         cursor.execute(
-            "SELECT id,event_origin FROM ventilation_events WHERE open_room_id=? FOR UPDATE",
+            """SELECT id,event_origin,started_by_device_id
+               FROM ventilation_events WHERE open_room_id=? FOR UPDATE""",
             (room_id,),
         )
         event = cursor.fetchone()
@@ -445,6 +446,12 @@ class ZigbeeRepository:
                         """UPDATE ventilation_events
                            SET pending_end_at=NULL,ended_by_device_id=NULL WHERE id=?""",
                         (int(event[0]),),
+                    )
+                elif event[2] is None:
+                    cursor.execute(
+                        """UPDATE ventilation_events
+                           SET started_by_device_id=? WHERE id=?""",
+                        (device_id, int(event[0])),
                     )
                 return
             source_id, temperature = self._selected_outdoor_temperature(cursor)
@@ -461,7 +468,7 @@ class ZigbeeRepository:
                 ),
             )
             return
-        if event is None or event[1] != "zigbee_contact":
+        if event is None or (event[1] != "zigbee_contact" and event[2] is None):
             return
         if self._room_has_open_contact(cursor, room_id, excluded_device_id=device_id):
             return
@@ -494,10 +501,18 @@ class ZigbeeRepository:
                     continue
                 seen_rooms.add(room_id)
                 cursor.execute(
-                    "SELECT 1 FROM ventilation_events WHERE open_room_id=? FOR UPDATE",
+                    """SELECT id,started_by_device_id FROM ventilation_events
+                       WHERE open_room_id=? FOR UPDATE""",
                     (room_id,),
                 )
-                if cursor.fetchone() is not None:
+                existing_event = cursor.fetchone()
+                if existing_event is not None:
+                    if existing_event[1] is None:
+                        cursor.execute(
+                            """UPDATE ventilation_events SET started_by_device_id=?
+                               WHERE id=?""",
+                            (int(device_id), int(existing_event[0])),
+                        )
                     continue
                 cursor.execute(
                     "SELECT MAX(ended_at) FROM ventilation_events WHERE room_id=?",
@@ -527,7 +542,8 @@ class ZigbeeRepository:
             cursor.execute(
                 """UPDATE ventilation_events v
                    SET v.pending_end_at=UTC_TIMESTAMP(3)
-                   WHERE v.ended_at IS NULL AND v.event_origin='zigbee_contact'
+                   WHERE v.ended_at IS NULL
+                     AND (v.event_origin='zigbee_contact' OR v.started_by_device_id IS NOT NULL)
                      AND v.pending_end_at IS NULL
                      AND NOT EXISTS (
                        SELECT 1 FROM devices d
@@ -540,7 +556,8 @@ class ZigbeeRepository:
             cursor.execute(
                 """SELECT id,room_id,started_at,pending_end_at
                    FROM ventilation_events
-                   WHERE ended_at IS NULL AND event_origin='zigbee_contact'
+                   WHERE ended_at IS NULL
+                     AND (event_origin='zigbee_contact' OR started_by_device_id IS NOT NULL)
                      AND pending_end_at IS NOT NULL
                      AND pending_end_at <= UTC_TIMESTAMP(3) - INTERVAL ? SECOND
                    FOR UPDATE""",
