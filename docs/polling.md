@@ -186,10 +186,14 @@ A Zigbee2MQTT availability-figyelése engedélyezett. Az aktív, hálózati
 táplálású eszközök határa 10 perc, a passzív, elemes eszközöké 2880 perc
 (48 óra). A passzív eszközt a Zigbee2MQTT nem tudja felébreszteni vagy
 megbízhatóan pingelni, ezért az `offline` állapotot az elmaradt jelentésekből,
-késleltetve állapítja meg. A Nous/Tuya nyitásérzékelők jelenlegi reporting
-beállítása `min=3600`, `max=65000` másodperc és `change=0`; a 48 órás határ
-több mint két maximális jelentési ciklust hagy. A reporting-beállítás nem
-helyettesíti a tényleges események és a Zigbee2MQTT availability figyelését.
+késleltetve állapítja meg. A Nous/Tuya nyitásérzékelőknél a
+`batteryPercentageRemaining` és `batteryVoltage` attribútumok jelenlegi
+reporting beállítása `min=3600`, `max=65000` másodperc és `change=0`; ezek az
+akkumulátor-jelentések akkor is életjelet adhatnak, ha a `contact` állapot nem
+változik. A 48 órás határ több mint két maximális akkumulátor-jelentési ciklust
+hagy. Ez nem jelenti azt, hogy a nyitva/csukva állapot periodikusan ismétlődik,
+és nem helyettesíti a tényleges események, illetve a Zigbee2MQTT availability
+figyelését.
 
 Az idősoros mentés bevezetésekor a collector a cache aktuális értékeiből
 eszközönként és tulajdonságonként egy kezdőpontot készít. A cache nem tartalmaz

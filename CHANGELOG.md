@@ -12,6 +12,8 @@ helyi dátumok.
   hibát csak a Zigbee2MQTT explicit `availability=offline` állapota okoz.
 - A Zigbee2MQTT availability-figyelése aktív: a hálózati eszközök 10 perc, az
   elemes végberendezések 48 óra üzenetcsend után minősülnek offline-nak.
+  A Tuya érzékelők 65000 másodperces reporting értéke az akkumulátor-
+  attribútumokra vonatkozik, nem a nyitva/csukva állapot ismétlésére.
 - Az óraállás ceruza ikonja ismét megnyitja a szerkesztőt: az Energia oldal a
   kiválasztott rekord valódi energiatípusát és évét automatikusan láthatóvá
   teszi, és mentés után is ennél a sornál marad.

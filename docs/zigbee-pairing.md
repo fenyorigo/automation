@@ -140,8 +140,11 @@ ezért ilyen esetben mindig az adott modell aktuális oldalát kövessük.
 - Az availability-figyelés az aktív eszközöknél 10 perces, az alvó, elemes
   végberendezéseknél 2880 perces (48 órás) határt használ. Az utóbbiaknál ez
   nem aktív ping: az `offline` állapot az elmaradt Zigbee-jelentésekből
-  következik. A Nous/Tuya nyitásérzékelők `max rep interval=65000` másodperces
-  beállításához képest a 48 óra több mint két jelentési ciklusnyi tartalék.
+  következik. A Nous/Tuya nyitásérzékelőknél a
+  `batteryPercentageRemaining` és `batteryVoltage` attribútumokra érvényes
+  `max rep interval=65000` másodperces beállításhoz képest a 48 óra több mint
+  két akkumulátor-jelentési ciklusnyi tartalék. A `contact` állapot ettől még
+  csak tényleges nyitáskor vagy záráskor változhat és jelentődhet.
 
 ## Források
 
