@@ -7,6 +7,7 @@ import os
 import re
 import signal
 import sys
+import threading
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -22,6 +23,8 @@ SOURCE_SYSTEM = "zigbee2mqtt"
 DEFAULT_BASE_TOPIC = "zigbee2mqtt"
 OUTDOOR_SENSOR_MODELS = {"SNZB-02WD"}
 TIME_SERIES_PROPERTIES = {"temperature", "humidity", "battery"}
+EVENT_SERIES_PROPERTIES = {"contact"}
+STORED_SENSOR_PROPERTIES = TIME_SERIES_PROPERTIES | EVENT_SERIES_PROPERTIES
 
 UNIT_NAMES = {
     "%": "percent",
@@ -155,6 +158,19 @@ def time_series_event_id(
 ) -> str:
     timestamp = observed_at.strftime("%Y%m%dT%H%M%S%f")
     return f"{SOURCE_SYSTEM}:{ieee_address}:{property_name}:{timestamp}"
+
+
+def contact_state_changed(previous: Decimal | None, current: Decimal | None) -> bool:
+    """Return true only for an initial or genuine boolean contact-state observation."""
+    return current in {Decimal(0), Decimal(1)} and previous != current
+
+
+def ventilation_long_threshold_seconds() -> int:
+    return int(os.getenv("VENTILATION_LONG_THRESHOLD_MINUTES", "5")) * 60
+
+
+def ventilation_close_delay_seconds() -> int:
+    return int(os.getenv("VENTILATION_CONTACT_CLOSE_DELAY_SECONDS", "30"))
 
 
 class ZigbeeRepository:
@@ -317,25 +333,25 @@ class ZigbeeRepository:
     def _bootstrap_time_series(
         self, cursor: mariadb.Cursor, device_id: int, ieee_address: str
     ) -> None:
-        placeholders = ",".join("?" for _ in TIME_SERIES_PROPERTIES)
+        placeholders = ",".join("?" for _ in STORED_SENSOR_PROPERTIES)
         cursor.execute(
             f"""SELECT property_name,numeric_value,source_observed_at,received_at,
                        raw_payload
                   FROM zigbee2mqtt_property_cache
                  WHERE device_id=? AND property_name IN ({placeholders})""",
-            (device_id, *sorted(TIME_SERIES_PROPERTIES)),
+            (device_id, *sorted(STORED_SENSOR_PROPERTIES)),
         )
         for property_name, value, source_at, received_at, raw_payload in cursor.fetchall():
             if value is None:
                 continue
             raw = raw_payload if isinstance(raw_payload, str) else json_value(raw_payload)
-            self._insert_time_series_measurement(
+            self._insert_sensor_reading(
                 cursor, device_id, ieee_address, str(property_name), Decimal(str(value)),
                 source_at or received_at, raw,
             )
 
     @staticmethod
-    def _insert_time_series_measurement(
+    def _insert_sensor_reading(
         cursor: mariadb.Cursor,
         device_id: int,
         ieee_address: str,
@@ -344,7 +360,7 @@ class ZigbeeRepository:
         observed_at: datetime,
         raw_payload: str,
     ) -> None:
-        if property_name not in TIME_SERIES_PROPERTIES:
+        if property_name not in STORED_SENSOR_PROPERTIES:
             return
         cursor.execute(
             """SELECT id FROM sensors
@@ -367,6 +383,197 @@ class ZigbeeRepository:
             ),
         )
 
+    @staticmethod
+    def _selected_outdoor_temperature(
+        cursor: mariadb.Cursor,
+    ) -> tuple[int | None, Decimal | None]:
+        cursor.execute(
+            """SELECT s.id,o.temperature_c
+               FROM outdoor_temperature_sources s
+               JOIN outdoor_temperature_observations o ON o.id=(
+                 SELECT o2.id FROM outdoor_temperature_observations o2
+                 WHERE o2.source_id=s.id
+                 ORDER BY o2.observed_at DESC,o2.id DESC LIMIT 1
+               )
+               WHERE s.is_active=1
+                 AND o.observed_at >= UTC_TIMESTAMP(3) - INTERVAL s.max_age_minutes MINUTE
+               ORDER BY s.priority LIMIT 1"""
+        )
+        row = cursor.fetchone()
+        return (int(row[0]), Decimal(str(row[1]))) if row else (None, None)
+
+    @staticmethod
+    def _room_has_open_contact(
+        cursor: mariadb.Cursor, room_id: int, excluded_device_id: int | None = None
+    ) -> bool:
+        sql = """SELECT 1
+                   FROM devices d
+                   JOIN zigbee2mqtt_devices z ON z.device_id=d.id
+                   JOIN zigbee2mqtt_property_cache c
+                     ON c.device_id=d.id AND c.property_name='contact'
+                  WHERE d.room_id=? AND d.is_active=1
+                    AND d.device_type='contact_sensor' AND c.numeric_value=0"""
+        params: list[Any] = [room_id]
+        if excluded_device_id is not None:
+            sql += " AND d.id<>?"
+            params.append(excluded_device_id)
+        sql += " LIMIT 1"
+        cursor.execute(sql, tuple(params))
+        return cursor.fetchone() is not None
+
+    def _apply_contact_transition(
+        self,
+        cursor: mariadb.Cursor,
+        device_id: int,
+        contact_value: Decimal,
+        observed_at: datetime,
+    ) -> None:
+        cursor.execute("SELECT room_id FROM devices WHERE id=? AND is_active=1", (device_id,))
+        device = cursor.fetchone()
+        if device is None or device[0] is None:
+            return
+        room_id = int(device[0])
+        cursor.execute(
+            "SELECT id,event_origin FROM ventilation_events WHERE open_room_id=? FOR UPDATE",
+            (room_id,),
+        )
+        event = cursor.fetchone()
+        if contact_value == 0:
+            if event is not None:
+                if event[1] == "zigbee_contact":
+                    cursor.execute(
+                        """UPDATE ventilation_events
+                           SET pending_end_at=NULL,ended_by_device_id=NULL WHERE id=?""",
+                        (int(event[0]),),
+                    )
+                return
+            source_id, temperature = self._selected_outdoor_temperature(cursor)
+            cursor.execute(
+                """INSERT INTO ventilation_events
+                   (room_id,started_at,ended_at,open_room_id,
+                    started_outdoor_temperature_c,started_outdoor_source_id,
+                    note,created_by,event_origin,started_by_device_id,
+                    long_threshold_seconds,pending_end_at)
+                   VALUES (?,?,NULL,?,?,?,NULL,NULL,'zigbee_contact',?,?,NULL)""",
+                (
+                    room_id, observed_at, room_id, temperature, source_id,
+                    device_id, ventilation_long_threshold_seconds(),
+                ),
+            )
+            return
+        if event is None or event[1] != "zigbee_contact":
+            return
+        if self._room_has_open_contact(cursor, room_id, excluded_device_id=device_id):
+            return
+        cursor.execute(
+            """UPDATE ventilation_events
+               SET pending_end_at=?,ended_by_device_id=? WHERE id=?""",
+            (observed_at, device_id, int(event[0])),
+        )
+
+    def bootstrap_contact_ventilations(self) -> int:
+        """Create missing room events from persisted open contact states at startup."""
+        cursor = self.connection.cursor()
+        created = 0
+        try:
+            cursor.execute(
+                """SELECT d.id,d.room_id,
+                          COALESCE(c.source_observed_at,c.received_at) AS observed_at
+                   FROM devices d
+                   JOIN zigbee2mqtt_devices z ON z.device_id=d.id
+                   JOIN zigbee2mqtt_property_cache c
+                     ON c.device_id=d.id AND c.property_name='contact'
+                   WHERE d.is_active=1 AND d.device_type='contact_sensor'
+                     AND d.room_id IS NOT NULL AND c.numeric_value=0
+                   ORDER BY observed_at,d.id"""
+            )
+            seen_rooms: set[int] = set()
+            for device_id, room_id, observed_at in cursor.fetchall():
+                room_id = int(room_id)
+                if room_id in seen_rooms:
+                    continue
+                seen_rooms.add(room_id)
+                cursor.execute(
+                    "SELECT 1 FROM ventilation_events WHERE open_room_id=? FOR UPDATE",
+                    (room_id,),
+                )
+                if cursor.fetchone() is not None:
+                    continue
+                cursor.execute(
+                    "SELECT MAX(ended_at) FROM ventilation_events WHERE room_id=?",
+                    (room_id,),
+                )
+                last_end = cursor.fetchone()[0]
+                started_at = observed_at or utc_now_naive()
+                if last_end is not None and last_end > started_at:
+                    started_at = last_end
+                self._apply_contact_transition(
+                    cursor, int(device_id), Decimal(0), started_at
+                )
+                created += 1
+            self.connection.commit()
+            return created
+        except Exception:
+            self.connection.rollback()
+            raise
+        finally:
+            cursor.close()
+
+    def reconcile_pending_ventilations(self) -> int:
+        """Finish debounced automatic events once all room contacts remain closed."""
+        cursor = self.connection.cursor()
+        closed = 0
+        try:
+            cursor.execute(
+                """UPDATE ventilation_events v
+                   SET v.pending_end_at=UTC_TIMESTAMP(3)
+                   WHERE v.ended_at IS NULL AND v.event_origin='zigbee_contact'
+                     AND v.pending_end_at IS NULL
+                     AND NOT EXISTS (
+                       SELECT 1 FROM devices d
+                       JOIN zigbee2mqtt_property_cache c
+                         ON c.device_id=d.id AND c.property_name='contact'
+                       WHERE d.room_id=v.room_id AND d.is_active=1
+                         AND d.device_type='contact_sensor' AND c.numeric_value=0
+                     )"""
+            )
+            cursor.execute(
+                """SELECT id,room_id,started_at,pending_end_at
+                   FROM ventilation_events
+                   WHERE ended_at IS NULL AND event_origin='zigbee_contact'
+                     AND pending_end_at IS NOT NULL
+                     AND pending_end_at <= UTC_TIMESTAMP(3) - INTERVAL ? SECOND
+                   FOR UPDATE""",
+                (ventilation_close_delay_seconds(),),
+            )
+            for event_id, room_id, started_at, pending_end_at in cursor.fetchall():
+                if self._room_has_open_contact(cursor, int(room_id)):
+                    cursor.execute(
+                        "UPDATE ventilation_events SET pending_end_at=NULL WHERE id=?",
+                        (int(event_id),),
+                    )
+                    continue
+                source_id, temperature = self._selected_outdoor_temperature(cursor)
+                cursor.execute(
+                    """UPDATE ventilation_events
+                       SET ended_at=IF(? > started_at,?,DATE_ADD(started_at,INTERVAL 1 MICROSECOND)),
+                           open_room_id=NULL,pending_end_at=NULL,
+                           ended_outdoor_temperature_c=?,ended_outdoor_source_id=?
+                       WHERE id=?""",
+                    (
+                        pending_end_at, pending_end_at, temperature, source_id,
+                        int(event_id),
+                    ),
+                )
+                closed += 1
+            self.connection.commit()
+            return closed
+        except Exception:
+            self.connection.rollback()
+            raise
+        finally:
+            cursor.close()
+
     def cache_state(
         self, friendly_name: str, topic: str, payload: dict[str, Any], retained: bool
     ) -> bool:
@@ -387,6 +594,16 @@ class ZigbeeRepository:
             ieee_address = str(row[1])
             model_id = row[2]
             raw = json_value(payload)
+            previous_contact: Decimal | None = None
+            if "contact" in payload:
+                cursor.execute(
+                    """SELECT numeric_value FROM zigbee2mqtt_property_cache
+                       WHERE device_id=? AND property_name='contact'""",
+                    (device_id,),
+                )
+                previous_row = cursor.fetchone()
+                if previous_row is not None and previous_row[0] is not None:
+                    previous_contact = Decimal(str(previous_row[0]))
             for property_name, value in payload.items():
                 numeric_value, text_value = scalar_values(value)
                 cursor.execute(
@@ -405,9 +622,20 @@ class ZigbeeRepository:
                     ),
                 )
                 if property_name in TIME_SERIES_PROPERTIES and numeric_value is not None:
-                    self._insert_time_series_measurement(
+                    self._insert_sensor_reading(
                         cursor, device_id, ieee_address, property_name, numeric_value,
                         source_observed_at or received_at, raw,
+                    )
+                if property_name == "contact" and contact_state_changed(
+                    previous_contact, numeric_value
+                ):
+                    observed_at = source_observed_at or received_at
+                    self._insert_sensor_reading(
+                        cursor, device_id, ieee_address, property_name, numeric_value,
+                        observed_at, raw,
+                    )
+                    self._apply_contact_transition(
+                        cursor, device_id, numeric_value, observed_at
                     )
             cursor.execute(
                 "UPDATE zigbee2mqtt_devices SET last_message_at=? WHERE device_id=?",
@@ -546,6 +774,9 @@ def main() -> int:
     load_dotenv(ROOT / ".env")
     base_topic = os.getenv("ZIGBEE2MQTT_BASE_TOPIC", DEFAULT_BASE_TOPIC).rstrip("/")
     repository = ZigbeeRepository()
+    bootstrapped = repository.bootstrap_contact_ventilations()
+    if bootstrapped:
+        print(f"Bootstrapped {bootstrapped} open contact ventilation event(s)", flush=True)
     handler = ZigbeeMessageHandler(repository, base_topic)
     client = mqtt.Client(
         mqtt.CallbackAPIVersion.VERSION2,
@@ -585,6 +816,37 @@ def main() -> int:
         keepalive=60,
     )
 
+    reconcile_stop = threading.Event()
+
+    def reconcile_loop() -> None:
+        reconcile_repository = ZigbeeRepository()
+        try:
+            while not reconcile_stop.wait(5):
+                try:
+                    load_dotenv(ROOT / ".env", override=True)
+                    count = reconcile_repository.reconcile_pending_ventilations()
+                    bootstrapped = reconcile_repository.bootstrap_contact_ventilations()
+                    if count:
+                        print(f"Closed {count} debounced ventilation event(s)", flush=True)
+                    if bootstrapped:
+                        print(
+                            f"Bootstrapped {bootstrapped} open contact ventilation event(s)",
+                            flush=True,
+                        )
+                except Exception as error:
+                    print(
+                        f"Ventilation reconciliation error: {type(error).__name__}: {error}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+        finally:
+            reconcile_repository.close()
+
+    reconcile_thread = threading.Thread(
+        target=reconcile_loop, name="ventilation-reconciler", daemon=True
+    )
+    reconcile_thread.start()
+
     def stop(_signum: int, _frame: Any) -> None:
         client.disconnect()
 
@@ -593,6 +855,8 @@ def main() -> int:
     try:
         client.loop_forever(retry_first_connection=True)
     finally:
+        reconcile_stop.set()
+        reconcile_thread.join(timeout=10)
         repository.close()
     return 0
 

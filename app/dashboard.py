@@ -1182,12 +1182,19 @@ def load_ventilation_log() -> tuple[list[dict[str, Any]], list[dict[str, Any]], 
                       ss.display_name AS started_source_name,
                       v.ended_outdoor_temperature_c,
                       es.display_name AS ended_source_name,v.note,
-                      u.username AS created_by_name
+                      u.username AS created_by_name,v.event_origin,
+                      sd.name AS started_by_device_name,
+                      ed.name AS ended_by_device_name,
+                      v.long_threshold_seconds,v.pending_end_at,
+                      TIMESTAMPDIFF(SECOND,v.started_at,
+                        COALESCE(v.ended_at,UTC_TIMESTAMP(3))) AS duration_seconds
                FROM ventilation_events v
                JOIN rooms r ON r.id=v.room_id
                LEFT JOIN outdoor_temperature_sources ss ON ss.id=v.started_outdoor_source_id
                LEFT JOIN outdoor_temperature_sources es ON es.id=v.ended_outdoor_source_id
-               JOIN app_users u ON u.id=v.created_by
+               LEFT JOIN app_users u ON u.id=v.created_by
+               LEFT JOIN devices sd ON sd.id=v.started_by_device_id
+               LEFT JOIN devices ed ON ed.id=v.ended_by_device_id
                ORDER BY v.started_at DESC,v.id DESC LIMIT 100"""
         )
         return rooms, sources, rows_as_dicts(cursor)
@@ -3660,10 +3667,12 @@ def create_ventilation():
         temperature = float(outdoor[1]) if outdoor else None
         cursor.execute(
             """INSERT INTO ventilation_events
-               (room_id,started_at,ended_at,open_room_id,started_outdoor_temperature_c,started_outdoor_source_id,note,created_by)
-               VALUES (?,?,?,?,?,?,?,?)""",
+               (room_id,started_at,ended_at,open_room_id,started_outdoor_temperature_c,
+                started_outdoor_source_id,note,created_by,event_origin,long_threshold_seconds)
+               VALUES (?,?,?,?,?,?,?,?,'manual',?)""",
             (room_id, started_at, None, room_id, temperature, source_id,
-             request.form.get("note", "").strip() or None, g.current_user["id"]),
+             request.form.get("note", "").strip() or None, g.current_user["id"],
+             int(os.getenv("VENTILATION_LONG_THRESHOLD_MINUTES", "5")) * 60),
         )
         connection.commit()
     except Exception:
@@ -3707,7 +3716,7 @@ def finish_ventilation(event_id: int):
         source_id = int(outdoor[0]) if outdoor else None
         temperature = float(outdoor[1]) if outdoor else None
         cursor.execute(
-            """UPDATE ventilation_events SET ended_at=?,open_room_id=NULL,
+            """UPDATE ventilation_events SET ended_at=?,open_room_id=NULL,pending_end_at=NULL,
                ended_outdoor_temperature_c=?,ended_outdoor_source_id=? WHERE id=?""",
             (ended_at, temperature, source_id, event_id),
         )

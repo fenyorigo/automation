@@ -10,6 +10,15 @@ from app import global_settings
 
 
 class ReloadEnvironmentTest(unittest.TestCase):
+    def test_ventilation_timing_defaults_are_ui_managed(self) -> None:
+        settings = {item.key: item for item in global_settings.SETTINGS}
+        self.assertEqual(settings["VENTILATION_LONG_THRESHOLD_MINUTES"].default, "5")
+        self.assertEqual(
+            settings["VENTILATION_CONTACT_CLOSE_DELAY_SECONDS"].default, "30"
+        )
+        self.assertTrue(settings["VENTILATION_LONG_THRESHOLD_MINUTES"].validator("15"))
+        self.assertFalse(settings["VENTILATION_CONTACT_CLOSE_DELAY_SECONDS"].validator("2"))
+
     def test_reload_updates_values_and_reports_restart_keys(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             env_path = Path(directory) / ".env"

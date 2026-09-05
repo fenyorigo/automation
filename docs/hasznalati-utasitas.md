@@ -78,8 +78,9 @@ A kártyák az eszköz típusától függően mutathatják:
 - a Zigbee és Shelly hőmérők páratartalmát, elemállapotát, típusát és utolsó
   tényleges mérési idejét.
 - a Zigbee nyitásérzékelőknél hőmérséklet helyett a **Nyitva/Csukva** állapotot
-  és a tamper jelzést. A Zigbee2MQTT `contact=true` értéke csukott,
-  a `contact=false` nyitott állapotot jelent.
+és a tamper jelzést. A Zigbee2MQTT `contact=true` értéke csukott,
+  a `contact=false` nyitott állapotot jelent. Az állapotváltások időbélyeggel
+  megmaradnak, és a helyiség szellőztetési naplóját automatikusan vezérlik.
 
 A Shelly H&T Gen3 elemes, deep-sleep eszköz; az `/online=false` nem offline
 hiba. A kártya a legutóbbi tényleges mérés kora alapján fokozatosan változik:
@@ -299,7 +300,8 @@ megfelelő eszközéhez vezet.
 A szerkesztők a főmenü **Globális beállítások** oldalán módosíthatják a
 rendszerszintű működési értékeket: az alap lekérdezési időt, az időkorlátot,
 az adatmentés paramétereit, a gnuplot elérési útját, valamint az
-előkészített hűtési és fűtési biztonsági határokat. A mentés közvetlenül, de
+előkészített hűtési és fűtési biztonsági határokat, továbbá a rövid/hosszú
+szellőztetés és a nyílászáró-zárás késleltetésének határát. A mentés közvetlenül, de
 atomikusan frissíti a projekt `.env` fájlját, és a kezelt értékeket azonnal
 átvezeti a dashboard futó folyamatába. A periodikus poller minden ciklusban
 újraolvassa a `.env` fájlt.
@@ -556,12 +558,24 @@ A szellőztetés két külön műveletből áll.
 A rendszer automatikusan eltárolja az akkor aktív külső hőmérsékleti forrást és
 annak értékét. Egy helyiséghez egyszerre csak egy aktív szellőztetés tartozhat.
 
+Aktív, helyiséghez rendelt Nous/Tuya nyitásérzékelőnél nincs szükség kézi
+indításra: az első nyitott jel automatikusan indítja az eseményt. Egy helyiség
+több nyílászárója közös eseményt alkot; amíg bármelyik nyitva van, a
+szellőztetés aktív marad.
+
 ### Lezárás
 
 Az aktív eseménynél add meg a befejezési időt, majd nyomd meg a
 **Szellőztetés lezárása** gombot. A lezáráskor a rendszer ismét eltárolja az
 akkori külső forrást és hőmérsékletet. Így a mérési görbéken látható gyors
 változások később értelmezhetők.
+
+Automatikus eseménynél a csukott jel alapból csak 30 másodperc után zárja le a
+szellőztetést. Ha addig ismét nyitott jel érkezik, a lezárás elmarad. Ez kezeli
+a bukó és nyitott állás közti átváltáskor fellépő pillanatnyi becsukást. A
+napló a lezárt eseményt az esemény kezdetekor érvényes, alapból 5 perces határ
+alapján **Rövid** vagy **Hosszú** címkével mutatja. Mindkét határ a Globális
+beállítások oldalon módosítható.
 
 ## 12. Klíma
 

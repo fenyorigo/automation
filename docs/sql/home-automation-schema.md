@@ -52,6 +52,8 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `device_states`: eszközállapotok, például üzemmód, be-/kikapcsolás, ventilátorsebesség
 - `deterministic_reports`: kereshető, időbélyegzett automatikus jelentések,
   verziózott szabályokkal, bizonyítékokkal és az eredeti ténycsomaggal
+- `ventilation_events`: kézzel vagy Zigbee nyitásérzékelővel indított,
+  helyiségszintű szellőztetések időintervalluma és külsőhőmérséklet-pillanatképei
 
 ## MQTT-források
 
@@ -69,6 +71,16 @@ A Zigbee2MQTT minden tulajdonságának legutolsó értéke a
 `zigbee2mqtt_property_cache` táblában marad. A temperature, humidity és battery
 tulajdonságok ezen felül a közös `sensor_readings` idősorba is bekerülnek. A
 forrásoldali `last_seen` idő és az IEEE-cím stabil eseményazonosítást biztosít.
+A bináris `contact` csatorna ugyanebbe a táblába csak induló állapotként és
+valódi változáskor kerül (`0 = nyitva`, `1 = csukva`), nem ismétlődő
+pillanatképként.
+
+A `ventilation_events.event_origin` elkülöníti a `manual` és a
+`zigbee_contact` eredetet. Automatikus eseménynél a kezdő és lezáró eszköz is
+hivatkozható, a `pending_end_at` a még visszaellenőrzés alatt álló csukást
+jegyzi. A `long_threshold_seconds` az esemény létrejöttekor érvényes rövid/hosszú
+határt őrzi, ezért a globális alapérték későbbi módosítása nem osztályozza át a
+történeti eseményeket.
 
 ## Kalibrált és cselekedeti hőmérséklet
 

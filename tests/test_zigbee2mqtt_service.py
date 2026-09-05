@@ -1,9 +1,11 @@
 import json
 import unittest
 from datetime import UTC
+from decimal import Decimal
 
 from zigbee2mqtt_service import (
     ZigbeeMessageHandler,
+    contact_state_changed,
     inferred_device_type,
     is_outdoor_temperature_sensor,
     parse_last_seen,
@@ -145,6 +147,12 @@ class ZigbeeDiscoveryTest(unittest.TestCase):
         second = time_series_event_id(PLUG["ieee_address"], "temperature", observed)
         self.assertEqual(first, second)
         self.assertIn(":temperature:", first)
+
+    def test_contact_history_only_accepts_initial_or_changed_boolean_state(self) -> None:
+        self.assertTrue(contact_state_changed(None, Decimal(0)))
+        self.assertTrue(contact_state_changed(Decimal(0), Decimal(1)))
+        self.assertFalse(contact_state_changed(Decimal(1), Decimal(1)))
+        self.assertFalse(contact_state_changed(None, Decimal(2)))
 
 
 if __name__ == "__main__":

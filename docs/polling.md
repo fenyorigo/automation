@@ -159,6 +159,11 @@ megmaradnak. Az eseményazonosító a fizikai IEEE-címből, tulajdonságból é
 forrásoldali `last_seen` időből készül, ezért retained vagy ismételt üzenet nem
 duplázza ugyanazt a mintát.
 
+A nyitásérzékelők `contact` értéke nem periodikus pillanatképként, hanem csak
+az első ismert állapotnál és valódi állapotváltáskor kerül a `sensor_readings`
+táblába. Értéke `0 = nyitva`, `1 = csukva`; az `observed_at` a Zigbee2MQTT
+`last_seen` időpontja, ennek hiányában az MQTT-üzenet fogadási ideje.
+
 Az idősoros mentés bevezetésekor a collector a cache aktuális értékeiből
 eszközönként és tulajdonságonként egy kezdőpontot készít. A cache nem tartalmaz
 előzményeket, ezért a bevezetés előtti teljes Zigbee-idősor nem rekonstruálható.
@@ -225,6 +230,19 @@ egyszerre legfeljebb egy aktív szellőztetés lehet. Az indításkor a rendszer
 aktív, friss külső források prioritása alapján automatikusan rögzíti a forrást
 és a külső hőmérsékletet; ezeket nem kell kézzel kiválasztani. Az időpontok az
 adatbázisban UTC-ben tárolódnak, az UI helyi időben jeleníti meg őket.
+
+A helyiséghez rendelt aktív Zigbee/Nous nyitásérzékelő nyitása automatikusan
+elindítja ugyanezt a szellőztetési eseményt. Ha több érzékelő tartozik egy
+helyiséghez, az első nyitás indít, és csak az utolsó nyílászáró zárása zárhatja
+le. A csukott jelzést a collector alapból 30 másodpercig visszaellenőrzi. Ha
+közben ismét nyitott állapot érkezik, az esemény folytatódik: így a nyitott és
+bukó állás közötti rövid, kényszerű becsukás nem darabolja fel a naplót.
+
+A `VENTILATION_LONG_THRESHOLD_MINUTES` (alapból 5 perc) választja szét a rövid
+és hosszú szellőztetést. A határ eseményenként is eltárolódik. A
+`VENTILATION_CONTACT_CLOSE_DELAY_SECONDS` (alapból 30 másodperc) a zárási
+késleltetés. Mindkettő szerkeszthető a Globális beállítások oldalon; a Zigbee
+collector legfeljebb öt másodpercen belül újraolvassa őket a `.env` fájlból.
 
 ## Kézi klímahasználati napló
 
