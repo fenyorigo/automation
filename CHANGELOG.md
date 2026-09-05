@@ -12,6 +12,9 @@ helyi dátumok.
   nyomtató került be 10 perces ciklussal és külön eszközkártyával.
 - Új `docs/teendok.md` tartja nyilván a későbbre halasztott kontrollált Zigbee
   bridge-áramtalanítási próbát és a hozzá kapcsolódó megbízhatósági feladatokat.
+- Új Zigbee célzott újracsatlakoztatási útmutató készült a SONOFF és Nous/Tuya
+  végberendezésekhez, a térkép/LQI korlátaival és biztonságos hibaelhárítási
+  sorrenddel.
 - A Zigbee/Tuya nyitásérzékelők eszközkártyája hőmérséklet helyett a
   `Nyitva`/`Csukva` állapotot és a tamper jelzést mutatja.
 - A helyiséghez rendelt Zigbee/Tuya nyitásérzékelők automatikusan vezetik a
