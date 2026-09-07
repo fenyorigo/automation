@@ -7,6 +7,13 @@ helyi dátumok.
 
 ### Javítások
 
+- A Zigbee2MQTT systemd drop-inja 3 percre emeli a leállási határt, mert a
+  TCP-s Z-Stack koordinátor mentése a jelenlegi hálózaton mérve közel 97
+  másodperc. Ezzel a korábbi 90 másodperces timeout nem szakítja félbe a
+  zigbee-herdsman szabályos leállását; végső időtúllépéskor coredump sem készül.
+- Dokumentáltuk a Zigbee2MQTT ismert `write after end` leállási hibáját: a TCP
+  socket késői `Port closed` naplózása a már lezárt Winston transportot éri.
+  A hibás kilépési kódot szándékosan nem fedjük el systemd-beállítással.
 - A nyitásérzékelők régi `last_seen` időpontja többé nem jelent piros
   elérhetetlenséget: sárga, fekete betűs „Régi állapotjelzés” látszik. Piros
   hibát csak a Zigbee2MQTT explicit `availability=offline` állapota okoz.

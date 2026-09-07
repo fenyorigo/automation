@@ -146,9 +146,38 @@ ezért ilyen esetben mindig az adott modell aktuális oldalát kövessük.
   két akkumulátor-jelentési ciklusnyi tartalék. A `contact` állapot ettől még
   csak tényleges nyitáskor vagy záráskor változhat és jelentődhet.
 
+## Kontrollált bridge-próba, 2026-09-07
+
+A Zigbee2MQTT szabályos leállítása után a SONOFF/Tasmota bridge rövid
+áramtalanítást kapott. A `192.168.0.48:8888` port visszatérése után a
+Zigbee2MQTT első próbálkozásra elindult, mind a 20 korábban párosított eszközt
+betöltötte. A `Tuya erkélyajtó` és a `Tuya dolgozó ablak` párosítás és
+gombnyomás nélkül is elküldte a következő nyitás- és záráseseményt. A négy
+állapotváltozás bekerült a `sensor_readings` táblába; a dolgozói szellőztetés
+az első nyitáskor indult, és csak a második érzékelő bezárásakor zárult le.
+
+A próba közben azonosított 90 másodperces leállási hiba oka nem a systemd, az
+MQTT vagy a TCP socket bezárása volt. A zigbee-herdsman leállításkor kötelező
+koordinátor-backupot készít; ennek külön MQTT-n indított kontrollmérése a
+jelenlegi hálózaton 96,745 másodpercig tartott. A
+`deploy/systemd/zigbee2mqtt.service.d/timeout.conf` ezért 3 percre emeli a
+leállási határt. A hosszabb határ a koordinátormentés és a Zigbee-adatbázis
+konzisztenciáját védi; a műveletet nem szabad rövidebb kényszerített leállással
+helyettesíteni. Az ellenőrző leállások 95–96 másodperc alatt befejeződtek.
+
+A szabályos leállás végén jelenleg ismert upstream naplózási versenyhelyzet is
+látható: a TCP socket késői `Port closed` eseménye a már lezárt Winston
+transportba próbál írni, és `NodeError: write after end` hibával `1/FAILURE`
+kilépést okoz. Ez a mentés elkészülte, a zigbee-herdsman leállása és a socket
+bezárása után történik; az ezt követő indítás sikeres. A kilépési kódot nem
+vesszük fel a systemd `SuccessExitStatus` értékei közé, mert ugyanaz az `1`
+valódi futási hibát is jelenthet, amelynél szükséges a `Restart=on-failure`.
+Az upstream javítás megjelenéséig ezt külön teendőként követjük.
+
 ## Források
 
 - [Zigbee2MQTT – Allowing devices to join](https://www.zigbee2mqtt.io/guide/usage/pairing_devices.html)
 - [Zigbee2MQTT – Zigbee network](https://www.zigbee2mqtt.io/advanced/zigbee/01_zigbee_network.html)
 - [Zigbee2MQTT – FAQ](https://www.zigbee2mqtt.io/guide/faq/)
 - [Zigbee2MQTT – MQTT topics and messages](https://www.zigbee2mqtt.io/guide/usage/mqtt_topics_and_messages.html)
+- [Zigbee2MQTT #31377 – `write after end` hiba](https://github.com/Koenkk/zigbee2mqtt/issues/31377)
