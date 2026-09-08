@@ -39,6 +39,29 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
             ("OtthonSOS Garancia Médium", "hó"),
         )
 
+    def test_electricity_categories_fill_names_and_kwh_unit(self):
+        self.assertEqual(
+            complete_charge_metadata("discounted_energy", "", None, "electricity"),
+            ("ESZ Lakossági A1 kedvezményes árszabás ára", "kWh"),
+        )
+        self.assertEqual(
+            complete_charge_metadata("transmission_fee", "", None, "electricity"),
+            ('Átviteli forgalmi díj "A1"', "kWh"),
+        )
+        self.assertEqual(
+            complete_charge_metadata("settled_network_fee_offset", "", "kWh", "electricity"),
+            ("Részszámlákban elszámolt rendszerhasználati díjak", None),
+        )
+
+    def test_electricity_base_fee_preserves_controlled_meter_description(self):
+        self.assertEqual(
+            complete_charge_metadata(
+                "base_fee", "Használaton kívüli vezérelt mérő alapdíja", None,
+                "electricity",
+            ),
+            ("Használaton kívüli vezérelt mérő alapdíja", "hó"),
+        )
+
     def test_historic_service_preserves_otthonsos_plusz(self):
         self.assertEqual(
             complete_charge_metadata("service", "OtthonSOS Plusz", None),
@@ -191,6 +214,10 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
         self.assertIn("energyTariffPeriods", template)
         self.assertIn("Ne jelenjenek meg", template)
         self.assertIn("Automatikus számlatételek", template)
+        self.assertIn('name="billed_consumption"', template)
+        self.assertIn("network_usage_fee", template)
+        self.assertIn("settled_network_fee_offset", template)
+        self.assertIn("provider_customer_id", template)
 
 
 if __name__ == "__main__":

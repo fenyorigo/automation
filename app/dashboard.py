@@ -1617,7 +1617,10 @@ def load_energy_billing(
             )
             invoice["consumption_rows"] = rows_as_dicts(cursor)
             for consumption in invoice["consumption_rows"]:
-                consumption["heat_quantity_kwh"] = mj_to_kwh(consumption["heat_quantity_mj"])
+                consumption["heat_quantity_kwh"] = (
+                    mj_to_kwh(consumption["heat_quantity_mj"])
+                    if consumption["heat_quantity_mj"] is not None else None
+                )
             cursor.execute(
                 """SELECT * FROM energy_invoice_charge_lines
                    WHERE invoice_id=? ORDER BY sort_order,id""", (invoice["id"],)
@@ -2394,13 +2397,13 @@ def complete_gas_consumption_values(
 def installment_cumulative_assignments(
     rows: list[tuple[int, int, Decimal]],
 ) -> dict[int, Decimal | None]:
-    """Return the running billed volume on each installment's final detail row."""
+    """Return the running billed consumption on each installment's final detail row."""
     cumulative = Decimal("0")
     assignments: dict[int, Decimal | None] = {}
     for _invoice_id, invoice_rows in groupby(rows, key=lambda row: row[0]):
         details = list(invoice_rows)
         cumulative += sum((row[2] for row in details), Decimal("0"))
-        for _row_invoice_id, consumption_id, _billed_m3 in details:
+        for _row_invoice_id, consumption_id, _billed_consumption in details:
             assignments[consumption_id] = None
         assignments[details[-1][1]] = cumulative
     return assignments
@@ -2413,7 +2416,7 @@ def recalculate_installment_cumulative_consumption(
     if billing_cycle_id is None:
         return
     cursor.execute(
-        """SELECT i.id,c.id,c.billed_consumption_m3
+        """SELECT i.id,c.id,c.billed_consumption
            FROM energy_invoices i
            JOIN energy_invoice_consumption c ON c.invoice_id=i.id
            WHERE i.billing_cycle_id=? AND i.invoice_type='installment'
@@ -2425,7 +2428,7 @@ def recalculate_installment_cumulative_consumption(
     for consumption_id, cumulative in assignments.items():
         cursor.execute(
             """UPDATE energy_invoice_consumption
-               SET installment_volume_since_settlement_m3=? WHERE id=?""",
+               SET installment_consumption_since_settlement=? WHERE id=?""",
             (cumulative, consumption_id),
         )
 
@@ -2565,7 +2568,13 @@ def gas_conversion_defaults_for_invoice(
 def active_tariff_price(
     cursor: mariadb.Cursor, meter_id: int, category: str, effective_at: date
 ) -> Decimal | None:
-    tier = {"discounted_energy": "discounted", "market_energy": "market"}.get(category)
+    tier = {
+        "discounted_energy": "discounted",
+        "market_energy": "market",
+        "network_usage_fee": "network_combined",
+        "transmission_fee": "transmission",
+        "distribution_fee": "distribution",
+    }.get(category)
     if tier is None:
         return None
     cursor.execute(
@@ -2590,6 +2599,24 @@ def tariff_default_for_invoice(
         if invoice is None:
             abort(404)
         return active_tariff_price(cursor, invoice[0], category, effective_at or invoice[1])
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def energy_type_for_invoice(invoice_id: int) -> str:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT m.energy_type FROM energy_invoices i
+               JOIN energy_meters m ON m.id=i.meter_id WHERE i.id=?""",
+            (invoice_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            abort(404)
+        return str(row[0])
     finally:
         cursor.close()
         connection.close()
@@ -2647,6 +2674,18 @@ CHARGE_DESCRIPTION_DEFAULTS = {
     "support": "Támogatás, túlfizetés",
     "late_interest": "Késedelmi kamat",
 }
+ELECTRICITY_CHARGE_DESCRIPTION_DEFAULTS = {
+    "discounted_energy": "ESZ Lakossági A1 kedvezményes árszabás ára",
+    "market_energy": "ESZ Lakossági A1 lakossági piaci ár",
+    "base_fee": "Elosztói alapdíj",
+    "network_usage_fee": "Rendszerhasználati-üzemeltetési díj",
+    "transmission_fee": 'Átviteli forgalmi díj "A1"',
+    "distribution_fee": 'Elosztói forgalmi díj "A1"',
+    "settled_energy_offset": "Részszámlákban elszámolt energiadíj",
+    "settled_network_fee_offset": "Részszámlákban elszámolt rendszerhasználati díjak",
+    "support": "Támogatás, túlfizetés",
+    "late_interest": "Késedelmi kamat",
+}
 SERVICE_DESCRIPTION_OPTIONS = (
     "OtthonSOS Komfort",
     "OtthonSOS Garancia Médium",
@@ -2655,16 +2694,24 @@ SERVICE_DESCRIPTION_OPTIONS = (
 
 
 def complete_charge_metadata(
-    category: str, description: str, quantity_unit: str | None
+    category: str, description: str, quantity_unit: str | None, energy_type: str = "gas"
 ) -> tuple[str, str | None]:
-    if category in CHARGE_DESCRIPTION_DEFAULTS:
+    defaults = (
+        ELECTRICITY_CHARGE_DESCRIPTION_DEFAULTS
+        if energy_type == "electricity" else CHARGE_DESCRIPTION_DEFAULTS
+    )
+    if category in defaults:
         if category in {"discounted_energy", "market_energy"}:
-            unit = "MJ"
+            unit = "kWh" if energy_type == "electricity" else "MJ"
+        elif category in {"network_usage_fee", "transmission_fee", "distribution_fee"}:
+            unit = "kWh"
         elif category == "base_fee":
             unit = "hó"
         else:
             unit = None
-        return CHARGE_DESCRIPTION_DEFAULTS[category], unit
+        if energy_type == "electricity" and category == "base_fee" and description:
+            return description, unit
+        return defaults[category], unit
     if category == "service":
         return description or SERVICE_DESCRIPTION_OPTIONS[0], "hó"
     return description, quantity_unit
@@ -2948,7 +2995,11 @@ def create_energy_invoice():
         )
         parameters = (
             int(request.form["meter_id"]), optional_int(request.form.get("billing_cycle_id")),
-            request.form["invoice_number"].strip(), request.form["invoice_type"],
+            request.form["invoice_number"].strip(),
+            request.form.get("provider_name", "").strip() or None,
+            request.form.get("provider_customer_id", "").strip() or None,
+            request.form.get("contract_account_id", "").strip() or None,
+            request.form["invoice_type"],
             optional_int(request.form.get("sequence_no")), start, end,
             optional_form_date("issued_at"), optional_form_date("performance_at"), optional_form_date("due_at"),
             net_amount, vat_amount, gross_amount, rounding_amount, payable_amount,
@@ -2964,16 +3015,17 @@ def create_energy_invoice():
     try:
         cursor.execute(
             """INSERT INTO energy_invoices
-               (meter_id,billing_cycle_id,invoice_number,invoice_type,sequence_no,
+               (meter_id,billing_cycle_id,invoice_number,provider_name,provider_customer_id,
+                contract_account_id,invoice_type,sequence_no,
                 period_start_date,period_end_date,issued_at,performance_at,due_at,
                 net_amount_huf,vat_amount_huf,gross_amount_huf,rounding_amount_huf,payable_amount_huf,
                 account_balance_huf,counterfactual_market_amount_huf,note,recorded_by)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             parameters,
         )
         invoice_id = cursor.lastrowid
         added_defaults = 0
-        if parameters[3] == "installment":
+        if parameters[6] == "installment":
             added_defaults = add_default_invoice_charge_lines(cursor, invoice_id, parameters[0], end)
         connection.commit()
         message = "A számlát rögzítettük."
@@ -3010,7 +3062,11 @@ def edit_energy_invoice(invoice_id: int):
         )
         parameters = (
             int(request.form["meter_id"]), optional_int(request.form.get("billing_cycle_id")),
-            request.form["invoice_number"].strip(), request.form["invoice_type"],
+            request.form["invoice_number"].strip(),
+            request.form.get("provider_name", "").strip() or None,
+            request.form.get("provider_customer_id", "").strip() or None,
+            request.form.get("contract_account_id", "").strip() or None,
+            request.form["invoice_type"],
             optional_int(request.form.get("sequence_no")), start, end,
             optional_form_date("issued_at"), optional_form_date("performance_at"),
             optional_form_date("due_at"), net_amount, vat_amount, gross_amount,
@@ -3036,7 +3092,8 @@ def edit_energy_invoice(invoice_id: int):
             abort(404)
         cursor.execute(
             """UPDATE energy_invoices SET
-               meter_id=?,billing_cycle_id=?,invoice_number=?,invoice_type=?,sequence_no=?,
+               meter_id=?,billing_cycle_id=?,invoice_number=?,provider_name=?,provider_customer_id=?,
+               contract_account_id=?,invoice_type=?,sequence_no=?,
                period_start_date=?,period_end_date=?,issued_at=?,performance_at=?,due_at=?,
                net_amount_huf=?,vat_amount_huf=?,gross_amount_huf=?,rounding_amount_huf=?,payable_amount_huf=?,
                account_balance_huf=?,counterfactual_market_amount_huf=?,note=?,recorded_by=?
@@ -3045,7 +3102,7 @@ def edit_energy_invoice(invoice_id: int):
         affected_cycles: set[int] = set()
         if previous_invoice[1] == "installment" and previous_invoice[0] is not None:
             affected_cycles.add(previous_invoice[0])
-        if parameters[3] == "installment" and parameters[1] is not None:
+        if parameters[6] == "installment" and parameters[1] is not None:
             affected_cycles.add(parameters[1])
         for billing_cycle_id in affected_cycles:
             recalculate_installment_cumulative_consumption(cursor, billing_cycle_id)
@@ -3071,29 +3128,32 @@ def create_energy_invoice_consumption(invoice_id: int):
     try:
         start = required_form_date("period_start_date")
         end = required_form_date("period_end_date")
-        billed_m3 = Decimal(request.form["billed_consumption_m3"].replace(",", "."))
-        correction_input, heating_input = gas_conversion_defaults_for_invoice(
-            invoice_id, start, end,
-            optional_form_decimal("correction_factor"),
-            optional_form_decimal("heating_value_mj_m3"),
-        )
-        correction, corrected_m3, heating_value, heat_quantity = complete_gas_consumption_values(
-            billed_m3,
-            correction_input,
-            heating_input,
-            optional_form_decimal("corrected_consumption_m3"),
-            optional_form_decimal("heat_quantity_mj"),
-        )
+        energy_type = energy_type_for_invoice(invoice_id)
+        quantity_unit = "m3" if energy_type == "gas" else "kWh"
+        billed_consumption = Decimal(request.form["billed_consumption"].replace(",", "."))
+        correction = corrected_consumption = heating_value = heat_quantity = None
+        if energy_type == "gas":
+            correction_input, heating_input = gas_conversion_defaults_for_invoice(
+                invoice_id, start, end,
+                optional_form_decimal("correction_factor"),
+                optional_form_decimal("heating_value_mj_m3"),
+            )
+            correction, corrected_consumption, heating_value, heat_quantity = complete_gas_consumption_values(
+                billed_consumption, correction_input, heating_input,
+                optional_form_decimal("corrected_consumption"),
+                optional_form_decimal("heat_quantity_mj"),
+            )
         parameters = (
-            invoice_id, start, end, optional_form_decimal("provider_start_reading_m3"),
-            optional_form_decimal("provider_end_reading_m3"), request.form.get("reading_method") or None,
-            billed_m3, correction, corrected_m3, heating_value, heat_quantity,
+            invoice_id, start, end, optional_form_decimal("provider_start_reading"),
+            optional_form_decimal("provider_end_reading"), request.form.get("reading_method") or None,
+            billed_consumption, quantity_unit, correction, corrected_consumption, heating_value, heat_quantity,
             optional_form_date("last_settled_reading_date"),
-            optional_form_decimal("last_settled_reading_value_m3"),
-            optional_form_decimal("installment_volume_since_settlement_m3"),
+            optional_form_decimal("last_settled_reading_value"),
+            optional_form_decimal("installment_consumption_since_settlement"),
             request.form.get("note", "").strip() or None,
         )
-        if end < start or any(value < 0 for value in parameters[6:11]):
+        numeric_values = (parameters[3], parameters[4], billed_consumption)
+        if end < start or any(value is not None and value < 0 for value in numeric_values):
             raise ValueError
     except (KeyError, ValueError, InvalidOperation):
         abort(400)
@@ -3110,12 +3170,12 @@ def create_energy_invoice_consumption(invoice_id: int):
             abort(404)
         cursor.execute(
             """INSERT INTO energy_invoice_consumption
-               (invoice_id,period_start_date,period_end_date,provider_start_reading_m3,
-                provider_end_reading_m3,reading_method,billed_consumption_m3,correction_factor,
-                corrected_consumption_m3,heating_value_mj_m3,heat_quantity_mj,
-                last_settled_reading_date,last_settled_reading_value_m3,
-                installment_volume_since_settlement_m3,note)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               (invoice_id,period_start_date,period_end_date,provider_start_reading,
+                provider_end_reading,reading_method,billed_consumption,quantity_unit,
+                correction_factor,corrected_consumption,heating_value_mj_m3,heat_quantity_mj,
+                last_settled_reading_date,last_settled_reading_value,
+                installment_consumption_since_settlement,note)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             parameters,
         )
         if invoice_metadata[0] == "installment":
@@ -3145,27 +3205,32 @@ def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
     try:
         start = required_form_date("period_start_date")
         end = required_form_date("period_end_date")
-        billed_m3 = Decimal(request.form["billed_consumption_m3"].replace(",", "."))
-        correction_input, heating_input = gas_conversion_defaults_for_invoice(
-            invoice_id, start, end,
-            optional_form_decimal("correction_factor"),
-            optional_form_decimal("heating_value_mj_m3"),
-        )
-        correction, corrected_m3, heating_value, heat_quantity = complete_gas_consumption_values(
-            billed_m3, correction_input, heating_input,
-            optional_form_decimal("corrected_consumption_m3"),
-            optional_form_decimal("heat_quantity_mj"),
-        )
+        energy_type = energy_type_for_invoice(invoice_id)
+        quantity_unit = "m3" if energy_type == "gas" else "kWh"
+        billed_consumption = Decimal(request.form["billed_consumption"].replace(",", "."))
+        correction = corrected_consumption = heating_value = heat_quantity = None
+        if energy_type == "gas":
+            correction_input, heating_input = gas_conversion_defaults_for_invoice(
+                invoice_id, start, end,
+                optional_form_decimal("correction_factor"),
+                optional_form_decimal("heating_value_mj_m3"),
+            )
+            correction, corrected_consumption, heating_value, heat_quantity = complete_gas_consumption_values(
+                billed_consumption, correction_input, heating_input,
+                optional_form_decimal("corrected_consumption"),
+                optional_form_decimal("heat_quantity_mj"),
+            )
         parameters = (
-            start, end, optional_form_decimal("provider_start_reading_m3"),
-            optional_form_decimal("provider_end_reading_m3"), request.form.get("reading_method") or None,
-            billed_m3, correction, corrected_m3, heating_value, heat_quantity,
+            start, end, optional_form_decimal("provider_start_reading"),
+            optional_form_decimal("provider_end_reading"), request.form.get("reading_method") or None,
+            billed_consumption, quantity_unit, correction, corrected_consumption, heating_value, heat_quantity,
             optional_form_date("last_settled_reading_date"),
-            optional_form_decimal("last_settled_reading_value_m3"),
-            optional_form_decimal("installment_volume_since_settlement_m3"),
+            optional_form_decimal("last_settled_reading_value"),
+            optional_form_decimal("installment_consumption_since_settlement"),
             request.form.get("note", "").strip() or None, consumption_id, invoice_id,
         )
-        if end < start or any(value < 0 for value in parameters[5:10]):
+        numeric_values = (parameters[2], parameters[3], billed_consumption)
+        if end < start or any(value is not None and value < 0 for value in numeric_values):
             raise ValueError
     except (KeyError, ValueError, InvalidOperation):
         abort(400)
@@ -3184,11 +3249,11 @@ def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
             abort(404)
         cursor.execute(
             """UPDATE energy_invoice_consumption SET
-               period_start_date=?,period_end_date=?,provider_start_reading_m3=?,
-               provider_end_reading_m3=?,reading_method=?,billed_consumption_m3=?,
-               correction_factor=?,corrected_consumption_m3=?,heating_value_mj_m3=?,
-               heat_quantity_mj=?,last_settled_reading_date=?,last_settled_reading_value_m3=?,
-               installment_volume_since_settlement_m3=?,note=?
+               period_start_date=?,period_end_date=?,provider_start_reading=?,
+               provider_end_reading=?,reading_method=?,billed_consumption=?,quantity_unit=?,
+               correction_factor=?,corrected_consumption=?,heating_value_mj_m3=?,
+               heat_quantity_mj=?,last_settled_reading_date=?,last_settled_reading_value=?,
+               installment_consumption_since_settlement=?,note=?
                WHERE id=? AND invoice_id=?""", parameters,
         )
         if invoice_metadata[0] == "installment":
@@ -3218,6 +3283,7 @@ def create_energy_invoice_charge_line(invoice_id: int):
         description, quantity_unit = complete_charge_metadata(
             category, request.form.get("description", "").strip(),
             request.form.get("quantity_unit", "").strip() or None,
+            energy_type_for_invoice(invoice_id),
         )
         net_amount, vat_rate, gross_amount = complete_charge_amounts(
             category, quantity, net_unit_price, optional_form_decimal("net_amount_huf"),
@@ -3260,6 +3326,7 @@ def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
         description, quantity_unit = complete_charge_metadata(
             category, request.form.get("description", "").strip(),
             request.form.get("quantity_unit", "").strip() or None,
+            energy_type_for_invoice(invoice_id),
         )
         net_amount, vat_rate, gross_amount = complete_charge_amounts(
             category, quantity, net_unit_price, optional_form_decimal("net_amount_huf"),

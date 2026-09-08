@@ -484,6 +484,17 @@ A számlalistában a sorszámmal rendelkező részszámlák típusa például
 `1. részszámla` vagy `2. részszámla` alakban jelenik meg, így az időszakok
 között gyorsabban megtalálható a keresett számla.
 
+Villanyszámla rögzítésekor ugyanazt a számlafejet kell használni, de a
+fogyasztási részlet kWh-ban kér induló és záró szolgáltatói mérőállást. Az
+augusztus 1-jén átnyúló számlához több fogyasztási időszak adható. A régi
+összevont rendszerhasználati díj, az új átviteli és elosztói forgalmi díj,
+valamint az elszámolás negatív rendszerhasználati jóváírása külön kategóriából
+választható. A használaton kívüli vezérelt mérőt nem kell mérőként felvenni;
+a számlán szereplő 51 Ft-os bruttó alapdíja külön alapdíjsor.
+
+A részletes, számlaképet követő munkamenetet a
+`docs/villanyszámla-felvitele.md` tartalmazza.
+
 Elszámolószámlán a korábbi részszámlák energiadíj- és alapdíj-jóváírásához a
 két külön elszámolási kategória használható. A számla utolsó oldalán felsorolt
 részszámlák száma és végösszege külön is rögzíthető; az alkalmazás az egyező

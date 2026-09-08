@@ -5,6 +5,20 @@ helyi dátumok.
 
 ## Kiadatlan
 
+### Újdonságok
+
+- A közös energiaszámla-modell már gáz mellett villany fogyasztási részleteket
+  is kezel, kWh-alapú szolgáltatói mérőállással.
+- Új villanyos díjkategóriák készültek az összevont rendszerhasználati,
+  átviteli, elosztói és elszámolási jóváírási tételekhez.
+- A villany kedvezményes, piaci és rendszerhasználati tarifái időben hatályos
+  törzsadatként bekerülnek; az A1 és a használaton kívüli vezérelt mérő
+  alapdíja automatikus számlatételként használható.
+- A számlafej megőrzi a szolgáltatói számlázási rendszert, a
+  felhasználóazonosítót és a szerződéses folyószámlát.
+- Elkészült a villanyszámlák felviteli és ellenőrzési leírása, benne az
+  augusztus 1-jei bontással, az elszámolószámlákkal és az ismert duplumokkal.
+
 ### Javítások
 
 - A Zigbee2MQTT systemd drop-inja 3 percre emeli a leállási határt, mert a

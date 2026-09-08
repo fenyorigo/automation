@@ -37,7 +37,9 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
   automatikusan másolt alapdíj- és szolgáltatássablonok
 - `energy_invoices`: szolgáltatói számlafejek, számlaszintű kerekítés és
   fizetendő összegek
-- `energy_invoice_consumption`: a számlán szereplő becsült vagy tényleges fogyasztási sorok
+- `energy_invoice_consumption`: a számlán szereplő becsült vagy tényleges,
+  `m3` vagy `kWh` egységű fogyasztási sorok; a korrekciós és fűtőértékmezők
+  csak gáznál használatosak
 - `energy_invoice_charge_lines`: a számla energia-, alapdíj-, szolgáltatás- és
   korrekciós tételei, külön `rate`/`exempt` adózási jelöléssel és opcionális
   törzsadat-kapcsolattal
@@ -54,6 +56,18 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
   verziózott szabályokkal, bizonyítékokkal és az eredeti ténycsomaggal
 - `ventilation_events`: kézzel vagy Zigbee nyitásérzékelővel indított,
   helyiségszintű szellőztetések időintervalluma és külsőhőmérséklet-pillanatképei
+
+Az `energy_invoices` opcionálisan a számlán szereplő szolgáltató/számlázási
+rendszer nevét, felhasználóazonosítót és szerződéses folyószámlát is megőrzi.
+Ez visszakereshetővé teszi a 2026. május 31-i villanyszámla-zárás utáni
+számlázási átállást anélkül, hogy a fizikai A1 mérőt lecserélnénk.
+
+A villanyszámlák ugyanazt a számlamodellt használják, mint a gáz. A
+fogyasztási részletek kWh-ban tárolják az A1 mérő szolgáltatói állásait. A
+régi összevont rendszerhasználati díj, az új átviteli és elosztói díj, továbbá
+az elszámolt részszámlák rendszerhasználati jóváírása külön díjkategória. A
+használaton kívüli vezérelt mérő fogyasztási idősor nélkül, kizárólag a
+számlán ténylegesen felszámított alapdíjsorral jelenik meg.
 
 ## MQTT-források
 
