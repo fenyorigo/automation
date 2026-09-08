@@ -5,6 +5,9 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A PDF-ekkel ellenőrzött történeti villanyszámlákhoz idempotens, tranzakciós
+  importáló és utólagos adatbázis-ellenőrzés készült.
+
 ### Újdonságok
 
 - A közös energiaszámla-modell már gáz mellett villany fogyasztási részleteket

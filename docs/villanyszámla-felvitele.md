@@ -144,3 +144,31 @@ Csak egyszer rögzítendő:
 6. Elszámolószámlán a két negatív jóváírás.
 7. Elszámolt részszámlák összekapcsolása.
 8. A számlafej, a díjtételek és a fizetendő összeg végső egyeztetése.
+
+## A történeti számlák egyszeri importja
+
+A 2024.12.17–2026.08.22 közötti, PDF-ekkel ellenőrzött történeti adatsort az
+`app/import_electricity_invoices.py` tölti be. Az adatkészlet 20 egyedi
+számlát, 21 fogyasztási részletet, 109 díjtételt és 16 elszámolt-részszámla
+kapcsolatot tartalmaz. A két ismert duplum nem kerül be másodszor.
+
+Az importáló alapértelmezésben csak az adatkészlet belső összefüggéseit
+ellenőrzi:
+
+```bash
+PYTHONPATH=app .venv/bin/python app/import_electricity_invoices.py
+```
+
+A `--apply` kapcsoló egyetlen tranzakcióban ír. Meglévő célszámla esetén
+megáll, semmit nem töröl és nem ír felül:
+
+```bash
+PYTHONPATH=app .venv/bin/python app/import_electricity_invoices.py --apply
+```
+
+A már betöltött adatok és a gázos fogyasztási sorok változatlansága külön is
+ellenőrizhető:
+
+```bash
+PYTHONPATH=app .venv/bin/python app/import_electricity_invoices.py --verify
+```
