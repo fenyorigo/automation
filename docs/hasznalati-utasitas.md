@@ -336,10 +336,19 @@ nem jelennek meg és nem szerkeszthetők ezen a felületen.
 ### Szervizmód és Computherm-próba
 
 A két szervizkapcsoló alapállapotban kikapcsolt. A **Klímaszerviz folyamatban**
-felfüggeszti a klímás döntési szabályokat; a **Gázkazánszerviz folyamatban** a
+felfüggeszti a klímás döntési szabályokat és az időzített klímaparancsok
+végrehajtását; a **Gázkazánszerviz folyamatban** a
 fűtési szabályokat függeszti fel és megnyitja a védett Computherm-próbát. Aktív
 szervizmódot a kezdőlap piros sávval jelez, ezért a munka után mindig ki kell
 kapcsolni.
+
+A **Szervizteszt** oldalon aktív klímaszerviz mellett bármely Hisense klímához
+hűtési vagy fűtési próba adható meg célhőmérséklettel és ventilátorfokozattal.
+Ez a védett kézi művelet szándékosan figyelmen kívül hagyja a helyiségi és
+kültéri hőmérsékleti határokat, a termosztátigényt és a nyílászárók állapotát.
+A készülék saját, `16–30 °C` közötti beállítási tartománya továbbra is érvényes.
+A parancs előtt és után állapotlekérdezés történik; a kikapcsolás külön gomb.
+Szerviz után a klímaszerviz kapcsolót mindig ki kell kapcsolni.
 
 A kezdőlap **Szervizteszt** menüpontjában az emeleti vagy földszinti Computherm
 külön próbálható. Előbb a Bosch kézi állapotát kell bekapcsoltra állítani, majd

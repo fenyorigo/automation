@@ -18,6 +18,8 @@ FAN_SPEED_VALUES = {
     "quiet": "1",
 }
 FAN_SPEED_CODES = {value: key for key, value in FAN_SPEED_VALUES.items()}
+MODE_VALUES = {"fan": "0", "heat": "1", "cool": "2", "dry": "3", "auto": "4"}
+MODE_CODES = {value: key for key, value in MODE_VALUES.items()}
 
 
 @dataclass
@@ -34,7 +36,7 @@ def state_of(appliance: Any) -> dict[str, Any]:
     return {
         "power": bool(status.get("t_power")),
         "target_temperature_c": status.get("t_temp"),
-        "mode": status.get("t_work_mode"),
+        "mode": MODE_CODES.get(str(status.get("t_work_mode")), str(status.get("t_work_mode"))),
         "fan_speed": (
             "quiet" if str(status.get("t_fan_mute")).lower() in {"1", "true"}
             else FAN_SPEED_CODES.get(str(status.get("t_fan_speed")), str(status.get("t_fan_speed")))
@@ -59,7 +61,8 @@ def find_appliance(appliances: Any, wifi_id: str) -> Any:
 
 async def control_climate(
     wifi_id: str, desired_power: bool, temperature_c: int | None,
-    fan_speed: str | None = None, *, allow_running_update: bool = False,
+    fan_speed: str | None = None, *, mode: str | None = None,
+    allow_running_update: bool = False,
 ) -> ClimateControlResult:
     username = os.getenv("CONNECTLIFE_USERNAME")
     password = os.getenv("CONNECTLIFE_PASSWORD")
@@ -79,12 +82,19 @@ async def control_climate(
 
         properties = {"t_power": "1" if desired_power else "0"}
         if desired_power:
+            if mode is not None and mode not in MODE_VALUES:
+                return ClimateControlResult(
+                    "rejected", preflight, error_code="invalid_mode",
+                    error_message="Érvénytelen klíma-üzemmód.",
+                )
             if fan_speed not in FAN_SPEED_VALUES:
                 return ClimateControlResult(
                     "rejected", preflight, error_code="invalid_fan_speed",
                     error_message="Érvénytelen ventilátorfokozat.",
                 )
             properties["t_temp"] = str(temperature_c)
+            if mode is not None:
+                properties["t_work_mode"] = MODE_VALUES[mode]
             properties["t_fan_speed"] = FAN_SPEED_VALUES[fan_speed]
             properties["t_fan_mute"] = "1" if fan_speed == "quiet" else "0"
         await api.update_appliance(appliance.puid, properties)
@@ -100,7 +110,8 @@ async def control_climate(
                 or float(verified["target_temperature_c"]) == float(temperature_c)
             )
             fan_speed_ok = not desired_power or verified["fan_speed"] == fan_speed
-            if power_ok and temperature_ok and fan_speed_ok:
+            mode_ok = not desired_power or mode is None or verified["mode"] == mode
+            if power_ok and temperature_ok and fan_speed_ok and mode_ok:
                 return ClimateControlResult("verified", preflight, verified)
         return ClimateControlResult(
             "failed", preflight, verified, "verification_failed",

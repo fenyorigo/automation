@@ -1331,7 +1331,7 @@ def load_climate_operation_log() -> tuple[list[dict[str, Any]], list[dict[str, A
         events = rows_as_dicts(cursor)
         cursor.execute(
             """SELECT a.requested_at,a.completed_at,a.requested_power,
-                      a.requested_temperature_c,a.requested_fan_speed,
+                      a.requested_temperature_c,a.requested_fan_speed,a.requested_mode,
                       a.status,a.error_message,
                       d.name AS device_name,u.username
                FROM climate_control_attempts a
@@ -3974,7 +3974,7 @@ def climate_log() -> str:
 
 def begin_climate_control_attempt(
     device_id: int, requested_power: bool, requested_temperature: int | None,
-    requested_fan_speed: str | None,
+    requested_fan_speed: str | None, requested_mode: str | None = None,
 ) -> int:
     connection = connect_database()
     cursor = connection.cursor()
@@ -3982,10 +3982,10 @@ def begin_climate_control_attempt(
         cursor.execute(
             """INSERT INTO climate_control_attempts
                (device_id,requested_by,requested_power,requested_temperature_c,
-                requested_fan_speed,status)
-               VALUES (?,?,?,?,?,'requested')""",
+                requested_fan_speed,requested_mode,status)
+               VALUES (?,?,?,?,?,?,'requested')""",
             (device_id, g.current_user["id"], requested_power, requested_temperature,
-             requested_fan_speed),
+             requested_fan_speed, requested_mode),
         )
         attempt_id = int(cursor.lastrowid)
         connection.commit()
@@ -4493,6 +4493,12 @@ def load_service_test_context() -> dict[str, Any]:
           LEFT JOIN sensor_readings sr ON sr.id=(SELECT x.id FROM sensor_readings x WHERE x.sensor_id=s.id ORDER BY x.observed_at DESC,x.id DESC LIMIT 1)
           WHERE d.is_active=1 AND d.source_system='computherm' ORDER BY d.name""")
         devices = rows_as_dicts(cursor)
+        cursor.execute("""SELECT d.id,d.name,d.source_puid,r.name room_name,ds.power,ds.mode,
+          ds.target_temperature_c,ds.fan_speed,ds.observed_at
+          FROM devices d LEFT JOIN rooms r ON r.id=d.room_id
+          LEFT JOIN device_states ds ON ds.id=(SELECT x.id FROM device_states x WHERE x.device_id=d.id ORDER BY x.observed_at DESC,x.id DESC LIMIT 1)
+          WHERE d.is_active=1 AND d.source_system='connectlife' ORDER BY r.name,d.name""")
+        climate_devices = rows_as_dicts(cursor)
         cursor.execute("""SELECT t.*,d.name device_name,u.username FROM thermostat_service_tests t
           JOIN devices d ON d.id=t.device_id JOIN app_users u ON u.id=t.started_by
           ORDER BY t.started_at DESC LIMIT 20""")
@@ -4503,7 +4509,7 @@ def load_service_test_context() -> dict[str, Any]:
     active = next((item for item in tests if item["status"] in {"active","heat_requested","heat_suppressed"}), None)
     dashboard_devices, _ = load_dashboard()
     boiler = next((item for item in dashboard_devices if item["source_system"]=="manual" and item["device_type"]=="boiler"), None)
-    return {"devices":devices,"tests":tests,"active":active,"boiler":boiler,
+    return {"devices":devices,"climate_devices":climate_devices,"tests":tests,"active":active,"boiler":boiler,
             "climate_service_mode":os.getenv("CLIMATE_SERVICE_MODE","false")=="true",
             "boiler_service_mode":os.getenv("BOILER_SERVICE_MODE","false")=="true"}
 
@@ -4558,6 +4564,82 @@ def run_computherm_service_test(device_id: int, action: str):
             connection.commit()
         session["service_test_notice"]={"kind":"error","message":str(error)}
     finally: cursor.close(); connection.close()
+    return redirect(url_for("service_tests"))
+
+
+@app.post("/service-tests/climate/<int:device_id>/<action>")
+@editor_required
+def run_climate_service_test(device_id: int, action: str):
+    validate_csrf()
+    if action not in {"start", "stop"}:
+        abort(404)
+    if os.getenv("CLIMATE_SERVICE_MODE", "false") != "true":
+        abort(409, "A klímaszerviz mód nincs bekapcsolva.")
+
+    desired_power = action == "start"
+    mode = None
+    temperature = None
+    fan_speed = None
+    if desired_power:
+        try:
+            temperature_value = float(request.form["temperature_c"])
+            if not temperature_value.is_integer() or not 16 <= temperature_value <= 30:
+                raise ValueError
+            temperature = int(temperature_value)
+            mode = request.form["mode"]
+            fan_speed = request.form["fan_speed"]
+            if mode not in {"cool", "heat"} or fan_speed not in FAN_SPEED_VALUES:
+                raise ValueError
+        except (KeyError, TypeError, ValueError):
+            abort(400)
+
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT room_id,source_puid FROM devices
+               WHERE id=? AND is_active=1 AND source_system='connectlife'""",
+            (device_id,),
+        )
+        row = cursor.fetchone()
+    finally:
+        cursor.close()
+        connection.close()
+    if row is None or row[0] is None or not row[1]:
+        abort(404)
+
+    try:
+        with polling_cycle_lock(operation="climate_service_test"):
+            attempt_id = begin_climate_control_attempt(
+                device_id, desired_power, temperature, fan_speed, mode
+            )
+            result = asyncio.run(
+                control_climate(
+                    str(row[1]), desired_power, temperature, fan_speed,
+                    mode=mode, allow_running_update=desired_power,
+                )
+            )
+            persist_climate_control(
+                attempt_id, device_id, int(row[0]), result, desired_power,
+                temperature, fan_speed,
+            )
+    except PollCycleBusy:
+        session["service_test_notice"] = {
+            "kind": "warning",
+            "message": "Lekérdezés van folyamatban; a klímaszerviz-parancs nem indult el.",
+        }
+        return redirect(url_for("service_tests"))
+
+    if result.status == "verified":
+        detail = f"{mode}, {temperature} °C" if desired_power else "kikapcsolva"
+        session["service_test_notice"] = {
+            "kind": "success", "message": f"A klímaszerviz-parancs ellenőrizve: {detail}."
+        }
+    else:
+        session["service_test_notice"] = {
+            "kind": "warning" if result.status == "rejected" else "error",
+            "message": result.error_message or "A klímaszerviz-parancs sikertelen.",
+        }
     return redirect(url_for("service_tests"))
 
 

@@ -162,9 +162,18 @@ feletti Computherm- vagy Hisense-célértéket az observer eltérésként jelez;
 ## Szervizmódok és Computherm-próba
 
 A `Klímaszerviz folyamatban` globális kapcsoló felfüggeszti a hűtési és
-klímafűtési observer szabályait. A `Gázkazánszerviz folyamatban` kapcsoló csak
+klímafűtési observer szabályait, valamint az időzített klímavezérlés
+végrehajtását. A szervizoldalról indított kézi hűtési és fűtési próbákra nem
+vonatkozik beltéri vagy kültéri hőmérsékleti határ, termosztátigény- vagy
+nyílászáró-kapuzás. A `Gázkazánszerviz folyamatban` kapcsoló csak
 a fűtési döntéseket függeszti fel, és engedélyezi a Computherm szerviztesztet.
 A kezdőlap aktív szervizmód esetén piros figyelmeztetést mutat.
+
+A klímaszerviz-parancs explicit módot (`cool` vagy `heat`), célhőmérsékletet és
+ventilátorfokozatot küld. A készülék hardveres `16–30 °C` tartománya megmarad.
+A siker feltétele, hogy a visszaolvasott bekapcsolt állapot, üzemmód,
+célhőmérséklet és ventilátorfokozat mind megfeleljen a kérésnek. A kért mód az
+auditnapló része.
 
 A Computherm-próba csak szerkesztőnek, bekapcsolt gázkazánszerviz mellett és a
 nyilvántartás szerint bekapcsolt Bosch kazánnal használható. Egyszerre csak egy

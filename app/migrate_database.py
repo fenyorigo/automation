@@ -182,6 +182,10 @@ MIGRATIONS = (
         "v1_44_thermostat_service_tests",
         ROOT / "SQL" / "migrations" / "044_home_automation_v1.43_to_v1.44.sql",
     ),
+    (
+        "v1_45_climate_control_requested_mode",
+        ROOT / "SQL" / "migrations" / "045_home_automation_v1.44_to_v1.45.sql",
+    ),
 )
 
 

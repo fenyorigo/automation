@@ -167,6 +167,8 @@ def _persist(item: dict[str, object], attempt_id: int, power: bool, result: Clim
 
 
 async def process_due_climate_schedules() -> int:
+    if os.getenv("CLIMATE_SERVICE_MODE", "false") == "true":
+        return 0
     processed=0
     while True:
         item = await asyncio.to_thread(_claim_due)
@@ -324,6 +326,8 @@ def _persist_program(item: dict[str, object], attempt_id: int, result: ClimateCo
 
 
 async def process_due_climate_schedules() -> int:
+    if os.getenv("CLIMATE_SERVICE_MODE", "false") == "true":
+        return 0
     processed=0
     while True:
         item=await asyncio.to_thread(_claim_due_program)

@@ -5,6 +5,19 @@ helyi dátumok.
 
 ## Kiadatlan
 
+## 1.5.1 — 2026-09-08
+
+### Klímaszerviz
+
+- A Szervizteszt oldalon a Hisense klímák hűtésben vagy fűtésben, szabadon
+  választott eszköz-célhőmérséklettel és ventilátorfokozattal próbálhatók.
+- Klímaszerviz módban a parancsokat nem korlátozza a helyiségi vagy kültéri
+  hőmérséklet, a termosztátigény, illetve a nyílászáró állapota.
+- Az automatikus és időzített klímaparancsok a szerviz teljes ideje alatt
+  szünetelnek, így nem írhatják felül a szerelő kézi próbáját.
+- A kért hűtési vagy fűtési üzemmód bekerül a vezérlési auditnaplóba, és a
+  ConnectLife-parancs utáni visszaolvasás ezt is ellenőrzi.
+
 ## 1.5.0 — 2026-09-08
 
 ### Szervizüzem

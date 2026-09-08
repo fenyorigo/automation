@@ -6,6 +6,18 @@
 <p>Klímaszerviz: <strong>{{ 'aktív' if climate_service_mode else 'kikapcsolva' }}</strong> · Gázkazánszerviz: <strong>{{ 'aktív' if boiler_service_mode else 'kikapcsolva' }}</strong> · {{ boiler.name if boiler else 'Bosch kazán' }}: <strong>{{ 'bekapcsolva' if boiler and boiler.manual_power_state else 'kikapcsolva' }}</strong></p>
 {% if not boiler_service_mode %}<p class="service-mode-banner">A teszthez kapcsold be a Gázkazánszerviz módot a Globális beállításoknál.</p>{% elif not boiler or not boiler.manual_power_state %}<p class="service-mode-banner">A teszt csak az UI szerint bekapcsolt Bosch kazán mellett engedélyezett.</p>{% endif %}
 </section>
+<section class="history-panel"><h2>Hisense klímák</h2>
+<p class="notice">Aktív klímaszerviz módban a kézi próba nem veszi figyelembe a helyiségi vagy külső hőmérsékletet, a termosztátigényt és a nyílászárók állapotát. Az időzített és automatikus klímaműveletek szünetelnek.</p>
+{% if not climate_service_mode %}<p class="service-mode-banner">A próbához kapcsold be a Klímaszerviz módot a Globális beállításoknál.</p>{% endif %}
+<div class="service-test-grid">{% for device in climate_devices %}<article class="service-test-card"><h3>{{ device.name }}</h3>
+<p>{{ device.room_name }} · {{ 'bekapcsolva' if device.power else 'kikapcsolva' }}{% if device.power %} · {{ {'cool':'hűtés','heat':'fűtés','dry':'szárítás','fan':'ventilátor','auto':'automata'}.get(device.mode,device.mode) }} · cél {{ device.target_temperature_c|temperature }} °C{% endif %}</p>
+<form method="post" action="{{ url_for('run_climate_service_test',device_id=device.id,action='start') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<label>Próbaüzem<select name="mode" required><option value="cool">Hűtés</option><option value="heat">Fűtés</option></select></label>
+<label>Célhőmérséklet<input name="temperature_c" type="number" min="16" max="30" step="1" value="25" required></label>
+<label>Ventilátor<select name="fan_speed" required>{% for value,label in [('auto','Automata'),('low','Alacsony'),('medium_low','Közepesen alacsony'),('medium','Közepes'),('medium_high','Középmagas'),('high','Magas'),('quiet','Csendes')] %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+<button class="primary-button" {% if not climate_service_mode %}disabled{% endif %}>Próba indítása / beállítása</button></form>
+<form method="post" action="{{ url_for('run_climate_service_test',device_id=device.id,action='stop') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="secondary-button" {% if not climate_service_mode or not device.power %}disabled{% endif %}>Klíma kikapcsolása</button></form>
+</article>{% endfor %}</div></section>
 <section class="history-panel"><h2>Computherm termosztátok</h2><div class="service-test-grid">
 {% for device in devices %}<article class="service-test-card"><h3>{{ device.name }}</h3><p>{{ device.room_name }} · mért {{ device.measured_temperature_c|temperature }} °C · cél {{ device.target_temperature_c|temperature }} °C · relé {{ 'fűtést kér' if device.active else 'nem kér fűtést' }}</p>
 {% if active and active.device_id==device.id %}<p><strong>Aktív teszt:</strong> {{ active.status }} · {{ active.requested_temperature_c }} °C · {{ active.started_at|local_time }}{% if active.latest %} · visszaolvasott cél {{ active.latest.thermostat_temp }} °C · relé {{ 'fűtést kér' if active.latest.active else 'nem kér fűtést' }}{% endif %}</p><div class="service-test-actions">
