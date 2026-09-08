@@ -120,7 +120,7 @@ automatikusan feltételezni, hogy a beállított célérték körül szimmetriku
 
 ## Fűtési döntés
 
-Az 1.4.0 verzió az emeleti fűtés megfigyelő modelljét vezeti be. Kiszámolja a
+Az 1.3.1 verzió az emeleti fűtés megfigyelő modelljét vezeti be. Kiszámolja a
 helyiségi igényeket és a zónaszintű hőforrás-javaslatot, de sem a Hisense
 klímákat, sem a Computhermet nem vezérli.
 
@@ -157,7 +157,7 @@ Ha a termosztát `active` állapota fűtést kér, de a Bosch ki van kapcsolva, 
 helyszíni bekapcsolási figyelmeztetés jelenik meg. A `power` mező csak a
 termosztát bekapcsolt állapotát jelenti, nem a relé fűtési kérését. `22 °C`
 feletti Computherm- vagy Hisense-célértéket az observer eltérésként jelez; az
-1.4.0 még nem írja vissza.
+1.3.1 még nem írja vissza.
 
 ## Szervizmódok és Computherm-próba
 

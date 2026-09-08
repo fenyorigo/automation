@@ -5,7 +5,7 @@ helyi dátumok.
 
 ## Kiadatlan
 
-## 1.5.1 — 2026-09-08
+## 1.3.1 — 2026-09-08
 
 ### Klímaszerviz
 
@@ -18,9 +18,7 @@ helyi dátumok.
 - A kért hűtési vagy fűtési üzemmód bekerül a vezérlési auditnaplóba, és a
   ConnectLife-parancs utáni visszaolvasás ezt is ellenőrzi.
 
-## 1.5.0 — 2026-09-08
-
-### Szervizüzem
+### Computherm-szerviz
 
 - Külön globális klíma- és gázkazánszerviz-kapcsoló készült; aktív állapotuk
   jól láthatóan felfüggeszti az érintett observer szabályokat.
@@ -32,11 +30,7 @@ helyi dátumok.
 - A tesztek és parancsaik előtte/utána állapottal, felhasználóval és
   időbélyeggel auditálhatók; egyszerre csak egy termosztátteszt futhat.
 
-## 1.4.0 — 2026-09-08
-
-Elkészült az emeleti fűtési döntés első, kizárólag megfigyelő változata.
-
-### Új funkciók
+### Emeleti fűtési megfigyelés
 
 - Az emeleti helyiségek Zigbee-alapú, Hisense- és Computherm-méréssel
   mérsékelten korrigált fűtési igényt kapnak.
@@ -50,7 +44,7 @@ Elkészült az emeleti fűtési döntés első, kizárólag megfigyelő változa
 - A helyiségi `Fűtést kér` jelzés, a klímaalkalmasság, a blokkoló nyílászárók és
   az egész emelet hőforrás-javaslata megjelenik a kezdőlapon.
 
-### Biztonság
+### Fűtési biztonság
 
 - Az observer sem klíma-, sem Computherm-parancsot nem küld. Nyitott vagy
   ismeretlen nyílászáró nem kényszerít gázra váltást, hanem az érintett
