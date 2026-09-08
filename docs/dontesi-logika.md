@@ -154,19 +154,47 @@ szenzoraira kell alkalmazni, nem a teljes ház bármely érzékelőjére.
 
 ## Hűtési döntés
 
-Hisense klíma vezérlésénél a beltéri egység saját hőmérséklete csak tájékoztató
-adat: a mennyezet közelében mér, ezért nem ez a helyiség mérvadó érzékelője.
-A klímafutások során megfigyelt minimum–maximum jellegű mozgása sem alkalmas
-helyiségi szabályozási feltételnek vagy programlépés-váltás kiváltására.
-A döntést az adott helyiség elfogadott ESP-mérése alapján kell meghozni.
+Az 1.3.0 verzió az emeleti hűtés első, kizárólag megfigyelő változata. Kiszámolja
+és megjeleníti, mit tenne, de sem Hisense-, sem Computherm-parancsot nem küld.
+A hűtés és a fűtés külön döntési kör; a földszint ebben a hűtési körben nem vesz
+részt.
 
-- Hűtés nem indítható, ha a helyiség bármely elfogadott, mérvadó érzékelője
-  `25 °C` vagy alacsonyabb értéket mutat.
-- Az UI `25 °C` alatti hűtési célértéket nem fogadhat el.
-- A kültéri hőmérséklet korlátozhatja a megengedett beltéri célértéket; a
-  határok konfigurálhatók, nem programkódba huzalozottak.
-- Körülbelül `30 °C` alatti külső hőmérsékletnél kerülendő az indokolatlan
-  klímakapcsolgatás; a pontos szabály még mérendő és konfigurálandó.
+Az adott helyiség aktív Zigbee hőmérője a mérvadó. A Hisense saját érzékelője
+magasabban van, a Computherm pedig csak a dolgozóban áll rendelkezésre, ezért
+ezek kisebb súllyal módosíthatják a mérvadó értéket. Az alapértelmezett
+cselekedeti hőmérséklet:
+
+`Zigbee + 0,20 × (Hisense − Zigbee) + 0,10 × (Computherm − Zigbee)`
+
+Ha valamelyik másodlagos mérés hiányzik vagy túl régi, annak korrekciós tagja
+kimarad; a Zigbee súlya ennek megfelelően nő. A Zigbee mérés kötelező. Az ESP32
+eredeti nyers/elfogadott/cselekedeti modellje változatlanul megmarad, az emeleti
+observer pedig ugyanezt a fogalmi különválasztást helyiségi, többforrású
+számítással alkalmazza.
+
+Alapértelmezett, a Globális beállításokban módosítható hűtési paraméterek:
+
+- hűtési igény bekapcsolási határa: `27,5 °C`;
+- hűtési igény kikapcsolási határa: `27,0 °C`;
+- kültéri indítási engedély: `28,1 °C`;
+- kültéri leállítási határ: `27,1 °C`;
+- legkisebb megengedett hűtési célérték: `25 °C`;
+- döntési adat maximális kora: `180 perc`;
+- az utolsó nyílászáró bezárása utáni stabilizálás: `10 perc`;
+- Hisense súlya: `0,20`, Computherm súlya: `0,10`.
+
+A két szobahőmérsékleti és a két kültéri határ hiszterézist alkot: kikapcsolt
+klímánál a magasabb indítási, működő hűtésnél az alacsonyabb fenntartási határ
+érvényes. A termikus „Hűtést kér” állapot külön fogalom attól, hogy a kérés
+végrehajtható-e. Nyitott, ismeretlen állapotú vagy a Zigbee mesh-ről leesett
+nyílászáró-érzékelő blokkol; bezárás után a stabilizációs idő végéig szintén
+blokkolt maradna az indítás. Régi, de elérhető Tuya állapotjelzés önmagában nem
+hiba.
+
+Az observer lehetséges eredményei: `Elindítaná`, `Folytatná`, `Leállítaná`,
+`Nem indítaná`, `Hűtést kér, de blokkolva`, illetve `Nincs elég friss adat`.
+A `25 °C` alatti kézi Hisense-célértéket külön korrekciós igényként jelzi, de
+ebben a verzióban azt sem írja vissza.
 
 ## Kültéri hőmérséklet és fűtési mód választása
 

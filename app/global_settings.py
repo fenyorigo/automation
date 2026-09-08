@@ -53,8 +53,16 @@ SETTINGS = (
     Setting("DATABASE_BACKUP_TIME", "Napi mentés időpontja", "03:00", "time", validator=lambda value: re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value) is not None),
     Setting("DATABASE_BACKUP_KEEP", "Megőrzött automatikus mentések", "30", "number", validator=integer_between(1, 3650)),
     Setting("GNUPLOT_BIN", "Gnuplot program elérési útja", "/opt/homebrew/bin/gnuplot", "text"),
-    Setting("COOLING_MIN_ROOM_TEMPERATURE_C", "Hűtés alsó szobahőmérsékleti határa", "25", "number", "Előkészített biztonsági korlát; a vezérlési logika még nem használja.", number_between(5, 40)),
-    Setting("COOLING_MIN_TARGET_C", "Hűtés legkisebb célhőmérséklete", "25", "number", "Előkészített biztonsági korlát.", number_between(5, 40)),
+    Setting("COOLING_MIN_ROOM_TEMPERATURE_C", "Hűtés abszolút alsó szobahőmérsékleti korlátja", "25", "number", "Biztonsági korlát; ez alatt hűtési igény nem állhat fenn.", number_between(5, 40)),
+    Setting("COOLING_MIN_TARGET_C", "Hűtés legkisebb célhőmérséklete", "25", "number", "Az observer jelzi, ha a klímán ennél kisebb kézi célértéket észlel.", number_between(5, 40)),
+    Setting("COOLING_ROOM_REQUEST_ON_C", "Hűtési igény bekapcsolási határa", "27.5", "number", "A cselekedeti helyiséghőmérséklet ettől az értéktől kér hűtést, ha a klíma nem hűt.", number_between(5, 40)),
+    Setting("COOLING_ROOM_REQUEST_OFF_C", "Hűtési igény kikapcsolási határa", "27.0", "number", "Már működő hűtésnél eddig az értékig marad fenn az igény; a két határ adja a hiszterézist.", number_between(5, 40)),
+    Setting("COOLING_OUTDOOR_ENABLE_C", "Kültéri hűtésengedélyezési határ", "28.1", "number", "Kikapcsolt klíma csak legalább ilyen kültéri hőmérsékletnél indulhatna.", number_between(-30, 60)),
+    Setting("COOLING_OUTDOOR_DISABLE_C", "Kültéri hűtésletiltási határ", "27.1", "number", "Eddig a kültéri hőmérsékletig a hűtést leállítaná; a két kültéri határ adja a hiszterézist.", number_between(-30, 60)),
+    Setting("COOLING_HISENSE_WEIGHT", "Hisense mérés súlya", "0.20", "number", "A klíma saját, magasabban elhelyezett érzékelőjének súlya a cselekedeti hőmérsékletben.", number_between(0, 0.5)),
+    Setting("COOLING_COMPUTHERM_WEIGHT", "Computherm mérés súlya", "0.10", "number", "A Computherm súlya ott, ahol ugyanabban a helyiségben rendelkezésre áll.", number_between(0, 0.5)),
+    Setting("COOLING_MAX_DATA_AGE_MINUTES", "Hűtési döntési adat legnagyobb kora", "180", "number", "Perc; ennél régebbi mérés nem kerül a cselekedeti hőmérsékletbe.", integer_between(1, 1440)),
+    Setting("COOLING_WINDOW_CLOSE_STABILIZATION_MINUTES", "Ablakzárás utáni hűtési várakozás", "10", "number", "Perc; a legutolsó nyílászáró bezárása után eddig még blokkolt maradna a hűtés.", integer_between(0, 180)),
     Setting("HEATING_MAX_ROOM_TEMPERATURE_C", "Fűtés felső szobahőmérsékleti határa", "22", "number", "Előkészített biztonsági korlát; a vezérlési logika még nem használja.", number_between(5, 40)),
     Setting("HEATING_MAX_TARGET_C", "Fűtés legnagyobb célhőmérséklete", "22", "number", "Előkészített biztonsági korlát.", number_between(5, 40)),
     Setting("VENTILATION_LONG_THRESHOLD_MINUTES", "Hosszú szellőztetés határa", "5", "number", "Perc; ennél rövidebb esemény rövid szellőztetésnek számít.", integer_between(1, 180)),
@@ -103,6 +111,21 @@ def save(values_to_save: dict[str, str]) -> None:
         if not item.validator(value) or "\n" in value or "\r" in value:
             raise ValueError(f"Érvénytelen érték: {item.label}")
         normalized[item.key] = value
+
+    if float(normalized["COOLING_ROOM_REQUEST_ON_C"].replace(",", ".")) <= float(
+        normalized["COOLING_ROOM_REQUEST_OFF_C"].replace(",", ".")
+    ):
+        raise ValueError("A hűtési igény bekapcsolási határának nagyobbnak kell lennie a kikapcsolási határnál.")
+    if float(normalized["COOLING_OUTDOOR_ENABLE_C"].replace(",", ".")) <= float(
+        normalized["COOLING_OUTDOOR_DISABLE_C"].replace(",", ".")
+    ):
+        raise ValueError("A kültéri engedélyezési határnak nagyobbnak kell lennie a letiltási határnál.")
+    secondary_weight = sum(
+        float(normalized[key].replace(",", "."))
+        for key in ("COOLING_HISENSE_WEIGHT", "COOLING_COMPUTHERM_WEIGHT")
+    )
+    if secondary_weight >= 1:
+        raise ValueError("A Hisense és Computherm együttes súlyának 1-nél kisebbnek kell lennie.")
 
     original = ENV_PATH.read_text(encoding="utf-8").splitlines(keepends=True)
     remaining = dict(normalized)

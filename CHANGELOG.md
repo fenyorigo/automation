@@ -5,6 +5,30 @@ helyi dátumok.
 
 ## Kiadatlan
 
+## 1.3.0 — 2026-09-08
+
+Az emeleti Hisense klímákhoz elkészült a hűtési döntés első, kizárólag
+megfigyelő változata.
+
+### Új funkciók
+
+- A helyiség Zigbee hőmérője alapján, a Hisense és – ahol van – a Computherm
+  mérésével mérsékelten korrigálva számítjuk a cselekedeti hőmérsékletet.
+- A hűtési igény, a beltéri és kültéri hiszterézis, az adatfrissesség és az
+  ablakzárás utáni stabilizáció határai a Globális beállításokban módosíthatók.
+- A mérvadó hőmérő kártyáján piros `Hűtést kér` jelzés, részletes indítási,
+  folytatási, leállítási vagy blokkolási javaslat és a felhasznált forrássúlyok
+  jelennek meg.
+- Nyitott, ismeretlen vagy valóban elérhetetlen nyílászáró-érzékelő blokkolja a
+  javasolt indítást; a Tuya érzékelő pusztán régi állapotjelzése nem.
+- A nyers/cselekedeti nézet megmaradt, és most az emeleti, többforrású
+  cselekedeti hőmérsékletet is meg tudja jeleníteni.
+
+### Biztonság
+
+- Az observer sem a Hisense klímának, sem a Computherm termosztátnak nem küld
+  parancsot; az 1.3.0 csak azt mutatja meg, mit tenne a későbbi automatika.
+
 ## 1.2.0 — 2026-09-08
 
 Zigbee- és Shelly-szenzorintegráció, nyílászáró-alapú szellőztetési napló,

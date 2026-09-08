@@ -34,6 +34,7 @@ from poll_devices import DEFAULT_CONFIG, load_devices
 from poll_scheduler import run_cycle
 from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_active
 from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
+from cooling_observer import annotate_upstairs_cooling
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import (
     SETTINGS as GLOBAL_SETTINGS,
@@ -895,6 +896,12 @@ def load_dashboard(
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='contact') AS zigbee_contact_closed,
+              (SELECT csr.observed_at
+                 FROM sensors cs
+                 JOIN sensor_readings csr ON csr.sensor_id=cs.id
+                WHERE cs.device_id=d.id AND cs.is_active=1
+                  AND cs.sensor_type='contact'
+                ORDER BY csr.observed_at DESC,csr.id DESC LIMIT 1) AS zigbee_contact_observed_at,
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='tamper') AS zigbee_tamper,
@@ -1917,6 +1924,7 @@ def dashboard() -> str:
     attempt_origin = session.get("dashboard_poll_origin", "all")
     devices, attempts = load_dashboard(attempt_origin)
     _, outdoor_temperature = load_outdoor_sources()
+    cooling_advice = annotate_upstairs_cooling(devices, outdoor_temperature)
     outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")
     if requested_view in {"device", "room"}:
@@ -1926,13 +1934,28 @@ def dashboard() -> str:
     if requested_temperature in {"raw", "action"}:
         session["dashboard_temperature"] = requested_temperature
     temperature_mode = session.get("dashboard_temperature", "raw")
-    has_active_esp32 = any(device["source_system"] == "esp32" for device in devices)
+    has_action_temperature = any(
+        device.get("action_temperature_c") is not None
+        or device.get("cooling_action_temperature_c") is not None
+        for device in devices
+    )
     now_utc = datetime.now(UTC).replace(tzinfo=None)
     for device in devices:
-        use_action = temperature_mode == "action" and device["source_system"] == "esp32"
+        use_action = temperature_mode == "action" and (
+            device["source_system"] == "esp32"
+            or device.get("cooling_action_temperature_c") is not None
+        )
         if use_action:
-            device["display_temperature_c"] = device["action_temperature_c"]
-            device["display_temperature_at"] = device["action_measurement_at"]
+            device["display_temperature_c"] = (
+                device.get("cooling_action_temperature_c")
+                if device.get("cooling_action_temperature_c") is not None
+                else device["action_temperature_c"]
+            )
+            device["display_temperature_at"] = (
+                device["measurement_at"]
+                if device.get("cooling_action_temperature_c") is not None
+                else device["action_measurement_at"]
+            )
             device["display_temperature_kind"] = "Cselekedeti hőmérséklet"
             device["display_temperature_available"] = device["action_temperature_c"] is not None
         else:
@@ -1962,7 +1985,8 @@ def dashboard() -> str:
         poll_notice=session.pop("poll_notice", None),
         view_mode=view_mode,
         temperature_mode=temperature_mode,
-        has_active_esp32=has_active_esp32,
+        has_active_esp32=has_action_temperature,
+        cooling_advice=cooling_advice,
         outdoor_temperature=outdoor_summary,
         device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_summary),

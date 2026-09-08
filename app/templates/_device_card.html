@@ -6,6 +6,7 @@
     </span>
   </div>
   {% if device.source_system in ['zigbee2mqtt', 'shelly_mqtt'] %}<span class="badge mqtt-sensor-type">{{ device.device_type_name or device.device_type }}</span>{% endif %}
+  {% if device.cooling_advice is defined and device.cooling_advice.cooling_demand %}<span class="badge cooling-demand">Hűtést kér</span>{% endif %}
   <p class="device-poll-interval">{% if device.source_system == 'zigbee2mqtt' %}Adatkapcsolat: <strong>folyamatos MQTT</strong>{% elif device.source_system == 'shelly_mqtt' %}Adatkapcsolat: <strong>Wi-Fi / MQTT · deep sleep</strong>{% else %}Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}{% endif %}</p>
   {% if device.managed_manually %}
   <div class="manual-state {{ 'powered' if device.manual_power_state else 'stopped' }}">
@@ -29,7 +30,19 @@
   <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c if device.temperature_c is not none else '—' }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}"> W</span></div>
   {% else %}
   <div class="temperature"><span class="temperature-value {% if device.source_system == 'shelly_mqtt' %}shelly-{{ device.shelly_status_class }}{% elif device.display_temperature_is_stale %}stale-measurement{% endif %}">{{ device.display_temperature_c|temperature }}</span><span class="temperature-unit {% if device.source_system == 'shelly_mqtt' %}shelly-{{ device.shelly_status_class }}{% elif device.display_temperature_is_stale %}stale-measurement{% endif %}">°C</span></div>
-  {% if device.source_system == 'esp32' %}
+  {% if device.cooling_advice is defined %}
+    <p class="temperature-provenance">
+      <strong>{{ device.display_temperature_kind }}</strong> · {{ device.cooling_advice.calculation_version }}
+      {% if device.cooling_advice.sources is defined %}<br>{% for source in device.cooling_advice.sources %}{{ source.name }} {{ (source.weight * 100)|round|int }}%{% if not loop.last %} · {% endif %}{% endfor %}{% endif %}
+    </p>
+    <div class="cooling-advice {{ device.cooling_advice.status }}">
+      <strong>{{ device.cooling_advice.status_label }}</strong>
+      {% if device.cooling_advice.action_temperature_c is defined %}<small>Cselekedeti: {{ device.cooling_advice.action_temperature_c|temperature }} °C · határ: {{ device.cooling_advice.room_threshold_c|temperature }} °C</small>{% endif %}
+      {% if device.cooling_advice.target_correction_needed %}<small>Célérték-korrekciót kérne: minimum {{ device.cooling_advice.minimum_target_c|temperature }} °C.</small>{% endif %}
+      {% for blocker in device.cooling_advice.blockers %}<small>{{ blocker }}</small>{% endfor %}
+      <small class="observer-note">Megfigyelő üzem: nem küld eszközparancsot.</small>
+    </div>
+  {% elif device.source_system == 'esp32' %}
     {% if temperature_mode == 'action' %}
       {% if device.display_temperature_available %}
       <p class="temperature-provenance"><strong>Cselekedeti</strong> · EMA {{ device.filter_tau_seconds // 60 }} perc · korrekció {{ '%+.3f'|format(device.calibration_offset_c|float) }} °C<br><time>{{ device.action_measurement_at|local_time }}</time></p>

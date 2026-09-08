@@ -19,5 +19,16 @@
   lezárt Winston transportba ír, ezért a folyamat `1/FAILURE` kóddal távozik.
   Ez upstream hiba; `SuccessExitStatus=1` nem használható, mert valódi
   futási hibákat is sikeresnek minősítene és kikapcsolná a restartvédelmet.
-- [ ] A klímavezérlés bevezetése előtt a túl régi nyitásérzékelő-állapotot
-  ismeretlennek és automatikus vezérlést blokkoló állapotnak kell tekinteni.
+- [x] A nyitásérzékelő régi, de a Zigbee2MQTT szerint elérhető állapota
+  önmagában nem vezérlési hiba. Nyitott vagy ismeretlen állapot, illetve az
+  explicit `availability=offline` blokkolja a hűtési javaslatot.
+
+## Fűtési állapotkapcsolat a Computherm-kártyákon
+
+- A Computherm-kártyákon jelenjen meg a hozzájuk tartozó Bosch kazán tényleges
+  be- vagy kikapcsolt állapota.
+- Ha a Computherm fűtést kér, de a kazán ki van kapcsolva, az UI ezt külön,
+  cselekvést igénylő állapotként jelezze: távoli beavatkozás helyett a kazánt
+  helyben be kell kapcsolni.
+- Az emeleti és földszinti Computherm–kazán kapcsolatot a fűtési vezérlés
+  tervezésekor kell véglegesíteni; ez nem része az 1.3.0 hűtési observernek.
