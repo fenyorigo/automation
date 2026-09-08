@@ -159,6 +159,23 @@ termosztát bekapcsolt állapotát jelenti, nem a relé fűtési kérését. `22
 feletti Computherm- vagy Hisense-célértéket az observer eltérésként jelez; az
 1.4.0 még nem írja vissza.
 
+## Szervizmódok és Computherm-próba
+
+A `Klímaszerviz folyamatban` globális kapcsoló felfüggeszti a hűtési és
+klímafűtési observer szabályait. A `Gázkazánszerviz folyamatban` kapcsoló csak
+a fűtési döntéseket függeszti fel, és engedélyezi a Computherm szerviztesztet.
+A kezdőlap aktív szervizmód esetén piros figyelmeztetést mutat.
+
+A Computherm-próba csak szerkesztőnek, bekapcsolt gázkazánszerviz mellett és a
+nyilvántartás szerint bekapcsolt Bosch kazánnal használható. Egyszerre csak egy
+termosztát tesztelhető. Indítás előtt teljes állapotmentés készül. A teszt a
+termosztát kikapcsolása nélkül kézi módra vált, szükség esetén ideiglenesen
+megemeli a `22 °C` felső korlátot, majd beállítja a kért célértéket. A fűtési
+kérés megszüntetése a mért érték alatti kézi céllal engedi el a relét; nem
+kapcsolja ki a Computhermet. A teszt lezárása visszaállítja az eredeti módot,
+célértéket és haladó korlátokat. A napi program tartalma egyik lépésben sem
+íródik felül. Minden parancs és visszaolvasott állapot auditnaplóba kerül.
+
 ### Helyiségi igény
 
 Egy helyiség fűtési igényt jelezhet, ha az elfogadott hőmérséklete a beállított

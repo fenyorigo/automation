@@ -53,6 +53,8 @@ SETTINGS = (
     Setting("DATABASE_BACKUP_TIME", "Napi mentés időpontja", "03:00", "time", validator=lambda value: re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value) is not None),
     Setting("DATABASE_BACKUP_KEEP", "Megőrzött automatikus mentések", "30", "number", validator=integer_between(1, 3650)),
     Setting("GNUPLOT_BIN", "Gnuplot program elérési útja", "/opt/homebrew/bin/gnuplot", "text"),
+    Setting("CLIMATE_SERVICE_MODE", "Klímaszerviz folyamatban", "false", "boolean", "Minden automatikus klímaszabályt felfüggeszt; a kézi szervizpróbákat nem korlátozza.", validator=lambda value: value in {"true", "false"}),
+    Setting("BOILER_SERVICE_MODE", "Gázkazánszerviz folyamatban", "false", "boolean", "Felfüggeszti a fűtési szabályokat és engedélyezi a védett Computherm szerviztesztet.", validator=lambda value: value in {"true", "false"}),
     Setting("COOLING_MIN_ROOM_TEMPERATURE_C", "Hűtés abszolút alsó szobahőmérsékleti korlátja", "25", "number", "Biztonsági korlát; ez alatt hűtési igény nem állhat fenn.", number_between(5, 40)),
     Setting("COOLING_MIN_TARGET_C", "Hűtés legkisebb célhőmérséklete", "25", "number", "Az observer jelzi, ha a klímán ennél kisebb kézi célértéket észlel.", number_between(5, 40)),
     Setting("COOLING_ROOM_REQUEST_ON_C", "Hűtési igény bekapcsolási határa", "27.5", "number", "A cselekedeti helyiséghőmérséklet ettől az értéktől kér hűtést, ha a klíma nem hűt.", number_between(5, 40)),

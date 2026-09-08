@@ -5,6 +5,20 @@ helyi dátumok.
 
 ## Kiadatlan
 
+## 1.5.0 — 2026-09-08
+
+### Szervizüzem
+
+- Külön globális klíma- és gázkazánszerviz-kapcsoló készült; aktív állapotuk
+  jól láthatóan felfüggeszti az érintett observer szabályokat.
+- Új, szerkesztői Computherm szervizteszt teszi lehetővé az emeleti és
+  földszinti fűtési kérés külön próbáját, kizárólag bekapcsolt Bosch mellett.
+- A teszt soha nem kapcsolja ki a Computhermet és nem írja át a napi programot.
+  A teljes eredeti állapotot elmenti, a tesztcélhoz szükség esetén ideiglenesen
+  megemeli a felső korlátot, majd egy művelettel mindent visszaállít.
+- A tesztek és parancsaik előtte/utána állapottal, felhasználóval és
+  időbélyeggel auditálhatók; egyszerre csak egy termosztátteszt futhat.
+
 ## 1.4.0 — 2026-09-08
 
 Elkészült az emeleti fűtési döntés első, kizárólag megfigyelő változata.

@@ -333,6 +333,23 @@ környezetéből; ilyen változtatás szintén újraindítással érvényesíthe
 Az adatbázis és a ConnectLife felhasználónevei, jelszavai, illetve más titkok
 nem jelennek meg és nem szerkeszthetők ezen a felületen.
 
+### Szervizmód és Computherm-próba
+
+A két szervizkapcsoló alapállapotban kikapcsolt. A **Klímaszerviz folyamatban**
+felfüggeszti a klímás döntési szabályokat; a **Gázkazánszerviz folyamatban** a
+fűtési szabályokat függeszti fel és megnyitja a védett Computherm-próbát. Aktív
+szervizmódot a kezdőlap piros sávval jelez, ezért a munka után mindig ki kell
+kapcsolni.
+
+A kezdőlap **Szervizteszt** menüpontjában az emeleti vagy földszinti Computherm
+külön próbálható. Előbb a Bosch kézi állapotát kell bekapcsoltra állítani, majd
+a gázkazánszerviz módot engedélyezni. A **Fűtési próba indítása** elmenti az
+eredeti termosztátállapotot és ideiglenes kézi célértéket ad. A **Fűtési kérés
+megszüntetése** a Computherm kikapcsolása nélkül engedi el a relét. A munka
+végén kötelező a **Teszt lezárása és visszaállítás**, amely visszaállítja az
+eredeti automata módot, célértéket és korlátokat. Egyszerre csak egy teszt
+futhat; a napi program egyik műveletnél sem módosul.
+
 ## 7. Elemzések és jelentések
 
 Az oldalon legfeljebb hét napos időablakból készíthető automatikus jelentés.

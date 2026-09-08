@@ -25,6 +25,7 @@
         <a class="history-link" href="{{ url_for('manual_measurements') }}">Kézi mérések</a>
         {% if can_write %}<a class="history-link" href="{{ url_for('backups') }}">Adatmentés</a>{% endif %}
         {% if can_write %}<a class="history-link" href="{{ url_for('global_settings') }}">Globális beállítások</a>{% endif %}
+        {% if can_write %}<a class="history-link" href="{{ url_for('service_tests') }}">Szervizteszt</a>{% endif %}
         <a class="history-link" href="{{ url_for('ventilation') }}">Szellőztetés</a>
         <a class="history-link" href="{{ url_for('climate_log') }}">Klíma</a>
         {% if can_write %}<a class="history-link" href="{{ url_for('users') }}">Felhasználók</a>{% endif %}
@@ -42,6 +43,8 @@
     </form>
     {% endif %}
   </header>
+  {% if climate_service_mode %}<p class="service-mode-banner">Klímaszerviz folyamatban – minden automatikus klímaszabály felfüggesztve.</p>{% endif %}
+  {% if boiler_service_mode %}<p class="service-mode-banner">Gázkazánszerviz folyamatban – a fűtési szabályok felfüggesztve.</p>{% endif %}
 
   <main>
     {% if poll_notice %}

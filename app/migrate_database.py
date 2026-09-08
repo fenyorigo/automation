@@ -178,6 +178,10 @@ MIGRATIONS = (
         "v1_43_electricity_invoices",
         ROOT / "SQL" / "migrations" / "043_home_automation_v1.42_to_v1.43.sql",
     ),
+    (
+        "v1_44_thermostat_service_tests",
+        ROOT / "SQL" / "migrations" / "044_home_automation_v1.43_to_v1.44.sql",
+    ),
 )
 
 

@@ -46,6 +46,10 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin: 24px 0 16px; }
 .updated { color: var(--muted); font-size: .85rem; }
 .header-updated { margin-top: 9px; color: var(--muted); font-size: .82rem; }
+.service-mode-banner { margin:12px auto; max-width:1200px; padding:12px 18px; border-radius:12px; background:#b42318; color:#fff; font-weight:900; }
+.service-test-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.service-test-card { padding:18px; border:1px solid var(--line); border-radius:14px; background:var(--card); }
+.service-test-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
 .device-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .device-card { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
 .device-card.is-offline { border-color: #dec6c0; }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import asdict
 import csv
 from functools import wraps
 from itertools import groupby
@@ -36,6 +37,7 @@ from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_ac
 from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
 from cooling_observer import annotate_upstairs_cooling
 from heating_observer import annotate_upstairs_heating
+from computherm_service import connect_device as connect_computherm, restore_test, snapshot as computherm_snapshot, start_test, suppress_heat
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import (
     SETTINGS as GLOBAL_SETTINGS,
@@ -1925,8 +1927,10 @@ def dashboard() -> str:
     attempt_origin = session.get("dashboard_poll_origin", "all")
     devices, attempts = load_dashboard(attempt_origin)
     _, outdoor_temperature = load_outdoor_sources()
-    cooling_advice = annotate_upstairs_cooling(devices, outdoor_temperature)
-    heating_advice = annotate_upstairs_heating(devices, outdoor_temperature)
+    climate_service_mode = os.getenv("CLIMATE_SERVICE_MODE", "false") == "true"
+    boiler_service_mode = os.getenv("BOILER_SERVICE_MODE", "false") == "true"
+    cooling_advice = None if climate_service_mode else annotate_upstairs_cooling(devices, outdoor_temperature)
+    heating_advice = None if climate_service_mode or boiler_service_mode else annotate_upstairs_heating(devices, outdoor_temperature)
     outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")
     if requested_view in {"device", "room"}:
@@ -1990,6 +1994,8 @@ def dashboard() -> str:
         has_active_esp32=has_action_temperature,
         cooling_advice=cooling_advice,
         heating_advice=heating_advice,
+        climate_service_mode=climate_service_mode,
+        boiler_service_mode=boiler_service_mode,
         outdoor_temperature=outdoor_summary,
         device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_summary),
@@ -4474,6 +4480,85 @@ def settings() -> str:
     requested_id = request.args.get("device", type=int)
     selected = next((item for item in devices if item["id"] == requested_id), devices[0] if devices else None)
     return render_template("settings.html", devices=devices, selected=selected)
+
+
+def load_service_test_context() -> dict[str, Any]:
+    connection = connect_database(); cursor = connection.cursor()
+    try:
+        cursor.execute("""SELECT d.id,d.name,d.source_device_id,r.name room_name,ds.power,ds.active,
+          ds.mode,ds.target_temperature_c,sr.value measured_temperature_c
+          FROM devices d LEFT JOIN rooms r ON r.id=d.room_id
+          LEFT JOIN device_states ds ON ds.id=(SELECT x.id FROM device_states x WHERE x.device_id=d.id ORDER BY x.observed_at DESC,x.id DESC LIMIT 1)
+          LEFT JOIN sensors s ON s.device_id=d.id AND s.sensor_type='temperature' AND s.is_active=1
+          LEFT JOIN sensor_readings sr ON sr.id=(SELECT x.id FROM sensor_readings x WHERE x.sensor_id=s.id ORDER BY x.observed_at DESC,x.id DESC LIMIT 1)
+          WHERE d.is_active=1 AND d.source_system='computherm' ORDER BY d.name""")
+        devices = rows_as_dicts(cursor)
+        cursor.execute("""SELECT t.*,d.name device_name,u.username FROM thermostat_service_tests t
+          JOIN devices d ON d.id=t.device_id JOIN app_users u ON u.id=t.started_by
+          ORDER BY t.started_at DESC LIMIT 20""")
+        tests = rows_as_dicts(cursor)
+        for item in tests:
+            item["latest"] = json.loads(item["latest_state"]) if item.get("latest_state") else None
+    finally: cursor.close(); connection.close()
+    active = next((item for item in tests if item["status"] in {"active","heat_requested","heat_suppressed"}), None)
+    dashboard_devices, _ = load_dashboard()
+    boiler = next((item for item in dashboard_devices if item["source_system"]=="manual" and item["device_type"]=="boiler"), None)
+    return {"devices":devices,"tests":tests,"active":active,"boiler":boiler,
+            "climate_service_mode":os.getenv("CLIMATE_SERVICE_MODE","false")=="true",
+            "boiler_service_mode":os.getenv("BOILER_SERVICE_MODE","false")=="true"}
+
+
+@app.get("/service-tests")
+@editor_required
+def service_tests() -> str:
+    return render_template("service_tests.html", **load_service_test_context(), notice=session.pop("service_test_notice",None))
+
+
+def computherm_config(source_device_id: str) -> dict[str, Any]:
+    config = next((item for item in load_devices(DEFAULT_CONFIG) if item.source_system=="computherm" and item.device_id==source_device_id), None)
+    if config is None: raise RuntimeError("A Computherm nincs a pollerkonfigurációban.")
+    return asdict(config)
+
+
+@app.post("/service-tests/computherm/<int:device_id>/<action>")
+@editor_required
+def run_computherm_service_test(device_id: int, action: str):
+    validate_csrf()
+    if action not in {"start","suppress","restore"}: abort(404)
+    if os.getenv("BOILER_SERVICE_MODE","false") != "true": abort(409,"A gázkazánszerviz mód nincs bekapcsolva.")
+    connection=connect_database(); cursor=connection.cursor()
+    try:
+        cursor.execute("SELECT source_device_id FROM devices WHERE id=? AND is_active=1 AND source_system='computherm'",(device_id,)); row=cursor.fetchone()
+        if row is None: abort(404)
+        cursor.execute("SELECT manual_power_state FROM devices WHERE is_active=1 AND source_system='manual' AND device_type='boiler' LIMIT 1"); boiler=cursor.fetchone()
+        if boiler is None or not bool(boiler[0]): abort(409,"A Bosch kazán nincs bekapcsolt állapotban.")
+        cursor.execute("SELECT id,device_id,original_state,status FROM thermostat_service_tests WHERE status IN ('active','heat_requested','heat_suppressed') ORDER BY started_at DESC LIMIT 1 FOR UPDATE"); active=cursor.fetchone()
+        if action=="start" and active is not None: abort(409,"Már fut Computherm szervizteszt.")
+        if action!="start" and (active is None or int(active[1])!=device_id): abort(409,"Ehhez az eszközhöz nincs aktív teszt.")
+        control=connect_computherm(computherm_config(str(row[0])))
+        requested=None
+        if action=="start":
+            requested=float(request.form["temperature_c"]); preflight=computherm_snapshot(control)
+            cursor.execute("INSERT INTO thermostat_service_tests (device_id,started_by,status,requested_temperature_c,original_state,latest_state) VALUES (?,?,'active',?,?,?)",(device_id,g.current_user["id"],requested,json.dumps(preflight),json.dumps(preflight))); test_id=int(cursor.lastrowid); connection.commit()
+            original,verified=start_test(control,requested,preflight)
+            cursor.execute("UPDATE thermostat_service_tests SET status='heat_requested',latest_state=? WHERE id=?",(json.dumps(verified),test_id))
+        else:
+            test_id=int(active[0]); original=json.loads(active[2]); preflight=computherm_snapshot(control)
+            if action=="suppress": verified=suppress_heat(control,original); new_status="heat_suppressed"; ended=None
+            else: verified=restore_test(control,original); new_status="restored"; ended=datetime.now(UTC).replace(tzinfo=None)
+            cursor.execute("UPDATE thermostat_service_tests SET status=?,latest_state=?,ended_at=? WHERE id=?",(new_status,json.dumps(verified),ended,test_id))
+        cursor.execute("INSERT INTO thermostat_service_commands (service_test_id,requested_by,action,requested_temperature_c,preflight_state,verified_state,success) VALUES (?,?,?,?,?,?,1)",(test_id,g.current_user["id"],action,requested,json.dumps(preflight),json.dumps(verified)))
+        connection.commit(); session["service_test_notice"]={"kind":"success","message":{"start":"A fűtési próba elindult.","suppress":"A fűtési kérés megszüntetve; a Computherm bekapcsolva maradt.","restore":"Az eredeti Computherm-állapot visszaállítva."}[action]}
+    except Exception as error:
+        connection.rollback()
+        if hasattr(error,"code"): raise
+        if "test_id" in locals():
+            cursor.execute("UPDATE thermostat_service_tests SET status='active',error_message=? WHERE id=?",(str(error),test_id))
+            cursor.execute("INSERT INTO thermostat_service_commands (service_test_id,requested_by,action,requested_temperature_c,preflight_state,success,error_message) VALUES (?,?,?,?,?,0,?)",(test_id,g.current_user["id"],action,requested,json.dumps(locals().get("preflight")),str(error)))
+            connection.commit()
+        session["service_test_notice"]={"kind":"error","message":str(error)}
+    finally: cursor.close(); connection.close()
+    return redirect(url_for("service_tests"))
 
 
 @app.get("/outdoor-sources")
