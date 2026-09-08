@@ -25,10 +25,14 @@
 
 ## Fűtési állapotkapcsolat a Computherm-kártyákon
 
-- A Computherm-kártyákon jelenjen meg a hozzájuk tartozó Bosch kazán tényleges
+- [x] A Computherm-kártyákon jelenjen meg a hozzájuk tartozó Bosch kazán tényleges
   be- vagy kikapcsolt állapota.
-- Ha a Computherm fűtést kér, de a kazán ki van kapcsolva, az UI ezt külön,
+- [x] Ha a Computherm fűtést kér, de a kazán ki van kapcsolva, az UI ezt külön,
   cselekvést igénylő állapotként jelezze: távoli beavatkozás helyett a kazánt
   helyben be kell kapcsolni.
-- Az emeleti és földszinti Computherm–kazán kapcsolatot a fűtési vezérlés
-  tervezésekor kell véglegesíteni; ez nem része az 1.3.0 hűtési observernek.
+- [x] Az emeleti observer a Computherm–Bosch kapcsolatot megfigyeli, de nem
+  vezérli. A földszinti fűtési döntés külön következő lépés marad.
+- [ ] A Hisense típusonkénti COP–külső hőmérséklet görbéjét méréssel vagy
+  gyártói adatokból felvenni, majd az ideiglenes `5,0 °C` kültéri küszöböt
+  tarifákból számított COP-határra cserélni.
+- [ ] Zigbee radiátorszelepek nélkül a kevert klíma–gáz üzem tiltott marad.

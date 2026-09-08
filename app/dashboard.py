@@ -35,6 +35,7 @@ from poll_scheduler import run_cycle
 from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_active
 from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
 from cooling_observer import annotate_upstairs_cooling
+from heating_observer import annotate_upstairs_heating
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import (
     SETTINGS as GLOBAL_SETTINGS,
@@ -1925,6 +1926,7 @@ def dashboard() -> str:
     devices, attempts = load_dashboard(attempt_origin)
     _, outdoor_temperature = load_outdoor_sources()
     cooling_advice = annotate_upstairs_cooling(devices, outdoor_temperature)
+    heating_advice = annotate_upstairs_heating(devices, outdoor_temperature)
     outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")
     if requested_view in {"device", "room"}:
@@ -1987,6 +1989,7 @@ def dashboard() -> str:
         temperature_mode=temperature_mode,
         has_active_esp32=has_action_temperature,
         cooling_advice=cooling_advice,
+        heating_advice=heating_advice,
         outdoor_temperature=outdoor_summary,
         device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_summary),

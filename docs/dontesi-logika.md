@@ -120,6 +120,45 @@ automatikusan feltételezni, hogy a beállított célérték körül szimmetriku
 
 ## Fűtési döntés
 
+Az 1.4.0 verzió az emeleti fűtés megfigyelő modelljét vezeti be. Kiszámolja a
+helyiségi igényeket és a zónaszintű hőforrás-javaslatot, de sem a Hisense
+klímákat, sem a Computhermet nem vezérli.
+
+Minden klimatizált emeleti helyiségben az aktív Zigbee hőmérő a mérvadó. A
+Hisense saját mérése `0,20`, a dolgozóban lévő Computherm mérése `0,10` súllyal
+korrigálhatja a helyiségi cselekedeti hőmérsékletet. Az alapértelmezett fűtési
+igény `20,0 °C` alatt indulna, aktív fűtésnél pedig `20,5 °C`-ig maradna fenn.
+Az értékek, súlyok és a mérési adatok legnagyobb kora a Globális beállításokban
+módosítható.
+
+A hőforrás-választás zónaszintű és kölcsönösen kizáró:
+
+1. ha nincs végrehajtható emeleti hőigény, egyik hőforrás sem indulna;
+2. ha minden végrehajtható hőigényű helyiség Hisense klímája használható, és a
+   kültéri hőmérséklet eléri az ideiglenes alsó határt, a klímás fűtés az
+   elsődleges;
+3. ha legalább egy ilyen helyiség klímája nem használható, vagy a kültéri
+   hőmérséklet a határ alá esik, a teljes emeletre a gázfűtés kerül előtérbe;
+4. klíma és gáz egyidejű használatát az observer nem javasolja. Helyiségenként
+   szabályozható kevert üzem csak későbbi Zigbee radiátorszelepekkel lehetséges.
+
+A klímás fűtés alsó kültéri határa kezdetben, mérési tapasztalat hiányában
+`5,0 °C`. Ez módosítható, ideiglenes helyettesítője a Hisense külső
+hőmérséklettől függő COP-görbéjének. A tárolt elvárt minimum `COP 2,5`; a SCOP
+nem pillanatnyi vezérlési érték. A későbbi tarifaalapú döntés a tényleges
+COP-görbével váltja majd fel az egyszerű kültéri küszöböt.
+
+Nyitott vagy ismeretlen állapotú nyílászáró, explicit offline kontaktus és a
+zárás utáni stabilizációs idő az adott helyiséget blokkolja; ezek önmagukban nem
+okoznak gázra váltást. A régi, de elérhető Tuya állapotjelzés továbbra sem hiba.
+
+A Computherm kártyája megmutatja a Bosch kézi nyilvántartás szerinti állapotát.
+Ha a termosztát `active` állapota fűtést kér, de a Bosch ki van kapcsolva, külön
+helyszíni bekapcsolási figyelmeztetés jelenik meg. A `power` mező csak a
+termosztát bekapcsolt állapotát jelenti, nem a relé fűtési kérését. `22 °C`
+feletti Computherm- vagy Hisense-célértéket az observer eltérésként jelez; az
+1.4.0 még nem írja vissza.
+
 ### Helyiségi igény
 
 Egy helyiség fűtési igényt jelezhet, ha az elfogadott hőmérséklete a beállított

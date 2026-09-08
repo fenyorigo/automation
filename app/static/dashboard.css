@@ -65,6 +65,10 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .badge.mqtt-sensor-type { margin-top: 8px; background: #e9e4f5; color: #59438a; }
 .badge.outdoor-source { background: #e4eef5; color: #315f78; }
 .badge.cooling-demand { margin-top: 8px; background: #b42318; color: #fff; }
+.badge.heating-demand { margin-top: 8px; background: #c94f16; color: #fff; }
+.badge.boiler-on { margin-top: 8px; background: var(--green-soft); color: var(--green); }
+.badge.boiler-off { margin-top: 8px; background: #ece6d5; color: #171717; }
+.badge.heating-alert { margin-top: 8px; background: #b42318; color: #fff; white-space: normal; }
 .temperature { display: flex; align-items: start; margin: 25px 0 20px; font-variant-numeric: tabular-nums; }
 .temperature-value { font-size: clamp(3.1rem, 8vw, 4.6rem); font-weight: 700; line-height: .85; letter-spacing: -.075em; }
 .temperature-unit { padding: 2px 0 0 8px; color: var(--muted); font-size: 1rem; font-weight: 700; }
@@ -90,6 +94,13 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .cooling-advice.would_start, .cooling-advice.would_stop, .cooling-advice.blocked { background:#fff0ed; }
 .cooling-advice.would_start strong, .cooling-advice.would_stop strong, .cooling-advice.blocked strong { color:#b42318; }
 .cooling-advice .observer-note { font-weight:800; }
+.heating-advice, .heating-zone-advice { display:grid; gap:5px; margin:0 0 16px; padding:12px 14px; border-radius:12px; background:#fff7e8; }
+.heating-advice strong, .heating-zone-advice strong { color:#8a3b12; }
+.heating-advice small, .heating-zone-advice small { color:var(--muted); line-height:1.35; }
+.heating-advice.no_demand, .heating-zone-advice.no_demand { background:#eef3f0; }
+.heating-advice.no_demand strong, .heating-zone-advice.no_demand strong { color:var(--ink); }
+.heating-advice.blocked, .heating-zone-advice.blocked, .heating-zone-advice.gas { background:#fff0ed; }
+.heating-advice.blocked strong, .heating-zone-advice.blocked strong, .heating-zone-advice.gas strong, .heating-action-required { color:#b42318 !important; font-weight:900; }
 .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; padding: 16px 0; border-block: 1px solid var(--line); }
 .state-grid div { min-width: 0; }
 dt { color: var(--muted); font-size: .7rem; }

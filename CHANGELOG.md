@@ -5,6 +5,30 @@ helyi dátumok.
 
 ## Kiadatlan
 
+## 1.4.0 — 2026-09-08
+
+Elkészült az emeleti fűtési döntés első, kizárólag megfigyelő változata.
+
+### Új funkciók
+
+- Az emeleti helyiségek Zigbee-alapú, Hisense- és Computherm-méréssel
+  mérsékelten korrigált fűtési igényt kapnak.
+- A zóna vagy kizárólag klímás, vagy kizárólag gázfűtési javaslatot ad; kevert
+  üzemet Zigbee radiátorszelepek hiányában nem enged.
+- Az ideiglenes klímás kültéri alsó határ, a `COP 2,5` elvárás, a helyiségi
+  hiszterézis, a forrássúlyok, az adatkor és az ablakzárás utáni várakozás a
+  Globális beállításokban módosítható.
+- A Computherm kártyák megmutatják a Bosch kazán kézi állapotát, és külön
+  figyelmeztetnek, ha a termosztát fűtést kér, miközben a kazán ki van kapcsolva.
+- A helyiségi `Fűtést kér` jelzés, a klímaalkalmasság, a blokkoló nyílászárók és
+  az egész emelet hőforrás-javaslata megjelenik a kezdőlapon.
+
+### Biztonság
+
+- Az observer sem klíma-, sem Computherm-parancsot nem küld. Nyitott vagy
+  ismeretlen nyílászáró nem kényszerít gázra váltást, hanem az érintett
+  helyiséget blokkolja.
+
 ## 1.3.0 — 2026-09-08
 
 Az emeleti Hisense klímákhoz elkészült a hűtési döntés első, kizárólag

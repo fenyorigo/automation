@@ -63,8 +63,16 @@ SETTINGS = (
     Setting("COOLING_COMPUTHERM_WEIGHT", "Computherm mérés súlya", "0.10", "number", "A Computherm súlya ott, ahol ugyanabban a helyiségben rendelkezésre áll.", number_between(0, 0.5)),
     Setting("COOLING_MAX_DATA_AGE_MINUTES", "Hűtési döntési adat legnagyobb kora", "180", "number", "Perc; ennél régebbi mérés nem kerül a cselekedeti hőmérsékletbe.", integer_between(1, 1440)),
     Setting("COOLING_WINDOW_CLOSE_STABILIZATION_MINUTES", "Ablakzárás utáni hűtési várakozás", "10", "number", "Perc; a legutolsó nyílászáró bezárása után eddig még blokkolt maradna a hűtés.", integer_between(0, 180)),
-    Setting("HEATING_MAX_ROOM_TEMPERATURE_C", "Fűtés felső szobahőmérsékleti határa", "22", "number", "Előkészített biztonsági korlát; a vezérlési logika még nem használja.", number_between(5, 40)),
-    Setting("HEATING_MAX_TARGET_C", "Fűtés legnagyobb célhőmérséklete", "22", "number", "Előkészített biztonsági korlát.", number_between(5, 40)),
+    Setting("HEATING_MAX_ROOM_TEMPERATURE_C", "Fűtés felső szobahőmérsékleti határa", "22", "number", "Biztonsági korlát; e fölött fűtési igény nem állhat fenn.", number_between(5, 40)),
+    Setting("HEATING_MAX_TARGET_C", "Fűtés legnagyobb célhőmérséklete", "22", "number", "Az observer jelzi az ennél magasabb fűtési célértéket.", number_between(5, 40)),
+    Setting("HEATING_ROOM_REQUEST_ON_C", "Fűtési igény bekapcsolási határa", "20.0", "number", "A cselekedeti helyiséghőmérséklet ettől lefelé kér fűtést, ha nincs aktív fűtés.", number_between(5, 35)),
+    Setting("HEATING_ROOM_REQUEST_OFF_C", "Fűtési igény kikapcsolási határa", "20.5", "number", "Már működő fűtésnél eddig az értékig marad fenn az igény; a két határ adja a hiszterézist.", number_between(5, 35)),
+    Setting("HEATING_CLIMATE_MIN_OUTDOOR_C", "Klímás fűtés kültéri alsó határa", "5.0", "number", "Ideiglenes COP-helyettesítő küszöb; alatta az observer a gázfűtést részesíti előnyben.", number_between(-30, 30)),
+    Setting("HEATING_MIN_COP", "Klímás fűtés legkisebb elfogadott COP-ja", "2.5", "number", "Döntési alapelv; tényleges COP-görbe hiányában az observer még a kültéri alsó határt használja.", number_between(1, 10)),
+    Setting("HEATING_HISENSE_WEIGHT", "Hisense fűtési mérés súlya", "0.20", "number", "A klíma saját érzékelőjének súlya a fűtési cselekedeti hőmérsékletben.", number_between(0, 0.5)),
+    Setting("HEATING_COMPUTHERM_WEIGHT", "Computherm fűtési mérés súlya", "0.10", "number", "A Computherm súlya ott, ahol ugyanabban a helyiségben rendelkezésre áll.", number_between(0, 0.5)),
+    Setting("HEATING_MAX_DATA_AGE_MINUTES", "Fűtési döntési adat legnagyobb kora", "180", "number", "Perc; ennél régebbi mérés nem kerül a fűtési cselekedeti hőmérsékletbe.", integer_between(1, 1440)),
+    Setting("HEATING_WINDOW_CLOSE_STABILIZATION_MINUTES", "Ablakzárás utáni fűtési várakozás", "10", "number", "Perc; a legutolsó nyílászáró bezárása után eddig még blokkolt maradna a fűtés.", integer_between(0, 180)),
     Setting("VENTILATION_LONG_THRESHOLD_MINUTES", "Hosszú szellőztetés határa", "5", "number", "Perc; ennél rövidebb esemény rövid szellőztetésnek számít.", integer_between(1, 180)),
     Setting("VENTILATION_CONTACT_CLOSE_DELAY_SECONDS", "Nyílászáró zárási késleltetése", "30", "number", "Másodperc; kiszűri a nyitott és bukó állás közötti pillanatnyi csukott jelzést.", integer_between(5, 300)),
     Setting("ENERGY_MJ_PER_KWH", "Energiaátváltás: MJ/kWh", "3.6", "number", "1 kWh energiatartalma MJ-ban; a villamos és gázfűtés közös energiaalapú összehasonlításához.", number_between(0.1, 100)),
@@ -126,6 +134,16 @@ def save(values_to_save: dict[str, str]) -> None:
     )
     if secondary_weight >= 1:
         raise ValueError("A Hisense és Computherm együttes súlyának 1-nél kisebbnek kell lennie.")
+    if float(normalized["HEATING_ROOM_REQUEST_ON_C"].replace(",", ".")) >= float(
+        normalized["HEATING_ROOM_REQUEST_OFF_C"].replace(",", ".")
+    ):
+        raise ValueError("A fűtési igény bekapcsolási határának kisebbnek kell lennie a kikapcsolási határnál.")
+    heating_secondary_weight = sum(
+        float(normalized[key].replace(",", "."))
+        for key in ("HEATING_HISENSE_WEIGHT", "HEATING_COMPUTHERM_WEIGHT")
+    )
+    if heating_secondary_weight >= 1:
+        raise ValueError("A fűtési Hisense és Computherm együttes súlyának 1-nél kisebbnek kell lennie.")
 
     original = ENV_PATH.read_text(encoding="utf-8").splitlines(keepends=True)
     remaining = dict(normalized)

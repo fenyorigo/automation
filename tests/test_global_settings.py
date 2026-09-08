@@ -27,11 +27,25 @@ class ReloadEnvironmentTest(unittest.TestCase):
         self.assertEqual(settings["COOLING_OUTDOOR_DISABLE_C"].default, "27.1")
         self.assertEqual(settings["COOLING_MAX_DATA_AGE_MINUTES"].default, "180")
 
+    def test_heating_observer_defaults_are_ui_managed(self) -> None:
+        settings = {item.key: item for item in global_settings.SETTINGS}
+        self.assertEqual(settings["HEATING_ROOM_REQUEST_ON_C"].default, "20.0")
+        self.assertEqual(settings["HEATING_ROOM_REQUEST_OFF_C"].default, "20.5")
+        self.assertEqual(settings["HEATING_CLIMATE_MIN_OUTDOOR_C"].default, "5.0")
+        self.assertEqual(settings["HEATING_MIN_COP"].default, "2.5")
+
     def test_save_rejects_reversed_cooling_hysteresis(self) -> None:
         values = {item.key: item.default for item in global_settings.SETTINGS}
         values["COOLING_ROOM_REQUEST_ON_C"] = "26"
         values["COOLING_ROOM_REQUEST_OFF_C"] = "27"
         with self.assertRaisesRegex(ValueError, "bekapcsolási határának"):
+            global_settings.save(values)
+
+    def test_save_rejects_reversed_heating_hysteresis(self) -> None:
+        values = {item.key: item.default for item in global_settings.SETTINGS}
+        values["HEATING_ROOM_REQUEST_ON_C"] = "21"
+        values["HEATING_ROOM_REQUEST_OFF_C"] = "20"
+        with self.assertRaisesRegex(ValueError, "fűtési igény bekapcsolási"):
             global_settings.save(values)
 
     def test_reload_updates_values_and_reports_restart_keys(self) -> None:
