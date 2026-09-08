@@ -5,6 +5,13 @@ helyi dátumok.
 
 ## Kiadatlan
 
+## 1.2.0 — 2026-09-08
+
+Zigbee- és Shelly-szenzorintegráció, nyílászáró-alapú szellőztetési napló,
+valamint részletes gáz- és villanyszámla-kezelés.
+
+### Adatimport
+
 - A PDF-ekkel ellenőrzött történeti villanyszámlákhoz idempotens, tranzakciós
   importáló és utólagos adatbázis-ellenőrzés készült.
 
