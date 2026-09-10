@@ -194,6 +194,10 @@ MIGRATIONS = (
         "v1_47_boiler_only_power_switch",
         ROOT / "SQL" / "migrations" / "047_home_automation_v1.46_to_v1.47.sql",
     ),
+    (
+        "v1_48_boiler_operating_states",
+        ROOT / "SQL" / "migrations" / "048_home_automation_v1.47_to_v1.48.sql",
+    ),
 )
 
 

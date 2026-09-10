@@ -152,8 +152,10 @@ Nyitott vagy ismeretlen állapotú nyílászáró, explicit offline kontaktus é
 zárás utáni stabilizációs idő az adott helyiséget blokkolja; ezek önmagukban nem
 okoznak gázra váltást. A régi, de elérhető Tuya állapotjelzés továbbra sem hiba.
 
-A Computherm kártyája megmutatja a Bosch kézi nyilvántartás szerinti állapotát.
-Ha a termosztát `active` állapota fűtést kér, de a Bosch ki van kapcsolva, külön
+A Computherm kártyája a Bosch tényleges fűtési elérhetőségét mutatja. Ehhez
+egyszerre szükséges a Nous vagy kézi forrás szerint meglévő tápellátás és a
+kézzel megjelölt **Fűtés** állapot. Ha a termosztát `active` állapota fűtést
+kér, de ezek valamelyike hiányzik, külön
 helyszíni bekapcsolási figyelmeztetés jelenik meg. A `power` mező csak a
 termosztát bekapcsolt állapotát jelenti, nem a relé fűtési kérését. `22 °C`
 feletti Computherm- vagy Hisense-célértéket az observer eltérésként jelez; az
@@ -161,8 +163,8 @@ feletti Computherm- vagy Hisense-célértéket az observer eltérésként jelez;
 
 A földszinti zónában nincs klíma, ezért ott nincs hőforrás-választás. A
 földszinti Computherm kártyájának külön, gáz-only javaslata a termosztát `active`
-jelét és a Bosch kézi nyilvántartási állapotát értékeli. Fűtési kérés és
-bekapcsolt kazán esetén aktív gázfűtést jelez; kikapcsolt kazán esetén helyszíni
+jelét és a Bosch fűtési elérhetőségét értékeli. Fűtési kérés és elérhető
+kazánfűtés esetén aktív gázfűtést jelez; ellenkező esetben helyszíni
 bekapcsolást kér; reléjel nélkül nincs földszinti fűtési igény. Ez továbbra is
 megfigyelő információ, eszközparancsot nem küld.
 
@@ -182,8 +184,9 @@ A siker feltétele, hogy a visszaolvasott bekapcsolt állapot, üzemmód,
 célhőmérséklet és ventilátorfokozat mind megfeleljen a kérésnek. A kért mód az
 auditnapló része.
 
-A Computherm-próba csak szerkesztőnek, bekapcsolt gázkazánszerviz mellett és a
-nyilvántartás szerint bekapcsolt Bosch kazánnal használható. Egyszerre csak egy
+A Computherm-próba csak szerkesztőnek, bekapcsolt gázkazánszerviz mellett,
+feszültség alatt álló és kézzel fűtésre jelölt Bosch kazánnal használható.
+Egyszerre csak egy
 termosztát tesztelhető. Indítás előtt teljes állapotmentés készül. A teszt a
 termosztát kikapcsolása nélkül kézi módra vált, szükség esetén ideiglenesen
 megemeli a `22 °C` felső korlátot, majd beállítja a kért célértéket. A fűtési

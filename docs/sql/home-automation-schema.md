@@ -32,6 +32,8 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `device_power_control_attempts`: a dedikált Bosch-tápdugalj kézi kapcsolási
   kérései, kérő felhasználója, előzetes és visszaigazolt reléállapota, valamint
   hibája
+- `boiler_mode_state_events`: a Bosch kézzel rögzített melegvíz- és
+  fűtésállapotának időbélyeges változásai
 - `sensor_readings`: mért értékek idősorokhoz
 - `energy_billing_cycles`: mérőnkénti, nem feltétlenül naptári elszámolási ciklusok
 - `gas_conversion_periods`: időben érvényes korrekciós tényező és fűtőérték

@@ -308,8 +308,12 @@ azonosítót ettől elkülönítve kell nyilvántartani.
 
 A Bosch 7000i elé kötött `nous-kazan` Tasmota dugalj a fűtési eszközök
 alapnézetének része. A dugalj **Bekapcsolva** állapota a kazán tápellátását
-jelzi, nem a Bosch melegvíz- vagy fűtési üzemének állapotát. A két kazánüzem
-egyelőre külön, kézzel nyilvántartandó adat.
+jelzi, nem a Bosch melegvíz- vagy fűtési üzemének állapotát. A Bosch kártyája
+ezért három külön jelzőpontot mutat: **Feszültség alatt**, **Melegvíz-
+szolgáltatás** és **Fűtés**. Az első forrása normál esetben a Nous, annak
+elérhetetlenségekor a kézi tartalékjelzés; a másik kettő kézzel rögzített adat.
+A Kézi állapot űrlapon mindhárom egyszerű jelölőnégyzet, külön ki/be
+választópár nélkül.
 
 ### Okosdugaljak kézi kapcsolása
 
@@ -324,8 +328,8 @@ kikapcsolom** megerősítés küldi el a parancsot. A megerősítés öt percig
 A Tasmota parancsot HTTP-visszaolvasás igazolja. Az elküldött, de nem igazolt
 parancs külön figyelmeztetést kap; nem jelenik meg biztos sikerként.
 Az igazolt kikapcsolás a Bosch nyilvántartott állapotát is kikapcsoltra állítja.
-Bekapcsoláskor a Bosch külön kézi állapota nem változik automatikusan, mert a
-tápfeszültség még nem bizonyítja, hogy a kazán panelje be van kapcsolva.
+Ilyenkor a melegvíz és a fűtés jelzése is megszűnik. Bekapcsoláskor csak a
+tápellátás lesz igazolt; a két kazánüzemet külön kell kézzel megjelölni.
 
 ### Lekérdezési idők
 
@@ -377,8 +381,9 @@ A parancs előtt és után állapotlekérdezés történik; a kikapcsolás kül�
 Szerviz után a klímaszerviz kapcsolót mindig ki kell kapcsolni.
 
 A kezdőlap **Szervizteszt** menüpontjában az emeleti vagy földszinti Computherm
-külön próbálható. Előbb a Bosch kézi állapotát kell bekapcsoltra állítani, majd
-a gázkazánszerviz módot engedélyezni. A **Fűtési próba indítása** elmenti az
+külön próbálható. Előbb a Bosch **Feszültség alatt** és **Fűtés** állapotát kell
+megjelölni, majd a gázkazánszerviz módot engedélyezni. A **Fűtési próba
+indítása** elmenti az
 eredeti termosztátállapotot és ideiglenes kézi célértéket ad. A **Fűtési kérés
 megszüntetése** a Computherm kikapcsolása nélkül engedi el a relét. A munka
 végén kötelező a **Teszt lezárása és visszaállítás**, amely visszaállítja az

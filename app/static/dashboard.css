@@ -107,6 +107,12 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .heating-advice.blocked strong, .heating-zone-advice.blocked strong, .heating-zone-advice.gas strong, .heating-action-required { color:#b42318 !important; font-weight:900; }
 .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; padding: 16px 0; border-block: 1px solid var(--line); }
 .state-grid div { min-width: 0; }
+.boiler-state-grid { grid-template-columns: 1fr; }
+.boiler-state-grid div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.boiler-state-grid dt { display: flex; align-items: center; gap: 8px; }
+.state-dot { width: .72rem; height: .72rem; flex: 0 0 auto; border: 2px solid #8c938f; border-radius: 50%; background: transparent; }
+.state-enabled .state-dot { border-color: var(--green); background: var(--green); }
+.state-disabled { color: var(--muted); }
 dt { color: var(--muted); font-size: .7rem; }
 dd { margin: 3px 0 0; font-weight: 700; text-transform: capitalize; }
 dd.power-on { color: #d05a16; }
@@ -137,6 +143,10 @@ dd.power-on { color: #d05a16; }
 .segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
 .segmented label { display: flex; align-items: center; justify-content: center; min-height: 42px; border: 1px solid var(--line); border-radius: 10px; background: white; font-size: .78rem; font-weight: 700; cursor: pointer; }
 .segmented input { margin-right: 6px; accent-color: var(--green); }
+.boiler-state-options { display: grid; gap: 7px; margin-top: 7px; }
+.boiler-state-options label { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: white; font-size: .82rem; font-weight: 700; }
+.boiler-state-options input { accent-color: var(--green); }
+.boiler-state-options label:has(input:disabled) { color: var(--muted); background: #f2f0e9; }
 .date-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .date-fields input { display: block; width: 100%; min-height: 42px; margin-top: 6px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font: inherit; }
 .maintenance-form button { min-height: 42px; margin-top: 11px; padding: 0 18px; border: 0; border-radius: 10px; background: var(--ink); color: white; font: inherit; font-weight: 800; cursor: pointer; }

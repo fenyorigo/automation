@@ -10,7 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "app"))
 
 from power_switch_control import control_tasmota_power, control_zigbee_power
-from dashboard import POWER_SWITCH_ALLOWLIST, reconcile_boiler_after_supply_cut
+from dashboard import (
+    POWER_SWITCH_ALLOWLIST,
+    annotate_boiler_operating_states,
+    reconcile_boiler_supply_state,
+)
 
 
 class _Response(io.BytesIO):
@@ -72,7 +76,7 @@ class _FakeMqttClient:
 
 
 class _BoilerCursor:
-    def __init__(self, row=(42, 1)) -> None:
+    def __init__(self, row=(42, 1, 1, 1)) -> None:
         self.row = row
         self.calls = []
 
@@ -155,7 +159,7 @@ class PowerSwitchControlTest(unittest.TestCase):
     def test_verified_boiler_supply_cut_marks_manual_boiler_off(self) -> None:
         cursor = _BoilerCursor()
 
-        changed = reconcile_boiler_after_supply_cut(
+        changed = reconcile_boiler_supply_state(
             cursor,
             source_system="tasmota",
             source_device_id="nous-kazan",
@@ -163,21 +167,48 @@ class PowerSwitchControlTest(unittest.TestCase):
         )
 
         self.assertTrue(changed)
-        self.assertEqual(cursor.calls[1][1], (42,))
-        self.assertEqual(cursor.calls[2][1], (42,))
+        self.assertEqual(cursor.calls[1][1], (0, 42))
+        self.assertEqual(cursor.calls[2][1], (42, 1, 0))
+        self.assertEqual(cursor.calls[3][1], (42,))
+        self.assertEqual(cursor.calls[4][1], (42, 1, 1))
 
-    def test_supply_restore_does_not_claim_boiler_panel_is_on(self) -> None:
-        cursor = _BoilerCursor()
+    def test_supply_restore_marks_mains_only(self) -> None:
+        cursor = _BoilerCursor((42, 0, 0, 0))
 
-        changed = reconcile_boiler_after_supply_cut(
+        changed = reconcile_boiler_supply_state(
             cursor,
             source_system="tasmota",
             source_device_id="nous-kazan",
             verified_power=True,
         )
 
-        self.assertFalse(changed)
-        self.assertEqual(cursor.calls, [])
+        self.assertTrue(changed)
+        self.assertEqual(cursor.calls[1][1], (1, 42))
+        self.assertEqual(len(cursor.calls), 3)
+
+    def test_boiler_card_uses_three_single_checkboxes(self) -> None:
+        template = (ROOT / "app" / "templates" / "_device_card.html").read_text()
+        self.assertIn('type="checkbox" name="manual_power_state"', template)
+        self.assertIn('type="checkbox" name="manual_hot_water_state"', template)
+        self.assertIn('type="checkbox" name="manual_heating_state"', template)
+
+    def test_boiler_operating_states_use_nous_supply(self) -> None:
+        boiler = {
+            "source_system": "manual", "device_type": "boiler",
+            "manual_power_state": False, "manual_hot_water_state": True,
+            "manual_heating_state": True,
+        }
+        supply = {
+            "source_system": "tasmota", "source_device_id": "nous-kazan",
+            "online": True, "switch_power": True,
+        }
+
+        annotate_boiler_operating_states([boiler, supply])
+
+        self.assertTrue(boiler["boiler_supply_power"])
+        self.assertEqual(boiler["boiler_supply_source"], "Nous")
+        self.assertTrue(boiler["boiler_hot_water_enabled"])
+        self.assertTrue(boiler["boiler_heating_enabled"])
 
 
 if __name__ == "__main__":

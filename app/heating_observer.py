@@ -237,7 +237,9 @@ def annotate_upstairs_heating(
         ),
         None,
     )
-    boiler_on = bool(boiler and boiler.get("manual_power_state"))
+    boiler_on = bool(
+        boiler and boiler.get("boiler_heating_enabled", boiler.get("manual_power_state"))
+    )
     thermostat_calling = bool(thermostat and thermostat.get("active"))
     gas_heating_active = boiler_on and thermostat_calling
     params = parameters_from_environment()
@@ -349,7 +351,9 @@ def annotate_ground_floor_heating(
         ),
         None,
     )
-    boiler_on = bool(boiler and boiler.get("manual_power_state"))
+    boiler_on = bool(
+        boiler and boiler.get("boiler_heating_enabled", boiler.get("manual_power_state"))
+    )
     thermostat_calling = bool(thermostat.get("active"))
     if thermostat_calling and boiler_on:
         status = "gas"

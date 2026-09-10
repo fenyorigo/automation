@@ -880,7 +880,8 @@ def load_dashboard(
               d.device_type,d.model,
               dt.name AS device_type_name,
               d.room_id, r.name AS room_name, z.name AS zone_name,
-              d.managed_manually, d.manual_power_state, d.access_mode,
+              d.managed_manually, d.manual_power_state,
+              d.manual_hot_water_state,d.manual_heating_state,d.access_mode,
               d.capability_mode, d.polling_enabled, d.control_enabled,
               d.poll_interval_seconds,
               d.last_service_date, d.next_service_due,
@@ -1147,6 +1148,42 @@ def load_dashboard(
                 device["derived_target_temperature_c"] = minimum
                 device["derived_target_source"] = " és ".join(locations)
     return devices, attempts
+
+
+def annotate_boiler_operating_states(devices: list[dict[str, Any]]) -> None:
+    """Separate observable mains supply from manually recorded boiler modes."""
+    boiler = next(
+        (
+            item for item in devices
+            if item.get("source_system") == "manual"
+            and item.get("device_type") == "boiler"
+        ),
+        None,
+    )
+    if boiler is None:
+        return
+    supply = next(
+        (
+            item for item in devices
+            if item.get("source_system") == "tasmota"
+            and item.get("source_device_id") == "nous-kazan"
+        ),
+        None,
+    )
+    if supply is not None and supply.get("online") and supply.get("switch_power") is not None:
+        supply_power = bool(supply["switch_power"])
+        supply_source = "Nous"
+    else:
+        supply_power = bool(boiler.get("manual_power_state"))
+        supply_source = "Kézi"
+    boiler["boiler_supply_power"] = supply_power
+    boiler["boiler_supply_source"] = supply_source
+    boiler["boiler_hot_water_enabled"] = bool(
+        supply_power and boiler.get("manual_hot_water_state")
+    )
+    boiler["boiler_heating_enabled"] = bool(
+        supply_power and boiler.get("manual_heating_state")
+    )
 
 
 def load_room_groups(
@@ -2011,6 +2048,7 @@ def dashboard() -> str:
     if request.args.get("cancel_power_off") == "1":
         session.pop("pending_power_off", None)
     devices, attempts = load_dashboard(attempt_origin)
+    annotate_boiler_operating_states(devices)
     _, outdoor_temperature = load_outdoor_sources()
     climate_service_mode = os.getenv("CLIMATE_SERVICE_MODE", "false") == "true"
     boiler_service_mode = os.getenv("BOILER_SERVICE_MODE", "false") == "true"
@@ -4599,6 +4637,7 @@ def load_service_test_context() -> dict[str, Any]:
     finally: cursor.close(); connection.close()
     active = next((item for item in tests if item["status"] in {"active","heat_requested","heat_suppressed"}), None)
     dashboard_devices, _ = load_dashboard()
+    annotate_boiler_operating_states(dashboard_devices)
     boiler = next((item for item in dashboard_devices if item["source_system"]=="manual" and item["device_type"]=="boiler"), None)
     return {"devices":devices,"climate_devices":climate_devices,"tests":tests,"active":active,"boiler":boiler,
             "climate_service_mode":os.getenv("CLIMATE_SERVICE_MODE","false")=="true",
@@ -4627,8 +4666,8 @@ def run_computherm_service_test(device_id: int, action: str):
     try:
         cursor.execute("SELECT source_device_id FROM devices WHERE id=? AND is_active=1 AND source_system='computherm'",(device_id,)); row=cursor.fetchone()
         if row is None: abort(404)
-        cursor.execute("SELECT manual_power_state FROM devices WHERE is_active=1 AND source_system='manual' AND device_type='boiler' LIMIT 1"); boiler=cursor.fetchone()
-        if boiler is None or not bool(boiler[0]): abort(409,"A Bosch kazán nincs bekapcsolt állapotban.")
+        cursor.execute("SELECT manual_power_state,manual_heating_state FROM devices WHERE is_active=1 AND source_system='manual' AND device_type='boiler' LIMIT 1"); boiler=cursor.fetchone()
+        if boiler is None or not bool(boiler[0]) or not bool(boiler[1]): abort(409,"A Bosch tápellátása vagy fűtése nincs bekapcsolt állapotban.")
         cursor.execute("SELECT id,device_id,original_state,status FROM thermostat_service_tests WHERE status IN ('active','heat_requested','heat_suppressed') ORDER BY started_at DESC LIMIT 1 FOR UPDATE"); active=cursor.fetchone()
         if action=="start" and active is not None: abort(409,"Már fut Computherm szervizteszt.")
         if action!="start" and (active is None or int(active[1])!=device_id): abort(409,"Ehhez az eszközhöz nincs aktív teszt.")
@@ -5191,17 +5230,28 @@ def validate_csrf() -> None:
 def update_power(device_id: int):
     validate_csrf()
 
+    allowed_values = {None, "1"}
     power_value = request.form.get("manual_power_state")
-    if power_value not in {"0", "1"}:
+    hot_water_value = request.form.get("manual_hot_water_state")
+    heating_value = request.form.get("manual_heating_state")
+    if any(
+        value not in allowed_values
+        for value in (power_value, hot_water_value, heating_value)
+    ):
         abort(400)
-    new_state = int(power_value)
+    new_state = int(power_value == "1")
+    new_hot_water_state = int(hot_water_value == "1")
+    new_heating_state = int(heating_value == "1")
+    if not new_state:
+        new_hot_water_state = 0
+        new_heating_state = 0
 
     connection = connect_database()
     cursor = connection.cursor()
     try:
         cursor.execute(
             """
-            SELECT manual_power_state FROM devices
+            SELECT manual_power_state,manual_hot_water_state,manual_heating_state
             WHERE id = ? AND is_active = 1 AND managed_manually = 1
             FOR UPDATE
             """,
@@ -5211,8 +5261,14 @@ def update_power(device_id: int):
         if row is None:
             abort(404)
         previous_state = int(bool(row[0]))
-        changed = previous_state != new_state
-        if changed:
+        previous_hot_water_state = None if row[1] is None else int(bool(row[1]))
+        previous_heating_state = None if row[2] is None else int(bool(row[2]))
+        power_changed = previous_state != new_state
+        modes_changed = (
+            previous_hot_water_state != new_hot_water_state
+            or previous_heating_state != new_heating_state
+        )
+        if power_changed:
             cursor.execute(
                 "UPDATE devices SET manual_power_state = ? WHERE id = ?",
                 (new_state, device_id),
@@ -5225,6 +5281,23 @@ def update_power(device_id: int):
                 """,
                 (device_id, previous_state, new_state),
             )
+        if modes_changed:
+            cursor.execute(
+                """UPDATE devices
+                      SET manual_hot_water_state=?,manual_heating_state=?
+                    WHERE id=?""",
+                (new_hot_water_state, new_heating_state, device_id),
+            )
+            cursor.execute(
+                """INSERT INTO boiler_mode_state_events
+                     (device_id,previous_hot_water_state,new_hot_water_state,
+                      previous_heating_state,new_heating_state)
+                   VALUES (?,?,?,?,?)""",
+                (
+                    device_id, previous_hot_water_state, new_hot_water_state,
+                    previous_heating_state, new_heating_state,
+                ),
+            )
         connection.commit()
     except Exception:
         connection.rollback()
@@ -5232,7 +5305,7 @@ def update_power(device_id: int):
     finally:
         cursor.close()
         connection.close()
-    result = "power_saved" if changed else "power_unchanged"
+    result = "power_saved" if power_changed or modes_changed else "power_unchanged"
     return redirect(url_for("dashboard", saved=result) + f"#device-{device_id}")
 
 
@@ -5264,40 +5337,59 @@ def load_switchable_device(device_id: int) -> dict[str, Any] | None:
         connection.close()
 
 
-def reconcile_boiler_after_supply_cut(
+def reconcile_boiler_supply_state(
     cursor: mariadb.Cursor,
     *,
     source_system: str,
     source_device_id: str,
     verified_power: bool | None,
 ) -> bool:
-    """Record the Bosch as effectively off after a verified mains cut."""
+    """Mirror verified Nous supply state and disable modes after a mains cut."""
     if (
         source_system != "tasmota"
         or source_device_id != "nous-kazan"
-        or verified_power is not False
+        or verified_power is None
     ):
         return False
     cursor.execute(
-        """SELECT id,manual_power_state FROM devices
+        """SELECT id,manual_power_state,manual_hot_water_state,manual_heating_state
              WHERE is_active=1 AND source_system='manual' AND device_type='boiler'
              LIMIT 1 FOR UPDATE"""
     )
     row = cursor.fetchone()
-    if row is None or not bool(row[1]):
+    if row is None:
         return False
     boiler_id = int(row[0])
-    cursor.execute(
-        "UPDATE devices SET manual_power_state=0 WHERE id=?",
-        (boiler_id,),
-    )
-    cursor.execute(
-        """INSERT INTO manual_state_events
-             (device_id,previous_power_state,new_power_state)
-           VALUES (?,1,0)""",
-        (boiler_id,),
-    )
-    return True
+    changed = bool(row[1]) != verified_power
+    if changed:
+        cursor.execute(
+            "UPDATE devices SET manual_power_state=? WHERE id=?",
+            (int(verified_power), boiler_id),
+        )
+        cursor.execute(
+            """INSERT INTO manual_state_events
+                 (device_id,previous_power_state,new_power_state)
+               VALUES (?,?,?)""",
+            (boiler_id, int(bool(row[1])), int(verified_power)),
+        )
+    if verified_power is False and (
+        row[2] is None or bool(row[2]) or row[3] is None or bool(row[3])
+    ):
+        cursor.execute(
+            """UPDATE devices
+                  SET manual_hot_water_state=0,manual_heating_state=0
+                WHERE id=?""",
+            (boiler_id,),
+        )
+        cursor.execute(
+            """INSERT INTO boiler_mode_state_events
+                 (device_id,previous_hot_water_state,new_hot_water_state,
+                  previous_heating_state,new_heating_state)
+               VALUES (?,?,0,?,0)""",
+            (boiler_id, row[2], row[3]),
+        )
+        changed = True
+    return changed
 
 
 @app.post("/devices/<int:device_id>/switch-power")
@@ -5383,7 +5475,7 @@ def switch_device_power(device_id: int):
                     json.dumps({"power": result.verified_power, "origin": "ui"}),
                 ),
             )
-        reconcile_boiler_after_supply_cut(
+        reconcile_boiler_supply_state(
             cursor,
             source_system=str(device["source_system"]),
             source_device_id=str(device["source_device_id"]),

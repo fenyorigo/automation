@@ -19,8 +19,9 @@ helyi dátumok.
   kötött második megerősítést kér, minden kísérlet auditált és a visszaigazolás
   hiánya nem jelenik meg sikerként.
 - A `Nous kazán` igazolt lekapcsolása a Bosch kézi állapotát is kikapcsoltra
-  állítja és naplózza; a táp visszaadása nem feltételezi automatikusan, hogy a
-  kazán panelje is bekapcsolt.
+  állítja és naplózza. A Bosch kártyája külön jelzi a Nous vagy kézi forrású
+  tápellátást, a melegvíz-szolgáltatást és a fűtést; a három kézi érték egy-egy
+  jelölőnégyzettel rögzíthető. Táp nélkül a két kazánüzem nem lehet aktív.
 
 ## 1.3.1 — 2026-09-08
 

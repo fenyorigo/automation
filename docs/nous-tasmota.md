@@ -72,10 +72,11 @@ terhelés és külön referencia teljesítménymérő szükséges. Terhelés né
   gombnyomása még nem
   küld parancsot: piros következményjelzés jelenik meg, és csak az öt percig
   érvényes második megerősítés hajtja végre a kapcsolást.
-- A Nous relé igazolt kikapcsolása a Bosch kézi nyilvántartási állapotát is
-  kikapcsoltra állítja, és erről `manual_state_events` bejegyzést készít. A
-  Nous bekapcsolása nem állítja automatikusan bekapcsoltra a Bosch-t: a
-  tápellátás megléte önmagában nem bizonyítja a kazán panelállapotát.
+- A Nous relé igazolt állapota a Bosch tápellátási jelzését is frissíti, és
+  változáskor `manual_state_events` bejegyzést készít. Kikapcsoláskor a kézzel
+  nyilvántartott melegvíz és fűtés is inaktív lesz; ezek változását a
+  `boiler_mode_state_events` őrzi. Visszakapcsoláskor csak a tápellátás válik
+  aktívvá, a melegvíz- és fűtésjelzést külön kell megadni.
 - Minden kapcsolási kísérlet, kérő felhasználó és visszaellenőrzött eredmény a
   `device_power_control_attempts` táblába kerül.
 - A `nous-mainit`, `nous-auxit` és a Zigbee router-dugaljak az UI-ból nem

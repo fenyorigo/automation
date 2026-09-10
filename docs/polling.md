@@ -379,8 +379,10 @@ adatbázisba. A munkamenetsüti `HttpOnly` és `SameSite=Lax`. Ha nincs beállí
 szerint védett, nem verziózott `.dashboard-secret` fájlt. Fedora-telepítésnél
 javasolt külön tartós `DASHBOARD_SECRET_KEY` értéket megadni a környezetben.
 
-A Bosch 7000i kézzel kezelt eszköz: a műszerfalon állítható, hogy a kazán
-bekapcsolt vagy kikapcsolt állapotban van-e. A Hisense klímákhoz és a kazánhoz
+A Bosch 7000i részben kézzel kezelt eszköz: a műszerfal külön jelölőnégyzetben
+tartja nyilván a tápellátás kézi tartalékjelzését, a melegvíz-szolgáltatást és
+a fűtést. Ha a Nous elérhető, a tényleges tápellátás forrása annak reléállapota.
+A Hisense klímákhoz és a kazánhoz
 megadható az utolsó szerviz dátuma. Az adatok és a korábbi szervizek története a
 MariaDB-ben maradnak meg. A következő szerviz időpontja a szerelővel való
 egyeztetéstől függ, ezért azt a rendszer nem számítja és nem tartja nyilván.
@@ -389,6 +391,8 @@ A kazán kézi állapotváltozásai és a szervizesemények külön naplózódna
 
 - a `manual_state_events` minden tényleges be-/kikapcsolást a régi és az új
   állapottal, valamint az adatbázis időbélyegével tárol;
+- a `boiler_mode_state_events` a melegvíz- és fűtésjelzés együttes változásait
+  tárolja;
 - a `service_events` a szerviz dátumát és a rögzítés időpontját tárolja.
 
 Azonos kazánállapot ismételt mentése nem hoz létre hamis állapotváltozást. A
