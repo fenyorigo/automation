@@ -74,6 +74,7 @@
       <div class="dashboard-filter">
         <label for="device-type-filter">Eszköztípus
           <select id="device-type-filter" data-dashboard-filter="device">
+            <option value="climate_control">Hűtés–fűtés vezérlés</option>
             <option value="all">Mind</option>
             {% if outdoor_temperature %}<option value="outdoor">Külső hőmérséklet</option>{% endif %}
             {% for group in device_groups %}<option value="{{ group.source_system }}">{{ {'esp32':'ESP32','tasmota':'Nous','connectlife':'Hisense','computherm':'Computherm','manual':'Kézi','linux_system':'Linux','zigbee2mqtt':'Zigbee'}.get(group.source_system,group.name) }}</option>{% endfor %}
@@ -91,7 +92,7 @@
           <span>aktuális külső referencia</span>
         </div>
         <div class="device-grid">
-          <article class="outdoor-temperature-card" data-polling-enabled="true">
+          <article class="outdoor-temperature-card" data-polling-enabled="true" data-climate-control="true">
             <div class="card-heading"><div><p class="source">Külső hőmérséklet</p><h3>{{ outdoor_temperature.display_name }}</h3></div><span class="badge outdoor-source">{{ outdoor_temperature.source_badge }}</span></div>
             <div class="temperature"><span class="temperature-value">{{ outdoor_temperature.temperature_c|temperature }}</span><span class="temperature-unit">°C</span></div>
             <footer class="card-footer"><span>{{ outdoor_temperature.measurement_label }}</span><time>{{ outdoor_temperature.observed_at|local_time }}</time></footer>
@@ -187,12 +188,15 @@
     const filter = document.querySelector('[data-dashboard-filter]');
     if (filter) {
       const kind = filter.dataset.dashboardFilter;
-      const storageKey = `automation-dashboard-${kind}-filter`;
+      const storageKey = kind === 'device'
+        ? 'automation-dashboard-device-filter-v2'
+        : `automation-dashboard-${kind}-filter`;
       const pollingFilter = kind === 'device' ? document.querySelector('#polling-enabled-filter') : null;
       const pollingStorageKey = 'automation-dashboard-polling-enabled-filter';
       const available = [...filter.options].map((option) => option.value);
       const saved = window.localStorage.getItem(storageKey);
-      filter.value = available.includes(saved) ? saved : 'all';
+      const defaultFilter = kind === 'device' ? 'climate_control' : 'all';
+      filter.value = available.includes(saved) ? saved : defaultFilter;
       if (pollingFilter) {
         pollingFilter.checked = window.localStorage.getItem(pollingStorageKey) === 'true';
       }
@@ -201,12 +205,15 @@
         const selected = filter.value;
         if (kind === 'device') {
           document.querySelectorAll('[data-device-source]').forEach((group) => {
-            const sourceMatches = selected === 'all' || group.dataset.deviceSource === selected;
+            const sourceMatches = selected === 'all' || selected === 'climate_control'
+              || group.dataset.deviceSource === selected;
             let visibleCards = 0;
             group.querySelectorAll('[data-polling-enabled]').forEach((card) => {
               const pollingMatches = !pollingFilter.checked || card.dataset.pollingEnabled === 'true';
-              card.hidden = !pollingMatches;
-              if (pollingMatches) visibleCards += 1;
+              const roleMatches = selected !== 'climate_control'
+                || card.dataset.climateControl === 'true';
+              card.hidden = !pollingMatches || !roleMatches;
+              if (pollingMatches && roleMatches) visibleCards += 1;
             });
             group.hidden = !sourceMatches || visibleCards === 0;
           });

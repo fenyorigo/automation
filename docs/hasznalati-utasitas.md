@@ -55,8 +55,11 @@ időállandóját, a kalibrációs korrekciót és a cselekedeti pont időpontj�
 
 - **Eszközök:** az eszközök típus szerint csoportosítva jelennek meg
   (ESP32, Computherm, Hisense, Nous/Tasmota, Zigbee, Shelly MQTT és kézi
-  eszközök). A szűrővel egy
-  kiválasztott eszközcsoport önmagában is megjeleníthető. A mellette levő
+  eszközök). Az alapértelmezett **Hűtés–fűtés vezérlés** szűrő együtt mutatja
+  a döntési láncban ténylegesen részt vevő Hisense klímákat, Computhermeket,
+  Bosch kazánt, mérvadó Zigbee hőmérőket és nyitásérzékelőket, valamint az
+  aktuális kültéri referenciaforrást. A többi választással egy
+  eszköztípus vagy minden eszköz is megjeleníthető. A mellette levő
   **Lekérdezési körben** jelölővel az összes vagy a kiválasztott típuson belül
   csak az automatikusan lekérdezett eszközök maradnak láthatók. A böngésző a
   típust és a jelölő állapotát is megjegyzi.

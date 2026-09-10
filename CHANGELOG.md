@@ -5,6 +5,10 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A kezdőlap új, alapértelmezett **Hűtés–fűtés vezérlés** szűrője egyetlen
+  nézetben mutatja a döntési lánc klímáit, termosztátjait, kazánját, mérvadó
+  Zigbee hőmérőit és nyitásérzékelőit, valamint a kültéri referenciaforrást.
+
 ## 1.3.1 — 2026-09-08
 
 ### Klímaszerviz

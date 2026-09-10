@@ -871,7 +871,8 @@ def load_dashboard(
         cursor.execute(
             """
             SELECT
-              d.id, d.name, d.hostname, d.expected_ip, d.source_system, d.device_type,d.model,
+              d.id, d.name, d.hostname, d.expected_ip, d.source_system,d.source_device_id,
+              d.device_type,d.model,
               dt.name AS device_type_name,
               d.room_id, r.name AS room_name, z.name AS zone_name,
               d.managed_manually, d.manual_power_state, d.access_mode,
@@ -1180,6 +1181,51 @@ def load_device_groups(devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [group for group in groups if group["devices"]]
 
 
+def mark_climate_control_devices(
+    devices: list[dict[str, Any]],
+    selected_outdoor: dict[str, Any] | None,
+) -> None:
+    """Mark cards that currently participate in heating/cooling decisions."""
+    climate_room_ids = {
+        int(item["room_id"])
+        for item in devices
+        if item.get("source_system") == "connectlife"
+        and item.get("room_id") is not None
+    }
+    relevant_ids: set[int] = set()
+    for item in devices:
+        source = item.get("source_system")
+        if source in {"connectlife", "computherm"}:
+            relevant_ids.add(int(item["id"]))
+        elif source == "manual" and item.get("device_type") == "boiler":
+            relevant_ids.add(int(item["id"]))
+        elif (
+            source == "zigbee2mqtt"
+            and item.get("room_id") in climate_room_ids
+            and item.get("device_type") in {"temperature_sensor", "contact_sensor"}
+        ):
+            relevant_ids.add(int(item["id"]))
+
+    if selected_outdoor and selected_outdoor.get("source_type") in {"zigbee2mqtt", "esp32"}:
+        configuration = selected_outdoor.get("configuration")
+        if isinstance(configuration, str):
+            try:
+                configuration = json.loads(configuration)
+            except json.JSONDecodeError:
+                configuration = {}
+        if isinstance(configuration, dict):
+            configured_id = configuration.get("device_id")
+            for item in devices:
+                if configured_id is not None and (
+                    str(item.get("id")) == str(configured_id)
+                    or str(item.get("source_device_id")) == str(configured_id)
+                ):
+                    relevant_ids.add(int(item["id"]))
+
+    for item in devices:
+        item["climate_control_relevant"] = int(item["id"]) in relevant_ids
+
+
 def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     connection = connect_database()
     cursor = connection.cursor()
@@ -1203,7 +1249,7 @@ def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]
         )
         sources = rows_as_dicts(cursor)
         cursor.execute(
-            """SELECT s.id,s.source_code,s.display_name,s.source_type,
+            """SELECT s.id,s.source_code,s.display_name,s.source_type,s.configuration,
                       o.temperature_c,o.observed_at,o.fetched_at
                FROM outdoor_temperature_sources s
                JOIN outdoor_temperature_observations o ON o.id=(
@@ -1931,6 +1977,7 @@ def dashboard() -> str:
     boiler_service_mode = os.getenv("BOILER_SERVICE_MODE", "false") == "true"
     cooling_advice = None if climate_service_mode else annotate_upstairs_cooling(devices, outdoor_temperature)
     heating_advice = None if climate_service_mode or boiler_service_mode else annotate_upstairs_heating(devices, outdoor_temperature)
+    mark_climate_control_devices(devices, outdoor_temperature)
     outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")
     if requested_view in {"device", "room"}:
