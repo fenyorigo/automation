@@ -8,6 +8,8 @@ helyi dátumok.
 - A kezdőlap új, alapértelmezett **Hűtés–fűtés vezérlés** szűrője egyetlen
   nézetben mutatja a döntési lánc klímáit, termosztátjait, kazánját, mérvadó
   Zigbee hőmérőit és nyitásérzékelőit, valamint a kültéri referenciaforrást.
+- A földszinti Computherm is kapott külön fűtési javaslatot; ez a kizárólagos
+  gázfűtési zónában a termosztát reléigényét és a Bosch állapotát mutatja.
 
 ## 1.3.1 — 2026-09-08
 

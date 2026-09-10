@@ -75,6 +75,8 @@ A kártyák az eszköz típusától függően mutathatják:
 - az elérhetőséget és az utolsó poll eredményét;
 - a klíma be-/kikapcsolt állapotát, üzemmódját és célértékét;
 - a Computherm mért és beállított hőmérsékletét;
+- mindkét Computherm fűtési javaslatát: az emeleten a klíma–gáz választást, a
+  földszinten pedig a termosztátigény és a Bosch állapota szerinti gázfűtést;
 - a Nous/Tasmota pillanatnyi teljesítményét, feszültségét, relé- és
   terheltségi állapotát, továbbá az összes fogyasztást és annak kezdőidejét;
 - a Bosch 7000i kézi állapotát és szervizadatait.

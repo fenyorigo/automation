@@ -159,6 +159,13 @@ termosztát bekapcsolt állapotát jelenti, nem a relé fűtési kérését. `22
 feletti Computherm- vagy Hisense-célértéket az observer eltérésként jelez; az
 1.3.1 még nem írja vissza.
 
+A földszinti zónában nincs klíma, ezért ott nincs hőforrás-választás. A
+földszinti Computherm kártyájának külön, gáz-only javaslata a termosztát `active`
+jelét és a Bosch kézi nyilvántartási állapotát értékeli. Fűtési kérés és
+bekapcsolt kazán esetén aktív gázfűtést jelez; kikapcsolt kazán esetén helyszíni
+bekapcsolást kér; reléjel nélkül nincs földszinti fűtési igény. Ez továbbra is
+megfigyelő információ, eszközparancsot nem küld.
+
 ## Szervizmódok és Computherm-próba
 
 A `Klímaszerviz folyamatban` globális kapcsoló felfüggeszti a hűtési és

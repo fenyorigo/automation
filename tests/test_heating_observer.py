@@ -3,7 +3,12 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timedelta
 
-from app.heating_observer import HeatingParameters, annotate_upstairs_heating, evaluate_room
+from app.heating_observer import (
+    HeatingParameters,
+    annotate_ground_floor_heating,
+    annotate_upstairs_heating,
+    evaluate_room,
+)
 
 
 NOW = datetime(2026, 12, 8, 12, 0, 0)
@@ -144,6 +149,38 @@ class HeatingObserverTest(unittest.TestCase):
         advice = annotate_upstairs_heating(devices, {"temperature_c": 7.0})
         self.assertEqual(advice["preferred_source"], "climate")
         self.assertFalse(advice["mixed_operation_allowed"])
+
+    def test_ground_floor_thermostat_gets_gas_only_advice(self) -> None:
+        devices = [
+            device(
+                1, "CT400 földszint", "computherm", 20.0,
+                zone_name="Földszint", room_name="Földszinti nappali", active=True,
+            ),
+            device(
+                2, "Bosch 7000i", "manual", room_id=9, room_name="Kazánház",
+                zone_name="Földszint", device_type="boiler",
+                managed_manually=True, manual_power_state=False,
+            ),
+        ]
+
+        advice = annotate_ground_floor_heating(devices)
+
+        self.assertEqual(advice["preferred_source"], "gas")
+        self.assertTrue(advice["boiler_action_required"])
+        self.assertFalse(advice["climate_selection"])
+        self.assertIs(devices[0]["heating_zone_advice"], advice)
+
+    def test_ground_floor_reports_active_gas_heating(self) -> None:
+        devices = [
+            device(1, "CT400 földszint", "computherm", zone_name="Földszint", active=True),
+            device(
+                2, "Bosch 7000i", "manual", zone_name="Földszint",
+                device_type="boiler", manual_power_state=True,
+            ),
+        ]
+        advice = annotate_ground_floor_heating(devices)
+        self.assertEqual(advice["status"], "gas")
+        self.assertFalse(advice["boiler_action_required"])
 
 
 if __name__ == "__main__":

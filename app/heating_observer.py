@@ -288,6 +288,8 @@ def annotate_upstairs_heating(
         status, label, preferred_source = "climate", "Klímás fűtést választana", "climate"
 
     zone_advice = {
+        "zone_label": "Emeleti",
+        "climate_selection": True,
         "status": status,
         "status_label": label,
         "preferred_source": preferred_source,
@@ -321,3 +323,62 @@ def annotate_upstairs_heating(
     if thermostat is not None:
         thermostat["heating_zone_advice"] = zone_advice
     return zone_advice
+
+
+def annotate_ground_floor_heating(
+    devices: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Attach the simple, gas-only ground-floor recommendation to its thermostat."""
+    thermostat = next(
+        (
+            item
+            for item in devices
+            if item.get("source_system") == "computherm"
+            and item.get("zone_name") == "Földszint"
+        ),
+        None,
+    )
+    if thermostat is None:
+        return None
+    boiler = next(
+        (
+            item
+            for item in devices
+            if item.get("source_system") == "manual"
+            and item.get("device_type") == "boiler"
+        ),
+        None,
+    )
+    boiler_on = bool(boiler and boiler.get("manual_power_state"))
+    thermostat_calling = bool(thermostat.get("active"))
+    if thermostat_calling and boiler_on:
+        status = "gas"
+        label = "Gázfűtés aktív"
+    elif thermostat_calling:
+        status = "gas_required"
+        label = "Fűtést kér, a kazán bekapcsolandó"
+    else:
+        status = "no_demand"
+        label = "Nincs földszinti fűtési igény"
+
+    advice = {
+        "zone_label": "Földszinti",
+        "climate_selection": False,
+        "status": status,
+        "status_label": label,
+        "preferred_source": "gas" if thermostat_calling else "none",
+        "demanded_rooms": [thermostat.get("room_name") or thermostat["name"]]
+        if thermostat_calling else [],
+        "climate_rooms": [],
+        "gas_required_rooms": [thermostat.get("room_name") or thermostat["name"]]
+        if thermostat_calling else [],
+        "blocked_rooms": [],
+        "thermostat_calling": thermostat_calling,
+        "boiler_on": boiler_on,
+        "boiler_name": boiler["name"] if boiler else "Bosch kazán",
+        "boiler_action_required": thermostat_calling and not boiler_on,
+        "mixed_operation_allowed": False,
+        "calculation_version": "ground-floor-heating-observer-v1",
+    }
+    thermostat["heating_zone_advice"] = advice
+    return advice

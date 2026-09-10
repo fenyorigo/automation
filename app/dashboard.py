@@ -36,7 +36,7 @@ from poll_scheduler import run_cycle
 from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_active
 from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
 from cooling_observer import annotate_upstairs_cooling
-from heating_observer import annotate_upstairs_heating
+from heating_observer import annotate_ground_floor_heating, annotate_upstairs_heating
 from computherm_service import connect_device as connect_computherm, restore_test, snapshot as computherm_snapshot, start_test, suppress_heat
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import (
@@ -1976,7 +1976,11 @@ def dashboard() -> str:
     climate_service_mode = os.getenv("CLIMATE_SERVICE_MODE", "false") == "true"
     boiler_service_mode = os.getenv("BOILER_SERVICE_MODE", "false") == "true"
     cooling_advice = None if climate_service_mode else annotate_upstairs_cooling(devices, outdoor_temperature)
-    heating_advice = None if climate_service_mode or boiler_service_mode else annotate_upstairs_heating(devices, outdoor_temperature)
+    if climate_service_mode or boiler_service_mode:
+        heating_advice = None
+    else:
+        heating_advice = annotate_upstairs_heating(devices, outdoor_temperature)
+        annotate_ground_floor_heating(devices)
     mark_climate_control_devices(devices, outdoor_temperature)
     outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")

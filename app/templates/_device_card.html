@@ -123,12 +123,12 @@
   {% endif %}
   {% if device.heating_zone_advice is defined %}
   <div class="heating-zone-advice {{ device.heating_zone_advice.status }}">
-    <strong>Emeleti javaslat: {{ device.heating_zone_advice.status_label }}</strong>
+    <strong>{{ device.heating_zone_advice.zone_label }} javaslat: {{ device.heating_zone_advice.status_label }}</strong>
     {% if device.heating_zone_advice.demanded_rooms %}<small>Fűtést kér: {{ device.heating_zone_advice.demanded_rooms|join(', ') }}.</small>{% endif %}
     {% if device.heating_zone_advice.climate_rooms %}<small>Klímával fűthető: {{ device.heating_zone_advice.climate_rooms|join(', ') }}.</small>{% endif %}
     {% if device.heating_zone_advice.gas_required_rooms %}<small>Gázt igényel: {{ device.heating_zone_advice.gas_required_rooms|join(', ') }}.</small>{% endif %}
     {% if device.heating_zone_advice.blocked_rooms %}<small>Blokkolt helyiség: {{ device.heating_zone_advice.blocked_rooms|join(', ') }}.</small>{% endif %}
-    <small>Klímás alsó kültéri határ: {{ device.heating_zone_advice.climate_min_outdoor_c|temperature }} °C · COP-elvárás: {{ device.heating_zone_advice.minimum_cop }}.</small>
+    {% if device.heating_zone_advice.climate_selection %}<small>Klímás alsó kültéri határ: {{ device.heating_zone_advice.climate_min_outdoor_c|temperature }} °C · COP-elvárás: {{ device.heating_zone_advice.minimum_cop }}.</small>{% else %}<small>A földszinti zóna hőforrása kizárólag a Bosch gázkazán.</small>{% endif %}
     {% if device.heating_zone_advice.boiler_action_required %}<small class="heating-action-required">A {{ device.heating_zone_advice.boiler_name }} helyben bekapcsolandó.</small>{% endif %}
     <small>Kevert klíma–gáz üzem nincs. Megfigyelő mód, parancsküldés nélkül.</small>
   </div>
