@@ -315,6 +315,15 @@ elérhetetlenségekor a kézi tartalékjelzés; a másik kettő kézzel rögzít
 A Kézi állapot űrlapon mindhárom egyszerű jelölőnégyzet, külön ki/be
 választópár nélkül.
 
+A Bosch kártyájának külön státusza a kazán saját power kapcsolóját is
+ellenőrzi. Bekapcsolt Nous és friss, legalább a globálisan beállított
+teljesítményhatárt elérő mérés esetén **Kazán power aktív** jelenik meg. A
+teszten mért nyugalmi érték kb. 5 W; az alapértelmezett felismerési határ 2 W.
+Bekapcsolt Nous melletti friss 0 W piros figyelmeztetés: a kazán power
+kapcsolója nincs bekapcsolva. Közvetlenül relékapcsolás után a következő új
+mérésig **ellenőrzésre vár** állapot látható, így a korábbi 0 W nem okoz téves
+riasztást.
+
 ### Okosdugaljak kézi kapcsolása
 
 A kezdőlapon kizárólag a Bosch tápellátását adó **Nous kazán** kártyáján

@@ -89,6 +89,11 @@ terhelés és külön referencia teljesítménymérő szükséges. Terhelés né
   indulási értékek 23, 122 és 74 W, a bekapcsolt panel nyugalmi értéke stabilan
   5 W volt. A kijelzett 301–304 V nyilvánvaló kalibrációs hiba, ezért a
   feszültség- és energiaadatok üzemszerű használata előtt külön kalibráció kell.
+- Bekapcsolt Nous esetén a Bosch saját power kapcsolóját a friss valós
+  teljesítményből származtatjuk. Legalább `BOILER_PANEL_ON_MIN_POWER_W`
+  (alapból 2 W) aktív panelt igazol; az új mérésből származó 0 W piros
+  figyelmeztetést ad. A relé bekapcsolása előtti mérés figyelmen kívül marad,
+  ezért a következő pollig csak ellenőrzésre váró állapot jelenik meg.
 - A Tasmota `PowerOnState` beállítása határozza meg, áramszünet után milyen
   reléállapot álljon vissza. Ennek módosítása külön, tudatos üzemeltetési döntés.
 - Firmware-frissítés vagy kalibráció idején az adott fogyasztásmérő adatsora

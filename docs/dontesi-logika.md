@@ -153,13 +153,20 @@ zárás utáni stabilizációs idő az adott helyiséget blokkolja; ezek önmagu
 okoznak gázra váltást. A régi, de elérhető Tuya állapotjelzés továbbra sem hiba.
 
 A Computherm kártyája a Bosch tényleges fűtési elérhetőségét mutatja. Ehhez
-egyszerre szükséges a Nous vagy kézi forrás szerint meglévő tápellátás és a
-kézzel megjelölt **Fűtés** állapot. Ha a termosztát `active` állapota fűtést
-kér, de ezek valamelyike hiányzik, külön
+egyszerre szükséges a Nous vagy kézi forrás szerint meglévő tápellátás, a kazán
+power kapcsolóját igazoló friss teljesítménymérés és a kézzel megjelölt
+**Fűtés** állapot. Ha a termosztát `active` állapota fűtést kér, de ezek
+valamelyike hiányzik, külön
 helyszíni bekapcsolási figyelmeztetés jelenik meg. A `power` mező csak a
 termosztát bekapcsolt állapotát jelenti, nem a relé fűtési kérését. `22 °C`
 feletti Computherm- vagy Hisense-célértéket az observer eltérésként jelez; az
 1.3.1 még nem írja vissza.
+
+A bekapcsolt Nous és friss 0 W a Bosch power kapcsolójának kikapcsolt állapotát
+jelzi, és piros státuszt ad. A kapcsolás előtti régi mérés nem értékelhető: az
+első új pollig az állapot ellenőrzésre vár. A felismerési határ a
+`BOILER_PANEL_ON_MIN_POWER_W` globális beállítás; alapértéke 2 W, míg a próbán
+mért nyugalmi fogyasztás stabil 5 W.
 
 A földszinti zónában nincs klíma, ezért ott nincs hőforrás-választás. A
 földszinti Computherm kártyájának külön, gáz-only javaslata a termosztát `active`

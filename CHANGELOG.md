@@ -22,6 +22,9 @@ helyi dátumok.
   állítja és naplózza. A Bosch kártyája külön jelzi a Nous vagy kézi forrású
   tápellátást, a melegvíz-szolgáltatást és a fűtést; a három kézi érték egy-egy
   jelölőnégyzettel rögzíthető. Táp nélkül a két kazánüzem nem lehet aktív.
+- Bekapcsolt Nous mellett a Bosch power kapcsolóját a friss teljesítmény igazolja:
+  a kb. 5 W-os nyugalmi fogyasztás aktív panelt jelent, a friss 0 W piros
+  figyelmeztetést ad. A relékapcsolás előtti régi mérés nem okoz téves riasztást.
 
 ## 1.3.1 — 2026-09-08
 

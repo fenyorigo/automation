@@ -1178,11 +1178,41 @@ def annotate_boiler_operating_states(devices: list[dict[str, Any]]) -> None:
         supply_source = "Kézi"
     boiler["boiler_supply_power"] = supply_power
     boiler["boiler_supply_source"] = supply_source
+    boiler["boiler_panel_power_state"] = "unpowered"
+    boiler["boiler_panel_power_label"] = "Kazán power: nincs táp"
+    boiler["boiler_panel_power_alert"] = False
+    panel_on = False
+    if supply_power and supply is not None:
+        measurement_at = supply.get("measurement_at")
+        state_at = supply.get("state_at")
+        poll_interval = int(supply.get("poll_interval_seconds") or 600)
+        measurement_fresh = bool(
+            measurement_at
+            and datetime.now(UTC).replace(tzinfo=None) - measurement_at
+                <= timedelta(seconds=max(poll_interval * 2, 180))
+            and (state_at is None or measurement_at >= state_at)
+        )
+        if not measurement_fresh:
+            boiler["boiler_panel_power_state"] = "pending"
+            boiler["boiler_panel_power_label"] = "Kazán power: ellenőrzésre vár"
+        else:
+            threshold = float(os.getenv("BOILER_PANEL_ON_MIN_POWER_W", "2.0"))
+            panel_on = float(supply.get("temperature_c") or 0) >= threshold
+            if panel_on:
+                boiler["boiler_panel_power_state"] = "on"
+                boiler["boiler_panel_power_label"] = "Kazán power aktív"
+            else:
+                boiler["boiler_panel_power_state"] = "off"
+                boiler["boiler_panel_power_label"] = (
+                    "Nous bekapcsolva, de a kazán power kapcsolója ki van kapcsolva"
+                )
+                boiler["boiler_panel_power_alert"] = True
+    boiler["boiler_panel_power_on"] = panel_on
     boiler["boiler_hot_water_enabled"] = bool(
-        supply_power and boiler.get("manual_hot_water_state")
+        panel_on and boiler.get("manual_hot_water_state")
     )
     boiler["boiler_heating_enabled"] = bool(
-        supply_power and boiler.get("manual_heating_state")
+        panel_on and boiler.get("manual_heating_state")
     )
 
 

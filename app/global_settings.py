@@ -55,6 +55,7 @@ SETTINGS = (
     Setting("GNUPLOT_BIN", "Gnuplot program elérési útja", "/opt/homebrew/bin/gnuplot", "text"),
     Setting("CLIMATE_SERVICE_MODE", "Klímaszerviz folyamatban", "false", "boolean", "Minden automatikus klímaszabályt felfüggeszt; a kézi szervizpróbákat nem korlátozza.", validator=lambda value: value in {"true", "false"}),
     Setting("BOILER_SERVICE_MODE", "Gázkazánszerviz folyamatban", "false", "boolean", "Felfüggeszti a fűtési szabályokat és engedélyezi a védett Computherm szerviztesztet.", validator=lambda value: value in {"true", "false"}),
+    Setting("BOILER_PANEL_ON_MIN_POWER_W", "Bosch power bekapcsolási teljesítményhatára", "2.0", "number", "Watt; bekapcsolt Nous mellett legalább ekkora friss fogyasztás igazolja a kazán power kapcsolójának bekapcsolt állapotát. A mért nyugalmi fogyasztás kb. 5 W.", number_between(0.1, 100)),
     Setting("COOLING_MIN_ROOM_TEMPERATURE_C", "Hűtés abszolút alsó szobahőmérsékleti korlátja", "25", "number", "Biztonsági korlát; ez alatt hűtési igény nem állhat fenn.", number_between(5, 40)),
     Setting("COOLING_MIN_TARGET_C", "Hűtés legkisebb célhőmérséklete", "25", "number", "Az observer jelzi, ha a klímán ennél kisebb kézi célértéket észlel.", number_between(5, 40)),
     Setting("COOLING_ROOM_REQUEST_ON_C", "Hűtési igény bekapcsolási határa", "27.5", "number", "A cselekedeti helyiséghőmérséklet ettől az értéktől kér hűtést, ha a klíma nem hűt.", number_between(5, 40)),

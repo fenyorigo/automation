@@ -33,6 +33,7 @@ class ReloadEnvironmentTest(unittest.TestCase):
         self.assertEqual(settings["HEATING_ROOM_REQUEST_OFF_C"].default, "20.5")
         self.assertEqual(settings["HEATING_CLIMATE_MIN_OUTDOOR_C"].default, "5.0")
         self.assertEqual(settings["HEATING_MIN_COP"].default, "2.5")
+        self.assertEqual(settings["BOILER_PANEL_ON_MIN_POWER_W"].default, "2.0")
 
     def test_save_rejects_reversed_cooling_hysteresis(self) -> None:
         values = {item.key: item.default for item in global_settings.SETTINGS}

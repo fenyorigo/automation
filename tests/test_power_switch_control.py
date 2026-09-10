@@ -2,6 +2,7 @@ import io
 import json
 import sys
 import unittest
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -200,7 +201,10 @@ class PowerSwitchControlTest(unittest.TestCase):
         }
         supply = {
             "source_system": "tasmota", "source_device_id": "nous-kazan",
-            "online": True, "switch_power": True,
+            "online": True, "switch_power": True, "temperature_c": 5,
+            "measurement_at": datetime.now(UTC).replace(tzinfo=None),
+            "state_at": datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=1),
+            "poll_interval_seconds": 120,
         }
 
         annotate_boiler_operating_states([boiler, supply])
@@ -209,6 +213,48 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertEqual(boiler["boiler_supply_source"], "Nous")
         self.assertTrue(boiler["boiler_hot_water_enabled"])
         self.assertTrue(boiler["boiler_heating_enabled"])
+        self.assertTrue(boiler["boiler_panel_power_on"])
+        self.assertFalse(boiler["boiler_panel_power_alert"])
+
+    def test_powered_nous_with_fresh_zero_watts_alerts_for_panel_off(self) -> None:
+        observed_at = datetime.now(UTC).replace(tzinfo=None)
+        boiler = {
+            "source_system": "manual", "device_type": "boiler",
+            "manual_power_state": True, "manual_hot_water_state": True,
+            "manual_heating_state": True,
+        }
+        supply = {
+            "source_system": "tasmota", "source_device_id": "nous-kazan",
+            "online": True, "switch_power": True, "temperature_c": 0,
+            "measurement_at": observed_at, "state_at": observed_at,
+            "poll_interval_seconds": 120,
+        }
+
+        annotate_boiler_operating_states([boiler, supply])
+
+        self.assertEqual(boiler["boiler_panel_power_state"], "off")
+        self.assertTrue(boiler["boiler_panel_power_alert"])
+        self.assertFalse(boiler["boiler_hot_water_enabled"])
+        self.assertFalse(boiler["boiler_heating_enabled"])
+
+    def test_pre_switch_measurement_waits_instead_of_false_alert(self) -> None:
+        now = datetime.now(UTC).replace(tzinfo=None)
+        boiler = {
+            "source_system": "manual", "device_type": "boiler",
+            "manual_power_state": True, "manual_hot_water_state": False,
+            "manual_heating_state": False,
+        }
+        supply = {
+            "source_system": "tasmota", "source_device_id": "nous-kazan",
+            "online": True, "switch_power": True, "temperature_c": 0,
+            "measurement_at": now - timedelta(seconds=10), "state_at": now,
+            "poll_interval_seconds": 120,
+        }
+
+        annotate_boiler_operating_states([boiler, supply])
+
+        self.assertEqual(boiler["boiler_panel_power_state"], "pending")
+        self.assertFalse(boiler["boiler_panel_power_alert"])
 
 
 if __name__ == "__main__":
