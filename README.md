@@ -25,7 +25,7 @@ The project currently provides:
 - event-driven Shelly H&T Gen3 temperature, humidity and battery history over
   the local Mosquitto broker, with deep-sleep-aware freshness;
 - Nous/Tasmota power, voltage and cumulative-energy polling, plus audited
-  manual switching of Tasmota and Zigbee router plugs with protected off flow;
+  manual switching of the dedicated boiler supply plug with protected off flow;
 - DNS, ping and HTTP availability monitoring for local network devices;
 - filtered gas/electricity invoice and meter-reading history, with
   effective-dated gas conversion, tariffs and automatic fixed invoice lines;

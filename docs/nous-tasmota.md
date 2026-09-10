@@ -2,8 +2,8 @@
 
 Az alkalmazás a Tasmota firmware-t futtató Nous okosdugaljakat hálózaton
 teljesítmény- és energiamérőként kezeli. A periodikus lekérdezés nem kapcsolja
-a relét és nem módosítja az eszköz konfigurációját; szerkesztőként a
-kezdőlapi kártyáról külön, naplózott kézi kapcsolás indítható.
+a relét és nem módosítja az eszköz konfigurációját. Kézi kapcsolás kizárólag
+a `nous-kazan` kezdőlapi kártyájáról indítható szerkesztőként.
 
 ## Nyilvántartott eszközök
 
@@ -68,11 +68,14 @@ terhelés és külön referencia teljesítménymérő szükséges. Terhelés né
 
 - A `nous-mainit` kritikus hálózati eszközöket táplál; kapcsolása az egész
   helyi infrastruktúrát leállíthatja.
-- A bekapcsolás közvetlenül kérhető. A kikapcsolás első gombnyomása még nem
+- A `nous-kazan` bekapcsolása közvetlenül kérhető. A kikapcsolás első
+  gombnyomása még nem
   küld parancsot: piros következményjelzés jelenik meg, és csak az öt percig
   érvényes második megerősítés hajtja végre a kapcsolást.
 - Minden kapcsolási kísérlet, kérő felhasználó és visszaellenőrzött eredmény a
   `device_power_control_attempts` táblába kerül.
+- A `nous-mainit`, `nous-auxit` és a Zigbee router-dugaljak az UI-ból nem
+  kapcsolhatók; ezek továbbra is csak megfigyelhetők.
 - A `nous-kazan` a hűtés–fűtés vezérlésben részt vevő eszközök alapnézetében
   is megjelenik. A relé bekapcsolt állapota csak a Bosch tápellátását jelenti;
   nem bizonyítja, hogy a kazánon a melegvíz vagy a fűtés engedélyezve van.

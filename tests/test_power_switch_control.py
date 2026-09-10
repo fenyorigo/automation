@@ -135,10 +135,10 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertIn('name="confirmation_token"', template)
         self.assertIn("Igen, kikapcsolom", template)
 
-    def test_power_switch_allowlist_is_limited_to_five_known_plugs(self) -> None:
-        self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 5)
+    def test_power_switch_allowlist_is_limited_to_boiler_supply(self) -> None:
+        self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 1)
         self.assertIn(("tasmota", "nous-kazan"), POWER_SWITCH_ALLOWLIST)
-        self.assertNotIn(("tasmota", "future-device"), POWER_SWITCH_ALLOWLIST)
+        self.assertNotIn(("tasmota", "nous-mainit"), POWER_SWITCH_ALLOWLIST)
 
 
 if __name__ == "__main__":

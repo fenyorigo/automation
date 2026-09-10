@@ -14,9 +14,10 @@ helyi dátumok.
   nyilvántartásba és a hűtés–fűtés vezérlés alapnézetébe; a rövid próba
   elkülönítette a Bosch 0 W-os kikapcsolt és 5 W-os bekapcsolt nyugalmi
   állapotát.
-- A Nous A1T/Tasmota és Zigbee router-dugaljak szerkesztőként kapcsolhatók a
-  kezdőlapról. A kikapcsolás piros, eszközhöz kötött második megerősítést kér,
-  minden kísérlet auditált és a visszaigazolás hiánya nem jelenik meg sikerként.
+- Kizárólag a `Nous kazán` kapcsolható a kezdőlapról; az IT- és Zigbee
+  router-dugaljak megfigyelhetők maradnak. A kikapcsolás piros, eszközhöz
+  kötött második megerősítést kér, minden kísérlet auditált és a visszaigazolás
+  hiánya nem jelenik meg sikerként.
 
 ## 1.3.1 — 2026-09-08
 

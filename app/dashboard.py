@@ -127,11 +127,7 @@ COMPUTHERM_LOCATION = {
 }
 
 POWER_SWITCH_ALLOWLIST = {
-    ("tasmota", "nous-auxit"),
-    ("tasmota", "nous-mainit"),
     ("tasmota", "nous-kazan"),
-    ("zigbee2mqtt", "0xa4c138115778ffff"),
-    ("zigbee2mqtt", "0xa4c138115783ffff"),
 }
 
 OUTDOOR_SOURCE_BADGES = {
