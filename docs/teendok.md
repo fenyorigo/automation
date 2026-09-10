@@ -36,3 +36,20 @@
   gyártói adatokból felvenni, majd az ideiglenes `5,0 °C` kültéri küszöböt
   tarifákból számított COP-határra cserélni.
 - [ ] Zigbee radiátorszelepek nélkül a kevert klíma–gáz üzem tiltott marad.
+
+## Bosch üzemmódok teljesítményalapú felismerése
+
+- [ ] A következő kazánszerviz alatt nagy gyakorisággal rögzíteni a Bosch
+  nyugalmi, melegvíz-indítási, fűtésindítási, tartós fűtési és leállás utáni
+  teljesítményprofilját.
+- [ ] Ellenőrizni, hogy a melegvíz-üzem a Nous mérésében biztosan
+  felismerhető-e, vagy csak túl rövid gyújtási tüske jelenik meg.
+- [ ] Csak bizonyítottan fűtésre jellemző, tartós vagy ismétlődő profilból
+  következtetni automatikusan fűtésre. Egyszerű, pillanatnyi alapfogyasztás-
+  növekedés önmagában ne írja át a kézi állapotokat.
+- [ ] Megbízható fűtésfelismerés esetén a kimaradt kézi jelölést automatikusan
+  pótolni: **Fűtés** és **Melegvíz-szolgáltatás** egyszerre váljon aktívvá,
+  mert fűtés mellett a melegvíz is engedélyezett. A fordított következtetés
+  tilos: felismert melegvíz-üzem nem jelenti azt, hogy a fűtés is engedélyezett.
+- [ ] Az automatikus következtetéshez forrást, időpontot és lehetőség szerint
+  biztonsági szintet tárolni, hogy megkülönböztethető legyen a kézi jelöléstől.

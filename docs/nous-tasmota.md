@@ -98,3 +98,8 @@ terhelés és külön referencia teljesítménymérő szükséges. Terhelés né
   reléállapot álljon vissza. Ennek módosítása külön, tudatos üzemeltetési döntés.
 - Firmware-frissítés vagy kalibráció idején az adott fogyasztásmérő adatsora
   átmenetileg megszakadhat.
+- A melegvíz- és fűtésüzem automatikus felismerése még nincs bekapcsolva. A
+  következő kazánszerviz nagy gyakoriságú méréseiből előbb külön profilt kell
+  készíteni a két üzemhez. Ha a fűtés később megbízhatóan felismerhető, a
+  rendszer a hiányzó kézi **Fűtés** és **Melegvíz-szolgáltatás** jelölést
+  együtt pótolhatja; melegvízből önmagában nem következtethet fűtésre.
