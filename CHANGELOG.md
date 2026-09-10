@@ -18,6 +18,9 @@ helyi dátumok.
   router-dugaljak megfigyelhetők maradnak. A kikapcsolás piros, eszközhöz
   kötött második megerősítést kér, minden kísérlet auditált és a visszaigazolás
   hiánya nem jelenik meg sikerként.
+- A `Nous kazán` igazolt lekapcsolása a Bosch kézi állapotát is kikapcsoltra
+  állítja és naplózza; a táp visszaadása nem feltételezi automatikusan, hogy a
+  kazán panelje is bekapcsolt.
 
 ## 1.3.1 — 2026-09-08
 

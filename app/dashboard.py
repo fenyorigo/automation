@@ -5264,6 +5264,42 @@ def load_switchable_device(device_id: int) -> dict[str, Any] | None:
         connection.close()
 
 
+def reconcile_boiler_after_supply_cut(
+    cursor: mariadb.Cursor,
+    *,
+    source_system: str,
+    source_device_id: str,
+    verified_power: bool | None,
+) -> bool:
+    """Record the Bosch as effectively off after a verified mains cut."""
+    if (
+        source_system != "tasmota"
+        or source_device_id != "nous-kazan"
+        or verified_power is not False
+    ):
+        return False
+    cursor.execute(
+        """SELECT id,manual_power_state FROM devices
+             WHERE is_active=1 AND source_system='manual' AND device_type='boiler'
+             LIMIT 1 FOR UPDATE"""
+    )
+    row = cursor.fetchone()
+    if row is None or not bool(row[1]):
+        return False
+    boiler_id = int(row[0])
+    cursor.execute(
+        "UPDATE devices SET manual_power_state=0 WHERE id=?",
+        (boiler_id,),
+    )
+    cursor.execute(
+        """INSERT INTO manual_state_events
+             (device_id,previous_power_state,new_power_state)
+           VALUES (?,1,0)""",
+        (boiler_id,),
+    )
+    return True
+
+
 @app.post("/devices/<int:device_id>/switch-power")
 def switch_device_power(device_id: int):
     validate_csrf()
@@ -5347,6 +5383,12 @@ def switch_device_power(device_id: int):
                     json.dumps({"power": result.verified_power, "origin": "ui"}),
                 ),
             )
+        reconcile_boiler_after_supply_cut(
+            cursor,
+            source_system=str(device["source_system"]),
+            source_device_id=str(device["source_device_id"]),
+            verified_power=result.verified_power if result.status == "verified" else None,
+        )
         connection.commit()
     except Exception:
         connection.rollback()

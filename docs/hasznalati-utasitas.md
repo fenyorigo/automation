@@ -323,6 +323,9 @@ kikapcsolom** megerősítés küldi el a parancsot. A megerősítés öt percig
 
 A Tasmota parancsot HTTP-visszaolvasás igazolja. Az elküldött, de nem igazolt
 parancs külön figyelmeztetést kap; nem jelenik meg biztos sikerként.
+Az igazolt kikapcsolás a Bosch nyilvántartott állapotát is kikapcsoltra állítja.
+Bekapcsoláskor a Bosch külön kézi állapota nem változik automatikusan, mert a
+tápfeszültség még nem bizonyítja, hogy a kazán panelje be van kapcsolva.
 
 ### Lekérdezési idők
 

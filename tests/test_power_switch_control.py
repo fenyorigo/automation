@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "app"))
 
 from power_switch_control import control_tasmota_power, control_zigbee_power
-from dashboard import POWER_SWITCH_ALLOWLIST
+from dashboard import POWER_SWITCH_ALLOWLIST, reconcile_boiler_after_supply_cut
 
 
 class _Response(io.BytesIO):
@@ -69,6 +69,18 @@ class _FakeMqttClient:
 
     def disconnect(self):
         pass
+
+
+class _BoilerCursor:
+    def __init__(self, row=(42, 1)) -> None:
+        self.row = row
+        self.calls = []
+
+    def execute(self, statement, parameters=None):
+        self.calls.append((statement, parameters))
+
+    def fetchone(self):
+        return self.row
 
 
 class PowerSwitchControlTest(unittest.TestCase):
@@ -139,6 +151,33 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 1)
         self.assertIn(("tasmota", "nous-kazan"), POWER_SWITCH_ALLOWLIST)
         self.assertNotIn(("tasmota", "nous-mainit"), POWER_SWITCH_ALLOWLIST)
+
+    def test_verified_boiler_supply_cut_marks_manual_boiler_off(self) -> None:
+        cursor = _BoilerCursor()
+
+        changed = reconcile_boiler_after_supply_cut(
+            cursor,
+            source_system="tasmota",
+            source_device_id="nous-kazan",
+            verified_power=False,
+        )
+
+        self.assertTrue(changed)
+        self.assertEqual(cursor.calls[1][1], (42,))
+        self.assertEqual(cursor.calls[2][1], (42,))
+
+    def test_supply_restore_does_not_claim_boiler_panel_is_on(self) -> None:
+        cursor = _BoilerCursor()
+
+        changed = reconcile_boiler_after_supply_cut(
+            cursor,
+            source_system="tasmota",
+            source_device_id="nous-kazan",
+            verified_power=True,
+        )
+
+        self.assertFalse(changed)
+        self.assertEqual(cursor.calls, [])
 
 
 if __name__ == "__main__":
