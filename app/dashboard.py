@@ -1197,6 +1197,11 @@ def mark_climate_control_devices(
         source = item.get("source_system")
         if source in {"connectlife", "computherm"}:
             relevant_ids.add(int(item["id"]))
+        elif source == "tasmota" and item.get("source_device_id") == "nous-kazan":
+            # The dedicated plug is the observable mains supply of the Bosch
+            # boiler, therefore it belongs to the heating decision chain even
+            # while actuator control remains disabled.
+            relevant_ids.add(int(item["id"]))
         elif source == "manual" and item.get("device_type") == "boiler":
             relevant_ids.add(int(item["id"]))
         elif (

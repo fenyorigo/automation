@@ -10,6 +10,7 @@ nem kapcsolja a relét és nem módosítja az eszköz konfigurációját.
 |---|---|---|
 | `nous-mainit` | `192.168.0.44` | fő informatikai infrastruktúra |
 | `nous-auxit` | `192.168.0.45` | dolgozószobai kiegészítő informatikai infrastruktúra |
+| `nous-kazan` | `192.168.0.46` | Bosch 7000i tápellátásának felügyelete |
 
 A címeket statikus DHCP-foglalás biztosítja. Az alkalmazásban hostnév
 használandó, hogy a címzés központilag, a helyi DNS-ben maradjon kezelhető.
@@ -67,6 +68,12 @@ terhelés és külön referencia teljesítménymérő szükséges. Terhelés né
 - A `nous-mainit` kritikus hálózati eszközöket táplál; kapcsolása az egész
   helyi infrastruktúrát leállíthatja.
 - A jelenlegi alkalmazásintegráció olvasási célú, vezérlés nincs engedélyezve.
+- A `nous-kazan` a hűtés–fűtés vezérlésben részt vevő eszközök alapnézetében
+  is megjelenik. A relé bekapcsolt állapota csak a Bosch tápellátását jelenti;
+  nem bizonyítja, hogy a kazánon a melegvíz vagy a fűtés engedélyezve van.
+- A `nous-kazan` 2026. szeptember 10-i első lekérdezésekor a relé bekapcsolt,
+  a terhelés 0 W volt. A kijelzett 306 V nyilvánvaló kalibrációs hiba, ezért a
+  feszültség- és energiaadatok üzemszerű használata előtt külön kalibráció kell.
 - A Tasmota `PowerOnState` beállítása határozza meg, áramszünet után milyen
   reléállapot álljon vissza. Ennek módosítása külön, tudatos üzemeltetési döntés.
 - Firmware-frissítés vagy kalibráció idején az adott fogyasztásmérő adatsora

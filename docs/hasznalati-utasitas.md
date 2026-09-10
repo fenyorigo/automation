@@ -306,6 +306,11 @@ pontosan egyeznie kell a firmware `/api/v1/measurements` válaszának `device_id
 mezőjével; a jelenlegi konfigurációban ez a hostname. A panelre írt gyári
 azonosítót ettől elkülönítve kell nyilvántartani.
 
+A Bosch 7000i elé kötött `nous-kazan` Tasmota dugalj a fűtési eszközök
+alapnézetének része. A dugalj **Bekapcsolva** állapota a kazán tápellátását
+jelzi, nem a Bosch melegvíz- vagy fűtési üzemének állapotát. A két kazánüzem
+egyelőre külön, kézzel nyilvántartandó adat.
+
 ### Lekérdezési idők
 
 A kezdőlapi eszközkártyákon minden eszköznél látszik a beállított gyakoriság,

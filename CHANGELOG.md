@@ -10,6 +10,10 @@ helyi dátumok.
   Zigbee hőmérőit és nyitásérzékelőit, valamint a kültéri referenciaforrást.
 - A földszinti Computherm is kapott külön fűtési javaslatot; ez a kizárólagos
   gázfűtési zónában a termosztát reléigényét és a Bosch állapotát mutatja.
+- A kazánházba telepített `nous-kazan` Tasmota dugalj bekerült a
+  nyilvántartásba és a hűtés–fűtés vezérlés alapnézetébe. Egyelőre csak a
+  Bosch tápellátását, teljesítményét és energiaadatait figyeli; kapcsolás nincs
+  engedélyezve.
 
 ## 1.3.1 — 2026-09-08
 

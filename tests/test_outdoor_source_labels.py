@@ -48,6 +48,8 @@ class OutdoorSourceLabelTest(unittest.TestCase):
             {"id": 6, "source_system": "shelly_mqtt", "room_id": 10, "device_type": "temperature_sensor"},
             {"id": 7, "source_system": "zigbee2mqtt", "room_id": 99, "device_type": "temperature_sensor"},
             {"id": 8, "source_system": "zigbee2mqtt", "room_id": 10, "device_type": "power_meter"},
+            {"id": 9, "source_system": "tasmota", "source_device_id": "nous-kazan", "room_id": 11, "device_type": "power_meter"},
+            {"id": 10, "source_system": "tasmota", "source_device_id": "nous-mainit", "room_id": 6, "device_type": "power_meter"},
         ]
         outdoor = {
             "source_type": "zigbee2mqtt",
@@ -57,7 +59,7 @@ class OutdoorSourceLabelTest(unittest.TestCase):
         mark_climate_control_devices(devices, outdoor)
 
         relevant = {item["id"] for item in devices if item["climate_control_relevant"]}
-        self.assertEqual(relevant, {1, 2, 3, 4, 5, 7})
+        self.assertEqual(relevant, {1, 2, 3, 4, 5, 7, 9})
 
     def test_dashboard_climate_filter_is_the_new_default(self) -> None:
         template = (
