@@ -1,8 +1,9 @@
 # Nous/Tasmota fogyasztásmérők
 
-Az alkalmazás a Tasmota firmware-t futtató Nous okosdugaljakat hálózaton,
-csak olvasható teljesítmény- és energiamérőként kezeli. A periodikus lekérdezés
-nem kapcsolja a relét és nem módosítja az eszköz konfigurációját.
+Az alkalmazás a Tasmota firmware-t futtató Nous okosdugaljakat hálózaton
+teljesítmény- és energiamérőként kezeli. A periodikus lekérdezés nem kapcsolja
+a relét és nem módosítja az eszköz konfigurációját; szerkesztőként a
+kezdőlapi kártyáról külön, naplózott kézi kapcsolás indítható.
 
 ## Nyilvántartott eszközök
 
@@ -67,12 +68,18 @@ terhelés és külön referencia teljesítménymérő szükséges. Terhelés né
 
 - A `nous-mainit` kritikus hálózati eszközöket táplál; kapcsolása az egész
   helyi infrastruktúrát leállíthatja.
-- A jelenlegi alkalmazásintegráció olvasási célú, vezérlés nincs engedélyezve.
+- A bekapcsolás közvetlenül kérhető. A kikapcsolás első gombnyomása még nem
+  küld parancsot: piros következményjelzés jelenik meg, és csak az öt percig
+  érvényes második megerősítés hajtja végre a kapcsolást.
+- Minden kapcsolási kísérlet, kérő felhasználó és visszaellenőrzött eredmény a
+  `device_power_control_attempts` táblába kerül.
 - A `nous-kazan` a hűtés–fűtés vezérlésben részt vevő eszközök alapnézetében
   is megjelenik. A relé bekapcsolt állapota csak a Bosch tápellátását jelenti;
   nem bizonyítja, hogy a kazánon a melegvíz vagy a fűtés engedélyezve van.
 - A `nous-kazan` 2026. szeptember 10-i első lekérdezésekor a relé bekapcsolt,
-  a terhelés 0 W volt. A kijelzett 306 V nyilvánvaló kalibrációs hiba, ezért a
+  a kikapcsolt Bosch panel terhelése 0 W volt. A rövid kézi próba alatt az
+  indulási értékek 23, 122 és 74 W, a bekapcsolt panel nyugalmi értéke stabilan
+  5 W volt. A kijelzett 301–304 V nyilvánvaló kalibrációs hiba, ezért a
   feszültség- és energiaadatok üzemszerű használata előtt külön kalibráció kell.
 - A Tasmota `PowerOnState` beállítása határozza meg, áramszünet után milyen
   reléállapot álljon vissza. Ennek módosítása külön, tudatos üzemeltetési döntés.

@@ -71,6 +71,7 @@
   {% if device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
   <dl class="state-grid">
     <div><dt>Kapcsolat</dt><dd>{{ 'Aktív' if device.online else 'Nincs friss adat' }}</dd></div>
+    <div><dt>Dugalj</dt><dd>{% if device.switch_power is none %}—{% elif device.switch_power %}Bekapcsolva{% else %}Kikapcsolva{% endif %}</dd></div>
     <div><dt>Típus</dt><dd>{{ device.zigbee_type or 'Zigbee' }}</dd></div>
     <div><dt>Jelminőség</dt><dd>{% if device.zigbee_linkquality is not none %}{{ device.zigbee_linkquality|int }} LQI{% else %}—{% endif %}</dd></div>
     <div><dt>Modell</dt><dd>{{ device.zigbee_model or '—' }}</dd></div>
@@ -120,6 +121,30 @@
     <div><dt>Üzemmód</dt><dd>{{ device.mode or '—' }}</dd></div>
     <div><dt>Aktív</dt><dd>{% if device.active is none %}—{% elif device.active %}Igen{% else %}Nem{% endif %}</dd></div>
   </dl>
+  {% endif %}
+  {% if can_write and device.switch_controllable %}
+    {% if pending_power_off and pending_power_off.device_id == device.id %}
+    <section class="power-off-confirmation" role="alert">
+      <strong>⚠ Kikapcsolási megerősítés</strong>
+      <p>A dugalj kikapcsolása megszakítja a rákötött eszközök tápellátását{% if device.source_system == 'zigbee2mqtt' %}, és gyengítheti a Zigbee mesh-t{% endif %}. Biztosan folytatod?</p>
+      <div class="power-switch-actions">
+        <form method="post" action="{{ url_for('switch_device_power',device_id=device.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="requested_power" value="0">
+          <input type="hidden" name="confirmed" value="1">
+          <input type="hidden" name="confirmation_token" value="{{ pending_power_off.token }}">
+          <button class="danger-button" type="submit">Igen, kikapcsolom</button>
+        </form>
+        <a class="secondary-link" href="{{ url_for('dashboard',cancel_power_off=1) }}#device-{{ device.id }}">Mégse</a>
+      </div>
+    </section>
+    {% else %}
+    <form class="power-switch-control" method="post" action="{{ url_for('switch_device_power',device_id=device.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" name="requested_power" value="1" {{ 'disabled' if device.switch_power is sameas true }}>Bekapcsolás</button>
+      <button class="danger-button" type="submit" name="requested_power" value="0" {{ 'disabled' if device.switch_power is sameas false }}>Kikapcsolás</button>
+    </form>
+    {% endif %}
   {% endif %}
   {% if device.heating_zone_advice is defined %}
   <div class="heating-zone-advice {{ device.heating_zone_advice.status }}">

@@ -37,6 +37,7 @@ from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_ac
 from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
 from cooling_observer import annotate_upstairs_cooling
 from heating_observer import annotate_ground_floor_heating, annotate_upstairs_heating
+from power_switch_control import control_tasmota_power, control_zigbee_power
 from computherm_service import connect_device as connect_computherm, restore_test, snapshot as computherm_snapshot, start_test, suppress_heat
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import (
@@ -123,6 +124,14 @@ DEVICE_GROUPS = (
 COMPUTHERM_LOCATION = {
     "iot-computherm-emelet": "emelet",
     "iot-computherm-foldszint": "földszint",
+}
+
+POWER_SWITCH_ALLOWLIST = {
+    ("tasmota", "nous-auxit"),
+    ("tasmota", "nous-mainit"),
+    ("tasmota", "nous-kazan"),
+    ("zigbee2mqtt", "0xa4c138115778ffff"),
+    ("zigbee2mqtt", "0xa4c138115783ffff"),
 }
 
 OUTDOOR_SOURCE_BADGES = {
@@ -876,10 +885,11 @@ def load_dashboard(
               dt.name AS device_type_name,
               d.room_id, r.name AS room_name, z.name AS zone_name,
               d.managed_manually, d.manual_power_state, d.access_mode,
-              d.capability_mode, d.polling_enabled,
+              d.capability_mode, d.polling_enabled, d.control_enabled,
               d.poll_interval_seconds,
               d.last_service_date, d.next_service_due,
               zd.availability AS zigbee_availability,
+              zd.friendly_name AS zigbee_friendly_name,
               zd.zigbee_type, zd.model_id AS zigbee_model,
               zd.last_message_at AS mqtt_message_at,
               (SELECT MAX(zpc.source_observed_at)
@@ -909,6 +919,10 @@ def load_dashboard(
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='tamper') AS zigbee_tamper,
+              (SELECT UPPER(COALESCE(zpc.text_value,
+                                     JSON_UNQUOTE(zpc.value_json)))
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='state') AS zigbee_power_state,
               (SELECT MAX(msr.observed_at)
                  FROM sensors ms JOIN sensor_readings msr ON msr.sensor_id=ms.id
                 WHERE ms.device_id=d.id AND ms.is_active=1
@@ -1090,6 +1104,28 @@ def load_dashboard(
             device["network_http_ok"] = network_state.get("http_ok")
             device["network_http_status"] = network_state.get("http_status")
             device["network_resolved_ip"] = network_state.get("resolved_ip")
+        device["switch_power"] = (
+            device.get("power")
+            if device["source_system"] == "tasmota"
+            else (
+                device.get("zigbee_power_state") == "ON"
+                if device.get("zigbee_power_state") in {"ON", "OFF"}
+                else None
+            )
+        )
+        device["switch_controllable"] = bool(
+            device.get("control_enabled")
+            and (device["source_system"], device["source_device_id"])
+                in POWER_SWITCH_ALLOWLIST
+            and (
+                device["source_system"] == "tasmota"
+                or (
+                    device["source_system"] == "zigbee2mqtt"
+                    and device.get("device_type") == "power_meter"
+                    and str(device.get("zigbee_type") or "").casefold() == "router"
+                )
+            )
+        )
         device["measurement_is_stale"] = bool(
             device["measurement_at"]
             and datetime.now(UTC).replace(tzinfo=None) - device["measurement_at"]
@@ -1976,6 +2012,8 @@ def dashboard() -> str:
     if requested_attempt_origin in {"all", "automatic", "manual"}:
         session["dashboard_poll_origin"] = requested_attempt_origin
     attempt_origin = session.get("dashboard_poll_origin", "all")
+    if request.args.get("cancel_power_off") == "1":
+        session.pop("pending_power_off", None)
     devices, attempts = load_dashboard(attempt_origin)
     _, outdoor_temperature = load_outdoor_sources()
     climate_service_mode = os.getenv("CLIMATE_SERVICE_MODE", "false") == "true"
@@ -2045,6 +2083,7 @@ def dashboard() -> str:
         latest_poll=latest_poll,
         poll_marker=latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
         poll_notice=session.pop("poll_notice", None),
+        pending_power_off=session.get("pending_power_off"),
         view_mode=view_mode,
         temperature_mode=temperature_mode,
         has_active_esp32=has_action_temperature,
@@ -5199,6 +5238,141 @@ def update_power(device_id: int):
         connection.close()
     result = "power_saved" if changed else "power_unchanged"
     return redirect(url_for("dashboard", saved=result) + f"#device-{device_id}")
+
+
+def load_switchable_device(device_id: int) -> dict[str, Any] | None:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT d.id,d.name,d.source_system,d.hostname,d.source_device_id,
+                      d.device_type,zd.friendly_name,zd.zigbee_type
+                 FROM devices d
+                 LEFT JOIN zigbee2mqtt_devices zd ON zd.device_id=d.id
+                WHERE d.id=? AND d.is_active=1 AND d.control_enabled=1
+                  AND (d.source_system='tasmota'
+                       OR (d.source_system='zigbee2mqtt'
+                           AND d.device_type='power_meter'
+                           AND LOWER(COALESCE(zd.zigbee_type,''))='router'))""",
+            (device_id,),
+        )
+        rows = rows_as_dicts(cursor)
+        if not rows:
+            return None
+        device = rows[0]
+        if (device["source_system"], device["source_device_id"]) not in POWER_SWITCH_ALLOWLIST:
+            return None
+        return device
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.post("/devices/<int:device_id>/switch-power")
+def switch_device_power(device_id: int):
+    validate_csrf()
+    requested_value = request.form.get("requested_power")
+    if requested_value not in {"0", "1"}:
+        abort(400)
+    requested_power = requested_value == "1"
+    device = load_switchable_device(device_id)
+    if device is None:
+        abort(404)
+
+    if not requested_power:
+        pending = session.get("pending_power_off")
+        token = request.form.get("confirmation_token")
+        confirmed = bool(
+            request.form.get("confirmed") == "1"
+            and isinstance(pending, dict)
+            and pending.get("device_id") == device_id
+            and token
+            and secrets.compare_digest(str(pending.get("token", "")), token)
+            and float(pending.get("expires_at", 0))
+                >= datetime.now(UTC).timestamp()
+        )
+        if not confirmed:
+            session["pending_power_off"] = {
+                "device_id": device_id,
+                "device_name": device["name"],
+                "token": secrets.token_urlsafe(24),
+                "expires_at": datetime.now(UTC).timestamp() + 300,
+            }
+            return redirect(url_for("dashboard") + f"#device-{device_id}")
+        session.pop("pending_power_off", None)
+
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """INSERT INTO device_power_control_attempts
+                 (device_id,source_system,requested_power,requested_by,status)
+               VALUES (?,?,?,?,'pending')""",
+            (device_id, device["source_system"], requested_power, g.current_user["id"]),
+        )
+        attempt_id = int(cursor.lastrowid)
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+
+    if device["source_system"] == "tasmota":
+        result = control_tasmota_power(str(device["hostname"]), requested_power)
+    else:
+        result = control_zigbee_power(str(device["friendly_name"]), requested_power)
+
+    connection = connect_database()
+    cursor = connection.cursor()
+    now = datetime.now(UTC).replace(tzinfo=None)
+    try:
+        cursor.execute(
+            """UPDATE device_power_control_attempts
+                  SET status=?,preflight_power=?,verified_power=?,completed_at=?,
+                      error_code=?,error_message=?
+                WHERE id=? AND status='pending'""",
+            (
+                result.status, result.preflight_power, result.verified_power, now,
+                result.error_code, result.error_message, attempt_id,
+            ),
+        )
+        if result.status == "verified" and device["source_system"] == "tasmota":
+            token = now.strftime("%Y%m%dT%H%M%S%f")
+            cursor.execute(
+                """INSERT INTO device_states
+                     (device_id,observed_at,power,online,source_system,
+                      source_event_id,raw_state)
+                   VALUES (?,?,?,1,'tasmota',?,?)""",
+                (
+                    device_id, now, result.verified_power,
+                    f"tasmota:ui-control:{device_id}:{token}",
+                    json.dumps({"power": result.verified_power, "origin": "ui"}),
+                ),
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+
+    if result.status == "verified":
+        state = "bekapcsolva" if requested_power else "kikapcsolva"
+        session["poll_notice"] = {
+            "kind": "success", "message": f"{device['name']}: {state}, visszaolvasva."
+        }
+    elif result.status == "unverified":
+        session["poll_notice"] = {
+            "kind": "warning", "message": f"{device['name']}: a parancs elküldve, de az állapot nem volt visszaigazolható."
+        }
+    else:
+        session["poll_notice"] = {
+            "kind": "error", "message": f"{device['name']}: a kapcsolás sikertelen ({result.error_code or 'ismeretlen hiba'})."
+        }
+    return redirect(url_for("dashboard") + f"#device-{device_id}")
 
 
 @app.post("/devices/<int:device_id>/service")

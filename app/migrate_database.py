@@ -186,6 +186,10 @@ MIGRATIONS = (
         "v1_45_climate_control_requested_mode",
         ROOT / "SQL" / "migrations" / "045_home_automation_v1.44_to_v1.45.sql",
     ),
+    (
+        "v1_46_power_switch_control",
+        ROOT / "SQL" / "migrations" / "046_home_automation_v1.45_to_v1.46.sql",
+    ),
 )
 
 

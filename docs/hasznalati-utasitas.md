@@ -311,6 +311,21 @@ alapnézetének része. A dugalj **Bekapcsolva** állapota a kazán tápellátá
 jelzi, nem a Bosch melegvíz- vagy fűtési üzemének állapotát. A két kazánüzem
 egyelőre külön, kézzel nyilvántartandó adat.
 
+### Okosdugaljak kézi kapcsolása
+
+A kezdőlapon a Nous A1T/Tasmota dugaljak és a Zigbee routerként működő
+Smart Plugok kártyáján külön **Bekapcsolás** és **Kikapcsolás** gomb látható a
+szerkesztőknek. A bekapcsolás azonnal elküldhető. Kikapcsoláskor előbb piros
+figyelmeztetés jelenik meg a következményekkel, és csak a külön **Igen,
+kikapcsolom** megerősítés küldi el a parancsot. A megerősítés öt percig
+érvényes és csak az adott dugaljhoz használható.
+
+A Tasmota parancsot HTTP-visszaolvasás, a Zigbee parancsot az eszköz MQTT-n
+visszaküldött, nem retained állapota igazolja. Az elküldött, de nem igazolt
+parancs külön figyelmeztetést kap; nem jelenik meg biztos sikerként. Az IT
+dugaljak kikapcsolása megszakíthatja a hálózatot vagy magát az automation
+szervert, a Zigbee routerek kikapcsolása pedig átmenetileg gyengítheti a mesh-t.
+
 ### Lekérdezési idők
 
 A kezdőlapi eszközkártyákon minden eszköznél látszik a beállított gyakoriság,

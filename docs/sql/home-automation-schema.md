@@ -29,6 +29,9 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `thermostat_service_commands`: a szerviztesztek parancs- és visszaolvasási auditnaplója
 - `climate_control_attempts`: a közvetlen, időzített és szervizcélú
   ConnectLife-parancsok auditja; a `requested_mode` a kért üzemmódot is megőrzi
+- `device_power_control_attempts`: a Nous/Tasmota és Zigbee router-dugaljak
+  kézi kapcsolási kérései, kérő felhasználója, előzetes és visszaigazolt
+  reléállapota, valamint hibája
 - `sensor_readings`: mért értékek idősorokhoz
 - `energy_billing_cycles`: mérőnkénti, nem feltétlenül naptári elszámolási ciklusok
 - `gas_conversion_periods`: időben érvényes korrekciós tényező és fűtőérték
