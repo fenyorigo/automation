@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "app"))
 
 from power_switch_control import control_tasmota_power, control_zigbee_power
 from dashboard import (
+    MANUAL_BOILER_STATE_SELECT_SQL,
     POWER_SWITCH_ALLOWLIST,
     annotate_boiler_operating_states,
     normalized_switch_power,
@@ -97,6 +98,9 @@ class _BoilerCursor:
 
 
 class PowerSwitchControlTest(unittest.TestCase):
+    def test_manual_boiler_state_query_selects_from_devices(self) -> None:
+        self.assertIn("FROM devices", MANUAL_BOILER_STATE_SELECT_SQL)
+
     @patch("power_switch_control.urllib.request.urlopen")
     def test_tasmota_switch_is_verified_by_fresh_status_read(self, urlopen) -> None:
         urlopen.side_effect = [

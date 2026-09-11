@@ -40,6 +40,8 @@ helyi dátumok.
 - Javítva a reléállapot adatbázisból érkező `0/1` értékének boolean
   normalizálása, hogy a megfelelő kapcsológomb ténylegesen megkapja a böngésző
   `disabled` állapotát.
+- Javítva a Bosch kézi melegvíz- és fűtésállapotának mentési lekérdezése; a
+  hibás SQL miatt a mentés 500-as hibaoldallal végződött.
 
 ## 1.3.1 — 2026-09-08
 

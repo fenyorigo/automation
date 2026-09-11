@@ -130,6 +130,13 @@ POWER_SWITCH_ALLOWLIST = {
     ("tasmota", "nous-kazan"),
 }
 
+MANUAL_BOILER_STATE_SELECT_SQL = """
+    SELECT manual_power_state,manual_hot_water_state,manual_heating_state
+      FROM devices
+     WHERE id = ? AND is_active = 1 AND managed_manually = 1
+     FOR UPDATE
+"""
+
 OUTDOOR_SOURCE_BADGES = {
     "zigbee2mqtt": "Zigbee eszköz",
     "open_meteo": "Webes lekérdezés",
@@ -5281,14 +5288,7 @@ def update_power(device_id: int):
     connection = connect_database()
     cursor = connection.cursor()
     try:
-        cursor.execute(
-            """
-            SELECT manual_power_state,manual_hot_water_state,manual_heating_state
-            WHERE id = ? AND is_active = 1 AND managed_manually = 1
-            FOR UPDATE
-            """,
-            (device_id,),
-        )
+        cursor.execute(MANUAL_BOILER_STATE_SELECT_SQL, (device_id,))
         row = cursor.fetchone()
         if row is None:
             abort(404)
