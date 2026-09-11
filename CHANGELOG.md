@@ -25,6 +25,9 @@ helyi dátumok.
 - Bekapcsolt Nous mellett a Bosch power kapcsolóját a friss teljesítmény igazolja:
   a kb. 5 W-os nyugalmi fogyasztás aktív panelt jelent, a friss 0 W piros
   figyelmeztetést ad. A relékapcsolás előtti régi mérés nem okoz téves riasztást.
+- A hűtés–fűtés alapnézet a Computhermek helyiségeinek mérvadó Zigbee
+  hőmérőit is mutatja, így a földszinti Computherm mellett a vendégszobai
+  hőmérő is információforrásként látható.
 
 ## 1.3.1 — 2026-09-08
 

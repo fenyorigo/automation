@@ -1288,7 +1288,7 @@ def mark_climate_control_devices(
     climate_room_ids = {
         int(item["room_id"])
         for item in devices
-        if item.get("source_system") == "connectlife"
+        if item.get("source_system") in {"connectlife", "computherm"}
         and item.get("room_id") is not None
     }
     relevant_ids: set[int] = set()

@@ -58,7 +58,10 @@ időállandóját, a kalibrációs korrekciót és a cselekedeti pont időpontj�
   eszközök). Az alapértelmezett **Hűtés–fűtés vezérlés** szűrő együtt mutatja
   a döntési láncban ténylegesen részt vevő Hisense klímákat, Computhermeket,
   Bosch kazánt, mérvadó Zigbee hőmérőket és nyitásérzékelőket, valamint az
-  aktuális kültéri referenciaforrást. A többi választással egy
+  aktuális kültéri referenciaforrást. A klímával nem rendelkező Computherm-
+  helyiségek mérvadó Zigbee hőmérői is információforrásként ide tartoznak;
+  ezért a földszinti Computherm mellett a vendégszobai hőmérő is megjelenik.
+  A többi választással egy
   eszköztípus vagy minden eszköz is megjeleníthető. A mellette levő
   **Lekérdezési körben** jelölővel az összes vagy a kiválasztott típuson belül
   csak az automatikusan lekérdezett eszközök maradnak láthatók. A böngésző a
