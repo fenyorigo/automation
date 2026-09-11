@@ -121,7 +121,7 @@ dd.power-on { color: #d05a16; }
 .error-message { margin-top: 12px; color: var(--red); font-size: .76rem; line-height: 1.45; }
 .power-switch-control,.power-switch-actions { display:flex; align-items:center; gap:9px; margin-top:14px; }
 .power-switch-control button,.power-switch-actions button { min-height:38px; padding:0 12px; border:0; border-radius:9px; background:var(--green); color:#fff; font:inherit; font-size:.74rem; font-weight:850; cursor:pointer; }
-.power-switch-control button:disabled { opacity:.42; cursor:not-allowed; }
+.power-switch-control button:disabled { opacity:1; background:#d9dddb !important; color:#68716d; cursor:not-allowed; box-shadow:none; }
 .power-switch-control .danger-button,.power-switch-actions .danger-button { background:#b42318; }
 .power-off-confirmation { margin-top:14px; padding:13px; border:2px solid #b42318; border-radius:12px; background:#fff0ed; color:#7a1812; }
 .power-off-confirmation strong { font-weight:900; }

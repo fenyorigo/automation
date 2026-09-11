@@ -34,6 +34,9 @@ helyi dátumok.
 - A `nous-kazan` feszültségmérését 235,5 V referenciaértékkel kalibráltuk;
   a `VoltageCal` 1950-ről 1498-ra változott, a kijelzés 306 V-ról 235 V-ra
   állt be.
+- A Nous kazán aktuális reléállapotával azonos kapcsológomb egyértelműen
+  szürke és inaktív; a szerveroldali visszaolvasás az ismételt parancsot is
+  hatás nélkül hagyja.
 
 ## 1.3.1 — 2026-09-08
 

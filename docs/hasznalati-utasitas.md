@@ -337,6 +337,12 @@ figyelmeztetés jelenik meg a következményekkel, és csak a külön **Igen,
 kikapcsolom** megerősítés küldi el a parancsot. A megerősítés öt percig
 érvényes és csak az adott dugaljhoz használható.
 
+A pillanatnyi reléállapottal azonos művelet nem választható: bekapcsolt
+dugaljnál a **Bekapcsolás**, kikapcsoltnál a **Kikapcsolás** gomb szürke és
+inaktív. A szerver egy régebben megnyitott oldalról érkező ismételt kérésnél is
+előbb visszaolvassa az állapotot, és azonos állapot esetén nem küld új
+reléparancsot.
+
 A Tasmota parancsot HTTP-visszaolvasás igazolja. Az elküldött, de nem igazolt
 parancs külön figyelmeztetést kap; nem jelenik meg biztos sikerként.
 Az igazolt kikapcsolás a Bosch nyilvántartott állapotát is kikapcsoltra állítja.

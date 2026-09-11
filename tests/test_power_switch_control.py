@@ -158,6 +158,11 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertIn("power-off-confirmation", template)
         self.assertIn('name="confirmation_token"', template)
         self.assertIn("Igen, kikapcsolom", template)
+        self.assertIn("'disabled' if device.switch_power is sameas true", template)
+        self.assertIn("'disabled' if device.switch_power is sameas false", template)
+        stylesheet = (ROOT / "app" / "static" / "dashboard.css").read_text()
+        self.assertIn(".power-switch-control button:disabled", stylesheet)
+        self.assertIn("background:#d9dddb !important", stylesheet)
 
     def test_power_switch_allowlist_is_limited_to_boiler_supply(self) -> None:
         self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 1)
