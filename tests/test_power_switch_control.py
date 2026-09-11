@@ -82,7 +82,14 @@ class _BoilerCursor:
         self.calls = []
 
     def execute(self, statement, parameters=None):
+        if "SELECT id,manual_power_state" in statement:
+            self.assert_valid_boiler_select(statement)
         self.calls.append((statement, parameters))
+
+    @staticmethod
+    def assert_valid_boiler_select(statement):
+        if "FROM devices" not in statement:
+            raise AssertionError("The boiler SELECT must include FROM devices")
 
     def fetchone(self):
         return self.row

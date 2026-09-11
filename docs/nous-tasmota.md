@@ -52,12 +52,17 @@ A parancs nem egyszerű kijelzési korrekció: a Tasmota ebből új
 kalibrációs tényezőt számít. A beállítás után ismét össze kell vetni a Tasmota
 feszültségét a multiméterrel.
 
-A 2026. augusztus 17-i beállítások:
+A rögzített kalibrációs beállítások:
 
 | Eszköz | Referencia | `VoltageCal` változás |
 |---|---:|---:|
 | `nous-auxit` | 230 V | 1950 → 1522 |
 | `nous-mainit` | 226 V | → 1454 |
+| `nous-kazan` | 235,5 V | 1950 → 1498 |
+
+A `nous-kazan` 2026. szeptember 11-i kalibrációja előtt a Tasmota 306 V-ot,
+utána egész voltos felbontással 235 V-ot jelzett. A kalibráció idején a relé
+bekapcsolt, a Bosch nyugalmi fogyasztása 5 W volt.
 
 Ez kizárólag a feszültségcsatorna kalibrációja. A teljesítmény- és
 energiamérés pontosságának ellenőrzéséhez ismert, lehetőleg közel ohmos

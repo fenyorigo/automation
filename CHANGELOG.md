@@ -28,6 +28,12 @@ helyi dátumok.
 - A hűtés–fűtés alapnézet a Computhermek helyiségeinek mérvadó Zigbee
   hőmérőit is mutatja, így a földszinti Computherm mellett a vendégszobai
   hőmérő is információforrásként látható.
+- Javítva a Nous kazán kapcsolása után futó Bosch-állapotszinkron adatbázis-
+  lekérdezése; a hibás lekérdezés a már végrehajtott reléparancs után 500-as
+  választ adott.
+- A `nous-kazan` feszültségmérését 235,5 V referenciaértékkel kalibráltuk;
+  a `VoltageCal` 1950-ről 1498-ra változott, a kijelzés 306 V-ról 235 V-ra
+  állt be.
 
 ## 1.3.1 — 2026-09-08
 

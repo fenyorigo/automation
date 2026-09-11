@@ -5383,6 +5383,7 @@ def reconcile_boiler_supply_state(
         return False
     cursor.execute(
         """SELECT id,manual_power_state,manual_hot_water_state,manual_heating_state
+             FROM devices
              WHERE is_active=1 AND source_system='manual' AND device_type='boiler'
              LIMIT 1 FOR UPDATE"""
     )
