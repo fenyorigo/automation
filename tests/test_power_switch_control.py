@@ -14,6 +14,7 @@ from power_switch_control import control_tasmota_power, control_zigbee_power
 from dashboard import (
     POWER_SWITCH_ALLOWLIST,
     annotate_boiler_operating_states,
+    normalized_switch_power,
     reconcile_boiler_supply_state,
 )
 
@@ -168,6 +169,19 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 1)
         self.assertIn(("tasmota", "nous-kazan"), POWER_SWITCH_ALLOWLIST)
         self.assertNotIn(("tasmota", "nous-mainit"), POWER_SWITCH_ALLOWLIST)
+
+    def test_tasmota_database_bits_are_normalized_to_real_booleans(self) -> None:
+        self.assertIs(
+            normalized_switch_power({"source_system": "tasmota", "power": 1}),
+            True,
+        )
+        self.assertIs(
+            normalized_switch_power({"source_system": "tasmota", "power": 0}),
+            False,
+        )
+        self.assertIsNone(
+            normalized_switch_power({"source_system": "tasmota", "power": None})
+        )
 
     def test_verified_boiler_supply_cut_marks_manual_boiler_off(self) -> None:
         cursor = _BoilerCursor()

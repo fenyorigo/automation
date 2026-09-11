@@ -244,6 +244,16 @@ def rows_as_dicts(cursor: mariadb.Cursor) -> list[dict[str, Any]]:
     return [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
 
 
+def normalized_switch_power(device: dict[str, Any]) -> bool | None:
+    if device.get("source_system") == "tasmota":
+        value = device.get("power")
+        return None if value is None else bool(value)
+    value = device.get("zigbee_power_state")
+    if value in {"ON", "OFF"}:
+        return value == "ON"
+    return None
+
+
 def user_count() -> int:
     connection = connect_database()
     cursor = connection.cursor()
@@ -1101,15 +1111,7 @@ def load_dashboard(
             device["network_http_ok"] = network_state.get("http_ok")
             device["network_http_status"] = network_state.get("http_status")
             device["network_resolved_ip"] = network_state.get("resolved_ip")
-        device["switch_power"] = (
-            device.get("power")
-            if device["source_system"] == "tasmota"
-            else (
-                device.get("zigbee_power_state") == "ON"
-                if device.get("zigbee_power_state") in {"ON", "OFF"}
-                else None
-            )
-        )
+        device["switch_power"] = normalized_switch_power(device)
         device["switch_controllable"] = bool(
             device.get("control_enabled")
             and (device["source_system"], device["source_device_id"])

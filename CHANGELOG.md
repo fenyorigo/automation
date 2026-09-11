@@ -37,6 +37,9 @@ helyi dátumok.
 - A Nous kazán aktuális reléállapotával azonos kapcsológomb egyértelműen
   szürke és inaktív; a szerveroldali visszaolvasás az ismételt parancsot is
   hatás nélkül hagyja.
+- Javítva a reléállapot adatbázisból érkező `0/1` értékének boolean
+  normalizálása, hogy a megfelelő kapcsológomb ténylegesen megkapja a böngésző
+  `disabled` állapotát.
 
 ## 1.3.1 — 2026-09-08
 
