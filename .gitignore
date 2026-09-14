@@ -42,7 +42,6 @@ config/devices.json
 connectlife/*.json
 connectlife/snapshots/
 computherm/*.pcap
-docs/device-inventory.md
 docs/computherm.md
 docs/computherm.txt
 db chat with chatgpt.txt

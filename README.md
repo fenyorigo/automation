@@ -63,6 +63,8 @@ Deferred operational checks are tracked in the [task list](docs/teendok.md).
 The ongoing ESP32/DS18B20 physical-response experiments are recorded in the
 [calibration measurement log](docs/esp32-ds18b20-kalibracios-meresek.md).
 Release history is maintained in [CHANGELOG.md](CHANGELOG.md).
+The current source-of-truth, production-state and continuation checklist is in
+the [Hungarian continuation handover](docs/tudnivalók%20a%20folytatáshoz.md).
 
 ## Safety model
 

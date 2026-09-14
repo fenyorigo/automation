@@ -5,6 +5,12 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- Új, verziózott folytatási átadó dokumentum rögzíti az éles Fedora, a Mac
+  fejlesztési repository és a távoli Git eltérő szerepét, a dokumentációs
+  belépési pontokat, a biztonsági invariánsokat és a következő munkák sorrendjét.
+- Az eszközleltár az éles adatbázis 2026-09-14-i név- és
+  helyiség-hozzárendeléseire frissült; a későbbre eldöntött Bosch-, TRV-,
+  automatikavezérlési, energia- és Zigbee-feladatok bekerültek a teendőlistába.
 - A kezdőlap új, alapértelmezett **Hűtés–fűtés vezérlés** szűrője egyetlen
   nézetben mutatja a döntési lánc klímáit, termosztátjait, kazánját, mérvadó
   Zigbee hőmérőit és nyitásérzékelőit, valamint a kültéri referenciaforrást.

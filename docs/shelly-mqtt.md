@@ -94,6 +94,11 @@ inaktívvá válnak. A régi méréseket nem mozgatjuk és nem töröljük.
 A `shellyhtg3-48f6eebb5c50` ugyanilyen módon a kézi `shelly-nappali` fizikai
 utódja, és annak nevét, valamint Nappali helyiség-hozzárendelését örökli.
 
+A későbbi végleges elhelyezés és az egységes névkonvenció után az éles
+nyilvántartás aktuális nevei: az első eszköz `Sh ebédlő` az
+**Ebédlő-konyha**, a második `Sh közlekedő` a **Közlekedő** helyiségben. Az
+eredeti kézi előd neve és helye csak a migráció történeti kiindulópontja.
+
 ## Fedora szolgáltatás
 
 ```bash
