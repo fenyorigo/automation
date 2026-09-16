@@ -1,6 +1,6 @@
 # Tudnivalók a folytatáshoz
 
-Frissítve: **2026-09-14** (Europe/Budapest)
+Frissítve: **2026-09-16** (Europe/Budapest)
 
 Ez a fájl az `automation` projekt folytatásának belépési pontja. Nem helyettesíti
 és nem másolja a részletes dokumentációt: rögzíti, hogy mi az igazság forrása,
@@ -18,11 +18,9 @@ Az üzemi állapot és a verziózott forrás két külön helyen él:
 2. **Fejlesztési forrásigazság:** a Macen a
    `/Users/bajanp/Projects/automation` repository `main` ága. A kódot itt kell
    módosítani és tesztelni, majd innen kell célzottan telepíteni a Fedorára.
-3. **Távoli Git:** `git@github.com:fenyorigo/automation.git`. A 2026-09-14-i
-   ellenőrzéskor a Mac `main` ága 14 committal megelőzte az `origin/main` ágat;
-   az utolsó alkalmazáskód-commit `4838354` volt, az origin csúcsa pedig
-   `150ac0e`. A GitHub tehát addig **nem teljes biztonsági másolat**, amíg a
-   helyi commitok nincsenek felküldve. Mindig újra ellenőrizendő:
+3. **Távoli Git:** `git@github.com:fenyorigo/automation.git`. A Mac és a GitHub
+   szinkronját minden munka végén ellenőrizni kell; a GitHub csak akkor teljes
+   biztonsági másolat, ha a helyi commitok felkerültek. Ellenőrző parancsok:
 
    ```bash
    git status --short --branch
@@ -108,7 +106,9 @@ forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
 ### Adatgyűjtés és nyilvántartás
 
 - A periodikus poller kezeli az öt Hisense klímát, két Computhermet, három
-  Nous/Tasmota dugaljat, két Linux gépet és a Xerox B235 hálózati nyomtatót.
+  Nous/Tasmota dugaljat, a `think260x` és `t470` Linux gépeket, valamint a
+  Xerox B235 hálózati nyomtatót. A `t470` a korábbi `thinkpad220x` rekordját
+  és teljes mérési előzményét folytatja ugyanazon a címen és hozzáféréssel.
 - A Zigbee collector automatikusan felfedezi az eszközöket, cache-eli a
   tulajdonságokat, és a hőmérsékletet, páratartalmat, elemet, valamint a valódi
   kontaktusváltásokat időbélyeggel a meglévő mérési modellbe írja. A régi

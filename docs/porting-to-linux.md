@@ -485,7 +485,8 @@ saját terhelését a Fedora szerverhez rögzítse.
 
 ### Távoli Linux-gép monitorozása korlátozott SSH-val
 
-A `think220x` tapasztalatai alapján a távoli Linux-gépekhez nem telepítünk
+A korábbi `think220x`, majd az azt 2026-09-16-án ugyanazon a címen felváltó
+`t470` tapasztalatai alapján a távoli Linux-gépekhez nem telepítünk
 külön ügynököt, és az alkalmazás nem kap általános vagy root SSH-hozzáférést.
 A távoli gépen egy kizárólag mérési JSON kiírására használható felhasználó és
 egy SSH forced command működik:
@@ -493,7 +494,7 @@ egy SSH forced command működik:
 ```text
 automation poller (think260x)
   -> SSH kulcs, BatchMode, PTY nélkül
-  -> automation-monitor@think220x
+  -> automation-monitor@t470 (192.168.10.2)
   -> kötelező /usr/local/libexec/automation-system-metrics parancs
   -> egyetlen JSON-válasz
 ```
@@ -507,7 +508,7 @@ ellenőrzését.
 
 #### A távoli gép előkészítése
 
-A `think220x` gépen létrejött az `automation-monitor` felhasználó, valamint a
+A távoli gépen létrejött az `automation-monitor` felhasználó, valamint a
 csak JSON-t kiíró, root jogosultságot nem igénylő
 `/usr/local/libexec/automation-system-metrics` program. A publikus kulcs
 `authorized_keys` sora a következő korlátozással szerepel:
@@ -533,7 +534,7 @@ systemctl reload sshd
 sshd -T | grep -i '^allowusers'
 ```
 
-A think220x `internal` firewalld zónája csak a routerként működő think260x
+A távoli gép `internal` firewalld zónája csak a routerként működő think260x
 DMZ-címéről (`192.168.10.1`) engedi az SSH-t. A jogosultságok és az SELinux
 címkék ellenőrzése:
 
@@ -565,7 +566,7 @@ sudo -u automation ssh -T \
 A helyes válasz egyetlen JSON-objektum, például:
 
 ```json
-{"schema_version":1,"hostname":"think220x","cpu_temperature_c":60.0,"load_1m":0.123,"load_5m":0.054,"load_15m":0.008}
+{"schema_version":1,"hostname":"t470","cpu_temperature_c":48.0,"load_1m":0.123,"load_5m":0.054,"load_15m":0.008}
 ```
 
 Fontos, hogy a kézi próba is ugyanazt a `known_hosts` fájlt használja, mint
@@ -583,22 +584,22 @@ sudo -u automation ssh -T \
 ```
 
 Ezután az alkalmazás már `StrictHostKeyChecking=yes` beállítással dolgozik.
-A sikeres 2026-08-27-i üzemi próbában a think220x 60 °C CPU-hőmérsékletet
-jelzett, miközben a helyben mért think260x 47 °C-ot; a két gép adatai külön
-idősorokba kerültek.
+A sikeres 2026-08-27-i eredeti üzemi próbában a think220x 60 °C CPU-
+hőmérsékletet jelzett, miközben a helyben mért think260x 47 °C-ot; a két gép
+adatai külön idősorokba kerültek. A gépet 2026-09-16-án a `t470` váltotta fel.
+Az átálláskor nem készült új device vagy szenzor: a meglévő rekordok és a teljes
+mérési előzmény folytatólagosan megmaradt.
 
-A `config/devices.json` távoli bejegyzésében fontos, hogy a nyilvántartási
-név (`thinkpad220x`) és az operációs rendszer valódi hostneve (`think220x`)
-nem azonos:
+A `config/devices.json` aktuális távoli bejegyzése:
 
 ```json
 {
   "source_system": "linux_system",
-  "hostname": "thinkpad220x",
-  "local_hostname": "think220x",
+  "hostname": "t470",
+  "local_hostname": "t470",
   "expected_ip": "192.168.10.2",
   "mac_address": "",
-  "device_id": "thinkpad220x",
+  "device_id": "t470",
   "metrics_transport": "ssh",
   "ssh_user": "automation-monitor",
   "ssh_identity_file": "/var/lib/automation/.ssh/id_ed25519_system_metrics",
@@ -611,7 +612,7 @@ Az `expected_ip` az SSH célpontja, ezért a távoli mérés nem függ a DNS-tő
 Az `auto` mód azonos hostname esetén helyben mér, eltérő hostname esetén
 SSH-t használ; üzemszerű távoli eszköznél mégis az explicit `ssh` ajánlott.
 Sikeres kézi próba és konfiguráció után a nyilvántartásban visszakapcsolható
-a `thinkpad220x` lekérdezése, majd egy kézi körrel ellenőrizhető. Ezután a
+a `t470` lekérdezése, majd egy kézi körrel ellenőrizhető. Ezután a
 10 perces automatikus lekérdezés is engedélyezhető.
 
 ## 13. Még hátralevő feladatok

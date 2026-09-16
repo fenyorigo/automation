@@ -92,8 +92,14 @@ szenzorrekordok inaktívak, történeti méréseik és helytörténetük megmara
 | Forrás | Név | Hostname | Helyiség |
 |---|---|---|---|
 | Linux | `260x` | `think260x.home` | Emelet / Kis nappali |
-| Linux | `220x` | telepítésspecifikus konfiguráció | Emelet / Kis nappali |
+| Linux | `t470` | `t470` (`192.168.10.2`) | Emelet / Kis nappali |
 | Hálózati felügyelet | `Xerox B235` | `xeroxb235.home` | Emelet / Kis nappali |
+
+A korábbi `thinkpad220x` nyilvántartási rekordot 2026-09-16-án a helyére
+került `t470` vette át. Az eszköz- és szenzorrekordok azonosítói, a korábbi
+mérések, a helyiség-hozzárendelés, a `192.168.10.2` cím, a 10 perces poll és a
+korlátozott SSH-hozzáférés változatlan maradt; csak a gép neve és a forrás-
+azonosítók változtak.
 
 ## Inaktív eszközök
 

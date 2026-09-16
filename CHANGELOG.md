@@ -5,6 +5,10 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A `thinkpad220x` helyére került `t470` ugyanazon a nyilvántartási eszköz- és
+  szenzorrekordokon folytatja a rendszerterhelési méréseket. A helyiség, a
+  `192.168.10.2` cím, a korlátozott SSH-hozzáférés, a pollritmus és minden
+  korábbi mérés megmaradt.
 - A SONOFF TRV Gen2 (`TRV-ZBT`) külön radiátortermosztát-eszköztípusként
   automatikusan felismerhető. A collector a radiátorközeli hőmérsékletet, a
   célhőmérsékletet, a szelepnyitást, az órás fűtési aktivitást és az
