@@ -111,9 +111,10 @@ forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
   és teljes mérési előzményét folytatja ugyanazon a címen és hozzáféréssel.
 - A Zigbee collector automatikusan felfedezi az eszközöket, cache-eli a
   tulajdonságokat, és a hőmérsékletet, páratartalmat, elemet, valamint a valódi
-  kontaktusváltásokat időbélyeggel a meglévő mérési modellbe írja. A régi
-  kontaktusállapot nem hiba; csak az explicit Zigbee2MQTT `offline` állapot
-  jelent kiesést.
+  kontaktusváltásokat időbélyeggel a meglévő mérési modellbe írja. A SONOFF
+  S60ZBTPF router-dugaljak teljesítmény-, áram-, feszültség- és összesenergia-
+  adatai szintén idősorosan tárolódnak. A régi kontaktusállapot nem hiba; csak
+  az explicit Zigbee2MQTT `offline` állapot jelent kiesést.
 - A Shelly collector két deep-sleep H&T Gen3 eszközt kezel közvetlen MQTT-ről.
   A temperature, humidity, battery és `battery_voltage` külön idősor; az
   `/online=false` normális. A frissességi színek határa 1, 2 és 4 óra.

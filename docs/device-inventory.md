@@ -83,6 +83,10 @@ idősorosan gyűjtött eszköz.
 | Tasmota | `Nous auxiliary IT` | `nous-auxit` | Emelet / Dolgozó | IT fogyasztásmérő |
 | Tasmota | `Nous kazán` | `nous-kazan.home` | Földszint / Kazánház | Bosch táp és fogyasztás |
 
+A SONOFF S60ZBTPF Zigbee router-dugaljak `power`, `current`, `voltage` és
+`energy` értékei idősorosan is bekerülnek a `sensor_readings` táblába. A
+reléállapot a Zigbee állapotcache része, nem mérési idősor.
+
 A Shelly stabil azonosítója a topic-prefix 12 hexadecimális karaktere. A két
 MQTT-eszköz a korábbi kézi Shelly-rekord fizikai utódja; a régi device- és
 szenzorrekordok inaktívak, történeti méréseik és helytörténetük megmaradtak.

@@ -5,6 +5,10 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Zigbee2MQTT collector a SONOFF S60ZBTPF dugaljak pillanatnyi
+  teljesítményét, áramát, feszültségét és összesített energiáját is a közös
+  `sensor_readings` idősorba menti. A reléállapot továbbra is állapotadat,
+  nem periodikus mérés.
 - A `thinkpad220x` helyére került `t470` ugyanazon a nyilvántartási eszköz- és
   szenzorrekordokon folytatja a rendszerterhelési méréseket. A helyiség, a
   `192.168.10.2` cím, a korlátozott SSH-hozzáférés, a pollritmus és minden

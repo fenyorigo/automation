@@ -160,6 +160,12 @@ class ZigbeeDiscoveryTest(unittest.TestCase):
         self.assertEqual(descriptors["energy"]["unit"], "kilowatt_hour")
         self.assertEqual(descriptors["state"]["unit"], "boolean")
         self.assertEqual(inferred_device_type(PLUG, list(descriptors.values())), "power_meter")
+        self.assertTrue(
+            {"power", "current", "voltage", "energy"}.issubset(
+                TIME_SERIES_PROPERTIES
+            )
+        )
+        self.assertNotIn("state", TIME_SERIES_PROPERTIES)
 
     def test_identifies_temperature_humidity_sensor(self) -> None:
         descriptors = {item["property"]: item for item in sensor_descriptors(THERMOMETER)}
