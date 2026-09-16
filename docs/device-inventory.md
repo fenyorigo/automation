@@ -75,9 +75,10 @@ idősorosan gyűjtött eszköz.
 
 | Forrás | Név | Hostname / azonosító | Helyiség | Szerep |
 |---|---|---|---|---|
-| Zigbee2MQTT | `SP emelet` | Zigbee IEEE-cím | Emelet / Emeleti fürdőszoba előtér | Zigbee router |
-| Zigbee2MQTT | `SP földszint` | Zigbee IEEE-cím | Földszint / Közlekedő | Zigbee router |
-| Zigbee2MQTT | `Smart plug ebédlő` | `0xa4c13811bed2ffff` | Földszint / Ebédlő-konyha | Klarstein-mérés és Zigbee router |
+| Zigbee2MQTT | `SP emelet` | `0xa4c138115783ffff` | Emelet / Emeleti fürdőszoba előtér | Zigbee router |
+| Zigbee2MQTT | `SP lépcső` | `0xa4c138115778ffff` | Földszint / Közlekedő | Zigbee router |
+| Zigbee2MQTT | `SP közlekedő` | `0xa4c13811554dffff` | Földszint / Közlekedő | Zigbee router |
+| Zigbee2MQTT | `SP ebédlő` | `0xa4c13811bed2ffff` | Földszint / Ebédlő-konyha | Klarstein-mérés, UI-kapcsolás és Zigbee router |
 | Kézi / külső mérés | `Klarstein Norderney` | helyi API nélkül | Földszint / Ebédlő-konyha | 2000 W-os villanyfűtő; a SONOFF méri |
 | Shelly MQTT | `Sh ebédlő` | `shellyhtg3-48f6eebb92d4` | Földszint / Ebédlő-konyha | Deep-sleep hőmérő |
 | Shelly MQTT | `Sh közlekedő` | `shellyhtg3-48f6eebb5c50` | Földszint / Közlekedő | Deep-sleep hőmérő |
@@ -87,7 +88,8 @@ idősorosan gyűjtött eszköz.
 
 A SONOFF S60ZBTPF Zigbee router-dugaljak `power`, `current`, `voltage` és
 `energy` értékei idősorosan is bekerülnek a `sensor_readings` táblába. A
-reléállapot a Zigbee állapotcache része, nem mérési idősor.
+reléállapot a Zigbee állapotcache része, nem mérési idősor. Közülük csak az
+`SP ebédlő` kapcsolható az UI-ról; a többi router védetten megfigyelési célú.
 
 A Shelly stabil azonosítója a topic-prefix 12 hexadecimális karaktere. A két
 MQTT-eszköz a korábbi kézi Shelly-rekord fizikai utódja; a régi device- és

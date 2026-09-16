@@ -1,4 +1,4 @@
-<article id="device-{{ device.id }}" data-polling-enabled="{{ 'true' if device.polling_enabled else 'false' }}" data-climate-control="{{ 'true' if device.climate_control_relevant else 'false' }}" class="device-card {{ 'is-offline' if device.polling_enabled and device.online is sameas false }} {{ 'is-warning' if (device.source_system == 'shelly_mqtt' and device.shelly_status_class == 'warning') or (device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' and device.zigbee_status_class == 'warning') or (device.boiler_status is defined and device.boiler_status.heating_unavailable) or (device.boiler_panel_power_alert is defined and device.boiler_panel_power_alert) }} {{ 'is-delayed' if device.source_system == 'shelly_mqtt' and device.shelly_status_class == 'delayed' }} {{ 'is-manual' if device.is_manual_visual }}">
+<article id="device-{{ device.id }}" data-polling-enabled="{{ 'true' if device.polling_enabled else 'false' }}" data-climate-control="{{ 'true' if device.climate_control_relevant else 'false' }}" class="device-card {{ 'is-offline' if device.polling_enabled and device.online is sameas false }} {{ 'is-warning' if (device.source_system == 'shelly_mqtt' and device.shelly_status_class == 'warning') or (device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' and device.zigbee_status_class == 'warning') or (device.boiler_status is defined and device.boiler_status.heating_unavailable) or (device.boiler_panel_power_alert is defined and device.boiler_panel_power_alert) }} {{ 'is-delayed' if device.source_system == 'shelly_mqtt' and device.shelly_status_class == 'delayed' }} {{ 'is-power-off' if device.switch_controllable and device.switch_power is sameas false }} {{ 'is-manual' if device.is_manual_visual }}">
   <div class="card-heading">
     <div><p class="source">{{ device.source_label }}</p><h3>{{ device.name }}</h3></div>
     <span class="badge {% if device.source_system == 'shelly_mqtt' %}{{ device.shelly_status_class }}{% elif device.source_system == 'zigbee2mqtt' %}{{ device.zigbee_status_class }}{{ ' contact-stale' if device.device_type == 'contact_sensor' and device.zigbee_status_class == 'warning' }}{% else %}{{ 'manual' if device.is_manual_visual or not device.polling_enabled else ('online' if device.online else 'offline') }}{% endif %}">
@@ -27,7 +27,7 @@
   <div class="manual-state stopped">
     <span class="manual-state-label">Megfigyelés</span><strong>Külső fogyasztásmérővel</strong>
   </div>
-  <p class="temperature-provenance"><strong>2000 W-os villanyfűtő</strong><br>A tényleges fűtést a Smart plug ebédlő méri.</p>
+  <p class="temperature-provenance"><strong>2000 W-os villanyfűtő</strong><br>A tényleges fűtést az SP ebédlő méri.</p>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' %}
   <div class="contact-state {% if device.zigbee_contact_closed is none %}unknown{% elif device.zigbee_contact_closed %}closed{% else %}open{% endif %}">
@@ -146,10 +146,13 @@
   </dl>
   {% endif %}
   {% if can_write and device.switch_controllable %}
+    {% if device.is_klarstein_supply and device.switch_power is sameas true %}
+    <p class="klarstein-standby-warning"><strong>Figyelem:</strong> a bekapcsolt dugalj csak tápot ad. A Klarsteint kézzel kell Standby-ból fűtésre kapcsolni.</p>
+    {% endif %}
     {% if pending_power_off and pending_power_off.device_id == device.id %}
     <section class="power-off-confirmation" role="alert">
       <strong>⚠ Kikapcsolási megerősítés</strong>
-      <p>A dugalj kikapcsolása megszakítja a rákötött eszközök tápellátását{% if device.source_system == 'zigbee2mqtt' %}, és gyengítheti a Zigbee mesh-t{% endif %}. Biztosan folytatod?</p>
+      <p>A dugalj kikapcsolása megszakítja a rákötött eszközök tápellátását{% if device.is_klarstein_supply %}; a Klarstein nem fog fűteni{% elif device.source_system == 'zigbee2mqtt' %}, és gyengítheti a Zigbee mesh-t{% endif %}. Biztosan folytatod?</p>
       <div class="power-switch-actions">
         <form method="post" action="{{ url_for('switch_device_power',device_id=device.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -186,7 +189,7 @@
   {% elif device.source_system == 'shelly_mqtt' %}
   <div class="card-footer"><span>Utolsó Shelly-mérés</span><time>{{ device.shelly_last_measurement_at|local_time }}</time></div>
   {% elif device.source_system == 'manual' and device.device_type == 'electric_heater' %}
-  <div class="card-footer"><span>Mérési forrás</span><strong>Smart plug ebédlő</strong></div>
+  <div class="card-footer"><span>Mérési forrás</span><strong>SP ebédlő</strong></div>
   {% elif device.is_manual_visual %}
   <div class="card-footer"><span>Utolsó kézi mérés</span><time>{{ device.measurement_at|local_time }}</time></div>
   {% elif device.hostname %}<div class="card-footer"><span>{{ device.hostname }}</span><time>{{ device.last_poll_at|local_time }}</time></div>{% endif %}

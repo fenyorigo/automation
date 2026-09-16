@@ -338,13 +338,19 @@ riasztást.
 
 ### Okosdugaljak kézi kapcsolása
 
-A kezdőlapon kizárólag a Bosch tápellátását adó **Nous kazán** kártyáján
-látható külön **Bekapcsolás** és **Kikapcsolás** gomb a szerkesztőknek. Az IT-
-és Zigbee router-dugaljak csak megfigyelhetők. A bekapcsolás azonnal
-elküldhető. Kikapcsoláskor előbb piros
+A kezdőlapon a Bosch tápellátását adó **Nous kazán**, valamint a Klarsteint
+ellátó **SP ebédlő** kártyáján látható külön **Bekapcsolás** és
+**Kikapcsolás** gomb a szerkesztőknek. A többi IT- és Zigbee router-dugalj
+csak megfigyelhető. A bekapcsolás azonnal elküldhető. Az SP ebédlő
+bekapcsolása után külön figyelmeztetés emlékeztet rá, hogy a Klarsteint a saját
+kezelőjén kézzel kell Standby-ból fűtésre kapcsolni. Kikapcsoláskor előbb piros
 figyelmeztetés jelenik meg a következményekkel, és csak a külön **Igen,
 kikapcsolom** megerősítés küldi el a parancsot. A megerősítés öt percig
 érvényes és csak az adott dugaljhoz használható.
+
+A kikapcsolt, kapcsolható dugalj teljes kártyája piros jelölést kap. Ez a
+Klarsteinnél azt jelenti, hogy a fűtő nem kaphat tápot; a relé visszakapcsolása
+önmagában még nem indít fűtést.
 
 A pillanatnyi reléállapottal azonos művelet nem választható: bekapcsolt
 dugaljnál a **Bekapcsolás**, kikapcsoltnál a **Kikapcsolás** gomb szürke és
@@ -352,8 +358,9 @@ inaktív. A szerver egy régebben megnyitott oldalról érkező ismételt kéré
 előbb visszaolvassa az állapotot, és azonos állapot esetén nem küld új
 reléparancsot.
 
-A Tasmota parancsot HTTP-visszaolvasás igazolja. Az elküldött, de nem igazolt
-parancs külön figyelmeztetést kap; nem jelenik meg biztos sikerként.
+A Tasmota parancsot HTTP-, a Zigbee-parancsot friss MQTT-állapot-visszaolvasás
+igazolja. Az elküldött, de nem igazolt parancs külön figyelmeztetést kap; nem
+jelenik meg biztos sikerként.
 Az igazolt kikapcsolás a Bosch nyilvántartott állapotát is kikapcsoltra állítja.
 Ilyenkor a melegvíz és a fűtés jelzése is megszűnik. Bekapcsoláskor csak a
 tápellátás lesz igazolt; a két kazánüzemet külön kell kézzel megjelölni.

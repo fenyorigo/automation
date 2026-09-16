@@ -5,16 +5,22 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- Az `SP ebédlő` az UI-ról be- és kikapcsolható; kikapcsolása külön piros
+  megerősítést kér, kikapcsolt állapotban a kártya piros. Bekapcsolás után az
+  alkalmazás jelzi, hogy a Klarsteint kézzel kell Standby-ból fűtésre
+  kapcsolni. Más Zigbee-routerek továbbra sem kapcsolhatók.
+- A negyedik S60ZBTPF `SP közlekedő` néven a földszinti Közlekedőhöz és
+  helytörténethez került; kizárólag megfigyelési és Zigbee-router szerepű.
 - A Zigbee2MQTT collector a SONOFF S60ZBTPF dugaljak pillanatnyi
   teljesítményét, áramát, feszültségét és összesített energiáját is a közös
   `sensor_readings` idősorba menti. A reléállapot továbbra is állapotadat,
   nem periodikus mérés.
-- A harmadik S60ZBTPF `Smart plug ebédlő` néven, a földszinti Ebédlő-konyha
+- A harmadik S60ZBTPF `SP ebédlő` néven, a földszinti Ebédlő-konyha
   helyiséghez és helytörténethez rendelve került nyilvántartásba; feladata a
   Klarstein konvektor fogyasztásának megfigyelése és a Zigbee mesh erősítése.
 - A `Klarstein Norderney` külön, helyi API nélküli `Villanyfűtő`ként került a
   nyilvántartásba és a hűtés–fűtés alapnézetbe. Kártyája nem mutat hibás
-  offline állapotot; jelzi, hogy működését a `Smart plug ebédlő` méri.
+  offline állapotot; jelzi, hogy működését az `SP ebédlő` méri.
 - A `thinkpad220x` helyére került `t470` ugyanazon a nyilvántartási eszköz- és
   szenzorrekordokon folytatja a rendszerterhelési méréseket. A helyiség, a
   `192.168.10.2` cím, a korlátozott SSH-hozzáférés, a pollritmus és minden

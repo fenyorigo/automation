@@ -128,7 +128,10 @@ COMPUTHERM_LOCATION = {
 
 POWER_SWITCH_ALLOWLIST = {
     ("tasmota", "nous-kazan"),
+    ("zigbee2mqtt", "0xa4c13811bed2ffff"),
 }
+
+KLARSTEIN_SUPPLY_SOURCE_ID = "0xa4c13811bed2ffff"
 
 MANUAL_BOILER_STATE_SELECT_SQL = """
     SELECT manual_power_state,manual_hot_water_state,manual_heating_state
@@ -1149,6 +1152,10 @@ def load_dashboard(
             device["network_http_status"] = network_state.get("http_status")
             device["network_resolved_ip"] = network_state.get("resolved_ip")
         device["switch_power"] = normalized_switch_power(device)
+        device["is_klarstein_supply"] = bool(
+            device["source_system"] == "zigbee2mqtt"
+            and device["source_device_id"] == KLARSTEIN_SUPPLY_SOURCE_ID
+        )
         device["switch_controllable"] = bool(
             device.get("control_enabled")
             and (device["source_system"], device["source_device_id"])
@@ -1339,6 +1346,12 @@ def mark_climate_control_devices(
             # The dedicated plug is the observable mains supply of the Bosch
             # boiler, therefore it belongs to the heating decision chain even
             # while actuator control remains disabled.
+            relevant_ids.add(int(item["id"]))
+        elif (
+            source == "zigbee2mqtt"
+            and item.get("source_device_id") == KLARSTEIN_SUPPLY_SOURCE_ID
+        ):
+            # The dedicated S60 supplies and measures the Klarstein heater.
             relevant_ids.add(int(item["id"]))
         elif source == "manual" and item.get("device_type") == "boiler":
             relevant_ids.add(int(item["id"]))
@@ -5566,8 +5579,17 @@ def switch_device_power(device_id: int):
 
     if result.status == "verified":
         state = "bekapcsolva" if requested_power else "kikapcsolva"
+        message = f"{device['name']}: {state}, visszaolvasva."
+        notice_kind = "success"
+        if (
+            requested_power
+            and device["source_system"] == "zigbee2mqtt"
+            and device["source_device_id"] == KLARSTEIN_SUPPLY_SOURCE_ID
+        ):
+            notice_kind = "warning"
+            message += " A Klarsteint kézzel kell Standby-ból fűtésre kapcsolni."
         session["poll_notice"] = {
-            "kind": "success", "message": f"{device['name']}: {state}, visszaolvasva."
+            "kind": notice_kind, "message": message
         }
     elif result.status == "unverified":
         session["poll_notice"] = {

@@ -168,11 +168,19 @@ class PowerSwitchControlTest(unittest.TestCase):
         stylesheet = (ROOT / "app" / "static" / "dashboard.css").read_text()
         self.assertIn(".power-switch-control button:disabled", stylesheet)
         self.assertIn("background:#d9dddb !important", stylesheet)
+        self.assertIn("klarstein-standby-warning", template)
+        self.assertIn(".device-card.is-power-off", stylesheet)
 
-    def test_power_switch_allowlist_is_limited_to_boiler_supply(self) -> None:
-        self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 1)
+    def test_power_switch_allowlist_is_limited_to_dedicated_supplies(self) -> None:
+        self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 2)
         self.assertIn(("tasmota", "nous-kazan"), POWER_SWITCH_ALLOWLIST)
+        self.assertIn(
+            ("zigbee2mqtt", "0xa4c13811bed2ffff"), POWER_SWITCH_ALLOWLIST
+        )
         self.assertNotIn(("tasmota", "nous-mainit"), POWER_SWITCH_ALLOWLIST)
+        self.assertNotIn(
+            ("zigbee2mqtt", "0xa4c13811554dffff"), POWER_SWITCH_ALLOWLIST
+        )
 
     def test_tasmota_database_bits_are_normalized_to_real_booleans(self) -> None:
         self.assertIs(

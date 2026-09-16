@@ -120,9 +120,10 @@ forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
   `/online=false` normális. A frissességi színek határa 1, 2 és 4 óra.
 - Az ESP32-eszközök inaktívak és már nem vesznek részt a pollkörben; a
   jelenlegi hőmérsékleti gerinc Zigbee és Shelly.
-- A 2026-09-16-i élő leltárban 23 aktív Zigbee-eszköz volt: 9
-  nyitásérzékelő, 9 hőmérő, 2 TRV és 3 router-dugalj. A harmadik,
-  `Smart plug ebédlő` dugalj a Klarstein fogyasztásának megfigyelésére készült.
+- A 2026-09-16-i élő leltárban 24 aktív Zigbee-eszköz volt: 9
+  nyitásérzékelő, 9 hőmérő, 2 TRV és 4 router-dugalj. Az `SP ebédlő` a
+  Klarstein fogyasztását méri; az új `SP közlekedő` a földszinti Közlekedőhöz
+  és helytörténethez van rendelve.
   A pontos név- és helyiségkiosztást a
   [`device-inventory.md`](device-inventory.md) rögzíti.
 
@@ -149,8 +150,10 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
 
 ### Bosch 7000i és Nous kazándugalj
 
-- A `nous-kazan.home` az egyetlen UI-ból kapcsolható dugalj. Kikapcsolása piros
-  második megerősítést kér; az állapottal azonos kapcsológomb inaktív.
+- A `nous-kazan.home` és az `SP ebédlő` a két UI-ból kapcsolható dugalj. A
+  többi Zigbee-router és IT-dugalj nincs engedélyezve. Kikapcsolásuk piros
+  második megerősítést kér; az állapottal azonos kapcsológomb inaktív, a
+  kikapcsolt kártya pedig piros jelölést kap.
 - Az igazolt Nous-lekapcsolás a Bosch táp-, melegvíz- és fűtésjelzését is
   kikapcsolja és naplózza. Visszakapcsolás jelenleg csak a tápot állítja
   aktívra; a másik két jelölés kézi.
@@ -166,9 +169,12 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
 - A 2000 W-os `Klarstein Norderney` az Ebédlő-konyha helyi API nélküli,
   megfigyelt villanyfűtője; saját heti programja vezérli, az automation nem
   kapcsolja.
-- Kizárólag a `Smart plug ebédlő` S60ZBTPF dugaljra csatlakozik. A rövid próba
+- Kizárólag az `SP ebédlő` S60ZBTPF dugaljra csatlakozik. A rövid próba
   stabilan 1877–1904 W, átlagosan 1889,6 W és 8,244 A terhelést mutatott; a
   standby fogyasztás a dugalj mérési felbontása alatt maradt.
+- Az `SP ebédlő` az UI-ról kapcsolható. Bekapcsolása csak tápot ad, ezért az
+  alkalmazás figyelmeztet, hogy a Klarsteint kézzel kell Standby-ból fűtésre
+  kapcsolni; kikapcsolása megerősítést kér.
 - A későbbi feladat a heti referenciaprogram, a SONOFF teljesítményéből képzett
   tényleges fűtési ciklusok és az ebédlői hőmérséklet összerendezése. A
   készülék jelenleg a hűtés–fűtés alapnézetben információs eszköz.
