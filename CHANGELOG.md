@@ -5,6 +5,17 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A SONOFF TRV Gen2 (`TRV-ZBT`) külön radiátortermosztát-eszköztípusként
+  automatikusan felismerhető. A collector a radiátorközeli hőmérsékletet, a
+  célhőmérsékletet, a szelepnyitást, az órás fűtési aktivitást és az
+  elemállapotot a közös idősorba menti; a teljes eszközállapot továbbra is a
+  Zigbee-cache-ben marad.
+- A TRV-kártya megmutatja a mérést, célértéket, szelepállást, üzemmódot,
+  kalibrációt, hibajelzést, elemet és LQI-t. A kártya egyértelműen jelzi, hogy
+  a radiátorközeli mérés aktív gázfűtés alatt nem vezérlési alap; ebben a
+  fázisban az alkalmazás nem küld parancsot a szelepnek.
+- A két első TRV (`TRV-G2 nappali bal`, `TRV-G2 Kristófék`) helyiséghez és
+  helytörténethez rendelve, aktív idősoros adatgyűjtéssel üzemel.
 - Új, verziózott folytatási átadó dokumentum rögzíti az éles Fedora, a Mac
   fejlesztési repository és a távoli Git eltérő szerepét, a dokumentációs
   belépési pontokat, a biztonsági invariánsokat és a következő munkák sorrendjét.

@@ -21,7 +21,8 @@ The project currently provides:
   measurement favorites;
 - configurable outdoor-temperature sources;
 - automatic Zigbee2MQTT discovery and last-known-state display for SONOFF
-  temperature, humidity, contact and router devices;
+  temperature, humidity, contact, router and TRV-ZBT radiator-thermostat
+  devices;
 - event-driven Shelly H&T Gen3 temperature, humidity and battery history over
   the local Mosquitto broker, with deep-sleep-aware freshness;
 - Nous/Tasmota power, voltage and cumulative-energy polling, plus audited

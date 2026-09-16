@@ -4,10 +4,12 @@ from datetime import UTC
 from decimal import Decimal
 
 from zigbee2mqtt_service import (
+    TIME_SERIES_PROPERTIES,
     ZigbeeMessageHandler,
     contact_state_changed,
     inferred_device_type,
     is_outdoor_temperature_sensor,
+    is_radiator_thermostat,
     parse_last_seen,
     sensor_descriptors,
     time_series_event_id,
@@ -52,6 +54,77 @@ THERMOMETER = {
             {"access": 5, "label": "Humidity", "property": "humidity", "type": "numeric", "unit": "%"},
             {"access": 7, "category": "config", "label": "Temperature calibration", "property": "temperature_calibration", "type": "numeric", "unit": "°C"},
             {"access": 1, "category": "diagnostic", "label": "Linkquality", "property": "linkquality", "type": "numeric", "unit": "lqi"},
+        ]
+    },
+}
+
+TRV = {
+    "friendly_name": "TRV-G2 nappali bal",
+    "ieee_address": "0xa4c138222cb21929",
+    "manufacturer": "SONOFF",
+    "model_id": "TRV-ZBT",
+    "type": "EndDevice",
+    "supported": True,
+    "interview_completed": True,
+    "definition": {
+        "exposes": [
+            {
+                "type": "climate",
+                "features": [
+                    {
+                        "access": 5,
+                        "label": "Local temperature",
+                        "property": "local_temperature",
+                        "type": "numeric",
+                        "unit": "°C",
+                    },
+                    {
+                        "access": 7,
+                        "label": "Occupied heating setpoint",
+                        "property": "occupied_heating_setpoint",
+                        "type": "numeric",
+                        "unit": "°C",
+                    },
+                ],
+            },
+            {
+                "access": 5,
+                "label": "Battery",
+                "property": "battery",
+                "type": "numeric",
+                "unit": "%",
+            },
+            {
+                "access": 5,
+                "category": "config",
+                "label": "Heating valve position",
+                "property": "heating_valve_position",
+                "type": "numeric",
+                "unit": "%",
+            },
+            {
+                "access": 5,
+                "label": "Heat percentage hour",
+                "property": "heat_percentage_hour",
+                "type": "numeric",
+                "unit": "%",
+            },
+            {
+                "access": 7,
+                "category": "config",
+                "label": "External temperature input",
+                "property": "external_temperature_input",
+                "type": "numeric",
+                "unit": "°C",
+            },
+            {
+                "access": 1,
+                "category": "diagnostic",
+                "label": "Linkquality",
+                "property": "linkquality",
+                "type": "numeric",
+                "unit": "lqi",
+            },
         ]
     },
 }
@@ -102,6 +175,46 @@ class ZigbeeDiscoveryTest(unittest.TestCase):
         self.assertTrue(is_outdoor_temperature_sensor("SNZB-02WD"))
         self.assertTrue(is_outdoor_temperature_sensor("snzb-02wd"))
         self.assertFalse(is_outdoor_temperature_sensor("SNZB-02P"))
+
+    def test_identifies_trv_and_maps_its_measurements(self) -> None:
+        descriptors = {item["property"]: item for item in sensor_descriptors(TRV)}
+        self.assertEqual(
+            set(descriptors),
+            {
+                "local_temperature",
+                "occupied_heating_setpoint",
+                "battery",
+                "heating_valve_position",
+                "heat_percentage_hour",
+                "linkquality",
+            },
+        )
+        self.assertEqual(
+            descriptors["local_temperature"]["sensor_type"], "temperature"
+        )
+        self.assertEqual(
+            descriptors["occupied_heating_setpoint"]["sensor_type"],
+            "target_temperature",
+        )
+        self.assertEqual(
+            descriptors["heating_valve_position"]["sensor_type"], "valve_position"
+        )
+        self.assertEqual(
+            inferred_device_type(TRV, list(descriptors.values())),
+            "radiator_thermostat",
+        )
+        self.assertTrue(
+            {
+                "local_temperature",
+                "occupied_heating_setpoint",
+                "heating_valve_position",
+                "heat_percentage_hour",
+                "battery",
+            }.issubset(TIME_SERIES_PROPERTIES)
+        )
+        self.assertNotIn("external_temperature_input", TIME_SERIES_PROPERTIES)
+        self.assertTrue(is_radiator_thermostat("trv-zbt"))
+        self.assertFalse(is_radiator_thermostat("SNZB-02P"))
 
     def test_routes_bridge_discovery_and_device_state(self) -> None:
         repository = FakeRepository()

@@ -198,9 +198,10 @@ A részletes, karbantartandó lista a [`teendok.md`](teendok.md). A következő
 
 1. A Bosch szerviz/próba alatt teljesítményprofil készítése, valamint annak
    ellenőrzése, hogy áram alá helyezve valóban mindig elérhető-e a melegvíz.
-2. A két SONOFF TRV-ZBT radiátorszelep érkezése után párosítás és
-   mérésgyűjtés. Radiátorközeli hőmérsékletük aktív gázfűtés alatt nem lehet
-   helyiségi vezérlési alap.
+2. A két SONOFF TRV-ZBT (`TRV-G2 nappali bal`, `TRV-G2 Kristófék`) párosítása,
+   helyiség-hozzárendelése és mérésgyűjtése elkészült. Következő lépés a téli
+   üzemi megfigyelés; radiátorközeli hőmérsékletük aktív gázfűtés alatt nem
+   lehet helyiségi vezérlési alap.
 3. Az emeleti fűtési observer téli megfigyelése. A kevert klíma–gáz üzem addig
    tiltott; a dolgozó radiátorán a bútorzat miatt nincs és nem lesz TRV.
 4. A hűtési observerből fokozatos, biztonságos automata vezérlés kialakítása:

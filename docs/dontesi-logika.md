@@ -175,6 +175,16 @@ kazánfűtés esetén aktív gázfűtést jelez; ellenkező esetben helyszíni
 bekapcsolást kér; reléjel nélkül nincs földszinti fűtési igény. Ez továbbra is
 megfigyelő információ, eszközparancsot nem küld.
 
+## Radiátortermosztátok
+
+A SONOFF TRV-ZBT saját hőmérséklete a radiátor közelsége miatt aktív
+gázfűtéskor torzított lehet, ezért nem kerül be a helyiségi hőigény számításába.
+Az induló, szándékosan egyszerű szabály szerint csak kikapcsolt Bosch/gázfűtés
+mellett használható kiegészítő helyiségi információként. A jelenlegi verzió a
+TRV adatait gyűjti és megjeleníti, de sem a szelepet, sem a kazánt nem vezérli
+belőlük. A kevert klíma–gáz stratégia továbbra is későbbi, külön jóváhagyott
+lépés.
+
 ## Szervizmódok és Computherm-próba
 
 A `Klímaszerviz folyamatban` globális kapcsoló felfüggeszti a hűtési és

@@ -29,6 +29,9 @@
     <span class="contact-state-label">Állapot</span>
     <strong>{% if device.zigbee_contact_closed is none %}Ismeretlen{% elif device.zigbee_contact_closed %}Csukva{% else %}Nyitva{% endif %}</strong>
   </div>
+  {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'radiator_thermostat' %}
+  <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.display_temperature_is_stale }}">{{ device.display_temperature_c|temperature }}</span><span class="temperature-unit {{ 'stale-measurement' if device.display_temperature_is_stale }}">°C</span></div>
+  <p class="temperature-provenance"><strong>Radiátorközeli mérés</strong> · aktív gázfűtés alatt nem vezérlési alap<br><time>{{ device.measurement_at|local_time }}</time></p>
   {% elif device.source_system == 'network_device' %}
   <div class="manual-state {{ 'powered' if device.online else 'stopped' }}">
     <span class="manual-state-label">Hálózati állapot</span><strong>{{ 'Elérhető' if device.online else 'Nem elérhető' }}</strong>
@@ -83,6 +86,18 @@
   <dl class="state-grid">
     <div><dt>Páratartalom</dt><dd>{% if device.zigbee_humidity_percent is not none %}{{ device.zigbee_humidity_percent|float|round(1) }}%{% else %}—{% endif %}</dd></div>
     <div><dt>Elem</dt><dd>{% if device.zigbee_battery_percent is not none %}{{ device.zigbee_battery_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>Jelminőség</dt><dd>{% if device.zigbee_linkquality is not none %}{{ device.zigbee_linkquality|int }} LQI{% else %}—{% endif %}</dd></div>
+    <div><dt>Modell</dt><dd>{{ device.zigbee_model or '—' }}</dd></div>
+  </dl>
+  {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'radiator_thermostat' %}
+  <dl class="state-grid">
+    <div><dt>Célhőmérséklet</dt><dd>{% if device.trv_target_temperature_c is not none %}{{ device.trv_target_temperature_c|temperature }} °C{% else %}—{% endif %}</dd></div>
+    <div><dt>Szelepnyitás</dt><dd>{% if device.trv_valve_position_percent is not none %}{{ device.trv_valve_position_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>Órás fűtési aktivitás</dt><dd>{% if device.trv_heating_activity_percent is not none %}{{ device.trv_heating_activity_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>Üzemmód</dt><dd>{% if device.trv_system_mode == 'heat' %}Fűtés{% elif device.trv_system_mode == 'off' %}Kikapcsolva{% else %}{{ device.trv_system_mode or '—' }}{% endif %}</dd></div>
+    <div><dt>Kalibráció</dt><dd>{% if device.trv_calibration_status == 'success' %}Sikeres{% else %}{{ device.trv_calibration_status or '—' }}{% endif %}</dd></div>
+    <div><dt>Hibajelzés</dt><dd>{% if device.trv_fault_code in [none, '', 'none'] %}Nincs{% else %}{{ device.trv_fault_code }}{% endif %}</dd></div>
+    <div><dt>Elem</dt><dd>{% if device.zigbee_battery_percent is not none %}{{ device.zigbee_battery_percent|float|round(0)|int }}%{% else %}Még nincs adat{% endif %}</dd></div>
     <div><dt>Jelminőség</dt><dd>{% if device.zigbee_linkquality is not none %}{{ device.zigbee_linkquality|int }} LQI{% else %}—{% endif %}</dd></div>
     <div><dt>Modell</dt><dd>{{ device.zigbee_model or '—' }}</dd></div>
   </dl>

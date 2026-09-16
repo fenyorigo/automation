@@ -199,6 +199,27 @@ Az idősoros mentés bevezetésekor a collector a cache aktuális értékeiből
 eszközönként és tulajdonságonként egy kezdőpontot készít. A cache nem tartalmaz
 előzményeket, ezért a bevezetés előtti teljes Zigbee-idősor nem rekonstruálható.
 
+### SONOFF TRV Gen2
+
+A `TRV-ZBT` modellt a Zigbee collector `radiator_thermostat` eszköztípusként
+ismeri fel. Új adatbázistábla nem szükséges: a legutóbbi teljes állapot a
+`zigbee2mqtt_property_cache` táblában, az alábbi numerikus csatornák pedig a
+meglévő `sensors` és `sensor_readings` táblákban is megmaradnak:
+
+| Zigbee2MQTT property | `sensor_type` | Egység |
+|---|---|---|
+| `local_temperature` | `temperature` | `celsius` |
+| `occupied_heating_setpoint` | `target_temperature` | `celsius` |
+| `heating_valve_position` | `valve_position` | `percent` |
+| `heat_percentage_hour` | `heating_activity` | `percent` |
+| `battery` | `battery` | `percent` |
+
+A külön érkező jelentések önálló idősoros pontok. A `system_mode`,
+`fault_code` és `motor_travel_calibration_status` állapotot a cache és a
+kártya mutatja, de ezekből nem készül numerikus mérési idősor. Frissen
+párosított TRV az elem százalékát később is jelentheti; a hiányzó első
+elemérték nem collectorhiba.
+
 Az SNZB-02WD kültéri hőmérő jelentései ezen felül időbélyeges
 `outdoor_temperature_observations` sorokat hoznak létre. A hozzá tartozó
 Zigbee2MQTT-forrás automatikusan aktív, 1. prioritású és 120 percig friss;

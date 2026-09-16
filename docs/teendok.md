@@ -60,9 +60,11 @@
 
 ## SONOFF TRV-ZBT radiátorszelepek
 
-- [ ] A két megrendelt TRV-ZBT érkezése után Zigbee2MQTT-párosítás,
-  helyiség-hozzárendelés és időbélyeges mérésgyűjtés.
-- [ ] A radiátor közelében mért TRV-hőmérséklet aktív gázfűtés alatt nem lehet
+- [x] Az első TRV-ZBT (`TRV-G2 nappali bal`) Zigbee2MQTT-párosítása,
+  nappali-hozzárendelése, külön eszköztípusa és időbélyeges mérésgyűjtése.
+- [x] A második szelep (`TRV-G2 Kristófék`) felszerelése, párosítása,
+  helyiség-hozzárendelése és mérésgyűjtésének ellenőrzése.
+- [x] A radiátor közelében mért TRV-hőmérséklet aktív gázfűtés alatt nem lehet
   helyiségi hőigény alapja. Az egyszerű induló szabály szerint csak kikapcsolt
   Bosch/gázfűtés mellett használható kiegészítő helyiségi információként.
 - [ ] A dolgozószobai radiátoron a bútorzat miatt nincs és nem lesz TRV; az

@@ -89,6 +89,15 @@ A kártyák az eszköz típusától függően mutathatják:
 és a tamper jelzést. A Zigbee2MQTT `contact=true` értéke csukott,
   a `contact=false` nyitott állapotot jelent. Az állapotváltások időbélyeggel
   megmaradnak, és a helyiség szellőztetési naplóját automatikusan vezérlik.
+- a SONOFF TRV Gen2 radiátorszelepnél a radiátorközeli hőmérsékletet,
+  célértéket, szelepnyitást, órás fűtési aktivitást, üzemmódot, kalibrációt,
+  hibajelzést, elemet és LQI-t. A kártya megjegyzése emlékeztet rá, hogy ez a
+  hőmérséklet aktív gázfűtés alatt nem helyiségi vezérlési alap.
+
+A TRV-k ebben a fázisban csak megfigyelt eszközök: az alkalmazás nem módosítja
+a célértéküket, üzemmódjukat vagy szelepállásukat. Új TRV párosítás után
+automatikusan létrejön, de a megfelelő helyiséget a **Nyilvántartás** oldalon
+hozzá kell rendelni.
 
 A Shelly H&T Gen3 elemes, deep-sleep eszköz; az `/online=false` nem offline
 hiba. A kártya a legutóbbi tényleges mérés kora alapján fokozatosan változik:

@@ -1,6 +1,6 @@
 # Otthonautomatizálási eszközleltár
 
-Frissítve az éles adatbázis alapján: **2026-09-14**.
+Frissítve az éles adatbázis alapján: **2026-09-16**.
 
 A tényleges, aktuális név, aktív állapot és helyiség-hozzárendelés elsődleges
 forrása a `think260x` adatbázisa és az alkalmazás **Nyilvántartás** oldala. Ez a
@@ -50,6 +50,8 @@ azonosítók a nem verziózott `config/devices.json` fájlban vannak.
 | Hőmérő | `Zb nappali` | Földszint / Nappali |
 | Hőmérő | `Zb vendégszoba` | Földszint / Vendégszoba |
 | Kültéri hőmérő | `Zb ext` | Zónán kívüli / Kültéri |
+| Radiátortermosztát | `TRV-G2 nappali bal` | Földszint / Nappali |
+| Radiátortermosztát | `TRV-G2 Kristófék` | Emelet / Kristófék |
 | Nyitásérzékelő | `Tuya dolgozó ablak` | Emelet / Dolgozó |
 | Nyitásérzékelő | `Tuya erkélyajtó` | Emelet / Dolgozó |
 | Nyitásérzékelő | `Tuya háló` | Emelet / Háló |
@@ -63,6 +65,11 @@ azonosítók a nem verziózott `config/devices.json` fájlban vannak.
 A Zigbee-eszközök stabil fizikai azonosítója az IEEE-cím, nem a szerkeszthető
 friendly name. A collector automatikusan regisztrálja őket; az új eszköz
 kezdetben helyiség nélkül és vezérlés nélkül jelenik meg.
+
+A `TRV-G2 nappali bal` fizikai azonosítója `0xa4c138222cb21929`, a
+`TRV-G2 Kristófék` azonosítója `0xa4c138972d1d2804`; mindkettő modellje
+`TRV-ZBT`. Mindkét szelep automatikusan felismert, helyiséghez rendelt és
+idősorosan gyűjtött eszköz.
 
 ## Routerek, MQTT-hőmérők és fogyasztásmérők
 

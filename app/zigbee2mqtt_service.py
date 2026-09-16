@@ -22,7 +22,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SYSTEM = "zigbee2mqtt"
 DEFAULT_BASE_TOPIC = "zigbee2mqtt"
 OUTDOOR_SENSOR_MODELS = {"SNZB-02WD"}
-TIME_SERIES_PROPERTIES = {"temperature", "humidity", "battery"}
+RADIATOR_THERMOSTAT_MODELS = {"TRV-ZBT"}
+TIME_SERIES_PROPERTIES = {
+    "temperature",
+    "humidity",
+    "battery",
+    "local_temperature",
+    "occupied_heating_setpoint",
+    "heating_valve_position",
+    "heat_percentage_hour",
+}
 EVENT_SERIES_PROPERTIES = {"contact"}
 STORED_SENSOR_PROPERTIES = TIME_SERIES_PROPERTIES | EVENT_SERIES_PROPERTIES
 
@@ -48,6 +57,8 @@ SENSOR_TYPE_NAMES = {
     "energy_month": "energy_month",
     "energy_today": "energy_today",
     "energy_yesterday": "energy_yesterday",
+    "heat_percentage_hour": "heating_activity",
+    "heating_valve_position": "valve_position",
     "humidity": "humidity",
     "linkquality": "linkquality",
     "occupancy": "occupancy",
@@ -55,7 +66,13 @@ SENSOR_TYPE_NAMES = {
     "state": "state",
     "tamper": "tamper",
     "temperature": "temperature",
+    "local_temperature": "temperature",
+    "occupied_heating_setpoint": "target_temperature",
     "voltage": "voltage",
+}
+
+DEVICE_TYPE_NAMES = {
+    "radiator_thermostat": "Radiátortermosztát",
 }
 
 
@@ -91,6 +108,10 @@ def is_outdoor_temperature_sensor(model_id: Any) -> bool:
     return str(model_id or "").upper() in OUTDOOR_SENSOR_MODELS
 
 
+def is_radiator_thermostat(model_id: Any) -> bool:
+    return str(model_id or "").upper() in RADIATOR_THERMOSTAT_MODELS
+
+
 def iter_exposes(exposes: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     """Yield published primitive properties from a Zigbee2MQTT exposes tree."""
     for expose in exposes:
@@ -101,7 +122,10 @@ def iter_exposes(exposes: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
         if (
             not isinstance(access, int)
             or access & 1 == 0
-            or expose.get("category") == "config"
+            or (
+                expose.get("category") == "config"
+                and expose.get("property") not in TIME_SERIES_PROPERTIES
+            )
             or expose.get("type") not in {"numeric", "binary"}
             or not expose.get("property")
         ):
@@ -129,6 +153,9 @@ def sensor_descriptors(device: dict[str, Any]) -> list[dict[str, str | None]]:
 
 def inferred_device_type(device: dict[str, Any], sensors: list[dict[str, str | None]]) -> str:
     properties = {str(item["property"]) for item in sensors}
+    model = device.get("model_id") or (device.get("definition") or {}).get("model")
+    if is_radiator_thermostat(model):
+        return "radiator_thermostat"
     if {"power", "energy", "current"} & properties:
         return "power_meter"
     if "contact" in properties:
@@ -227,7 +254,12 @@ class ZigbeeRepository:
         if type_row is None:
             cursor.execute(
                 "INSERT INTO device_types (code,name) VALUES (?,?)",
-                (device_type, device_type.replace("_", " ").title()),
+                (
+                    device_type,
+                    DEVICE_TYPE_NAMES.get(
+                        device_type, device_type.replace("_", " ").title()
+                    ),
+                ),
             )
             device_type_id = int(cursor.lastrowid)
         else:

@@ -917,6 +917,30 @@ def load_dashboard(
                 WHERE zpc.device_id=d.id AND zpc.property_name='temperature') AS zigbee_temperature_c,
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='local_temperature') AS trv_local_temperature_c,
+              (SELECT zpc.source_observed_at
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='local_temperature') AS trv_temperature_observed_at,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='occupied_heating_setpoint') AS trv_target_temperature_c,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='heating_valve_position') AS trv_valve_position_percent,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='heat_percentage_hour') AS trv_heating_activity_percent,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='system_mode') AS trv_system_mode,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='fault_code') AS trv_fault_code,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='motor_travel_calibration_status') AS trv_calibration_status,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='humidity') AS zigbee_humidity_percent,
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
@@ -1096,6 +1120,12 @@ def load_dashboard(
                 device["temperature_c"] = device["zigbee_temperature_c"]
                 device["measurement_at"] = (
                     device["zigbee_last_seen"] or device["mqtt_message_at"]
+                )
+            elif device["trv_local_temperature_c"] is not None:
+                device["temperature_c"] = device["trv_local_temperature_c"]
+                device["measurement_at"] = (
+                    device["trv_temperature_observed_at"]
+                    or device["mqtt_message_at"]
                 )
         elif device["source_system"] == "shelly_mqtt":
             (
@@ -1311,6 +1341,14 @@ def mark_climate_control_devices(
             # while actuator control remains disabled.
             relevant_ids.add(int(item["id"]))
         elif source == "manual" and item.get("device_type") == "boiler":
+            relevant_ids.add(int(item["id"]))
+        elif (
+            source == "zigbee2mqtt"
+            and item.get("device_type") == "radiator_thermostat"
+        ):
+            # A TRV is part of the heating equipment view even while its
+            # radiator-adjacent temperature is explicitly excluded from the
+            # room-demand calculation during active gas heating.
             relevant_ids.add(int(item["id"]))
         elif (
             source == "zigbee2mqtt"

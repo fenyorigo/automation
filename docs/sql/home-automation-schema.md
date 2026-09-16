@@ -92,8 +92,11 @@ kapnak. Élő üzenetnél az érkezési idő része a `source_event_id`-nak, íg
 
 A Zigbee2MQTT minden tulajdonságának legutolsó értéke a
 `zigbee2mqtt_property_cache` táblában marad. A temperature, humidity és battery
-tulajdonságok ezen felül a közös `sensor_readings` idősorba is bekerülnek. A
-forrásoldali `last_seen` idő és az IEEE-cím stabil eseményazonosítást biztosít.
+tulajdonságok, továbbá a TRV-ZBT `local_temperature`,
+`occupied_heating_setpoint`, `heating_valve_position` és
+`heat_percentage_hour` tulajdonságai ezen felül a közös `sensor_readings`
+idősorba is bekerülnek. A forrásoldali `last_seen` idő és az IEEE-cím stabil
+eseményazonosítást biztosít.
 A bináris `contact` csatorna ugyanebbe a táblába csak induló állapotként és
 valódi változáskor kerül (`0 = nyitva`, `1 = csukva`), nem ismétlődő
 pillanatképként.
