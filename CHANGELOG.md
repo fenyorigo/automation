@@ -9,6 +9,9 @@ helyi dátumok.
   teljesítményét, áramát, feszültségét és összesített energiáját is a közös
   `sensor_readings` idősorba menti. A reléállapot továbbra is állapotadat,
   nem periodikus mérés.
+- A harmadik S60ZBTPF `Smart plug ebédlő` néven, a földszinti Ebédlő-konyha
+  helyiséghez és helytörténethez rendelve került nyilvántartásba; feladata a
+  Klarstein konvektor fogyasztásának megfigyelése és a Zigbee mesh erősítése.
 - A `thinkpad220x` helyére került `t470` ugyanazon a nyilvántartási eszköz- és
   szenzorrekordokon folytatja a rendszerterhelési méréseket. A helyiség, a
   `192.168.10.2` cím, a korlátozott SSH-hozzáférés, a pollritmus és minden

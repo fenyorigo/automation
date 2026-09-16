@@ -120,9 +120,11 @@ forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
   `/online=false` normális. A frissességi színek határa 1, 2 és 4 óra.
 - Az ESP32-eszközök inaktívak és már nem vesznek részt a pollkörben; a
   jelenlegi hőmérsékleti gerinc Zigbee és Shelly.
-- A 2026-09-14-i élő leltárban 20 aktív Zigbee-eszköz volt: 9
-  nyitásérzékelő, 9 hőmérő és 2 router-dugalj. A pontos név- és
-  helyiségkiosztást a [`device-inventory.md`](device-inventory.md) rögzíti.
+- A 2026-09-16-i élő leltárban 23 aktív Zigbee-eszköz volt: 9
+  nyitásérzékelő, 9 hőmérő, 2 TRV és 3 router-dugalj. A harmadik,
+  `Smart plug ebédlő` dugalj a Klarstein fogyasztásának megfigyelésére készült.
+  A pontos név- és helyiségkiosztást a
+  [`device-inventory.md`](device-inventory.md) rögzíti.
 
 ### Szellőztetés, hűtés és fűtés
 
