@@ -1342,6 +1342,10 @@ def mark_climate_control_devices(
             relevant_ids.add(int(item["id"]))
         elif source == "manual" and item.get("device_type") == "boiler":
             relevant_ids.add(int(item["id"]))
+        elif source == "manual" and item.get("device_type") == "electric_heater":
+            # A local-API nélküli Klarstein a fűtési rendszer része; a
+            # tényleges működését a külön Zigbee fogyasztásmérő figyeli.
+            relevant_ids.add(int(item["id"]))
         elif (
             source == "zigbee2mqtt"
             and item.get("device_type") == "radiator_thermostat"

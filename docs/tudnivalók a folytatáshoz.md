@@ -161,6 +161,18 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
   részletes mérési tények és óvintézkedések a
   [`nous-tasmota.md`](nous-tasmota.md) fájlban vannak.
 
+### Klarstein Norderney és ebédlői SONOFF
+
+- A 2000 W-os `Klarstein Norderney` az Ebédlő-konyha helyi API nélküli,
+  megfigyelt villanyfűtője; saját heti programja vezérli, az automation nem
+  kapcsolja.
+- Kizárólag a `Smart plug ebédlő` S60ZBTPF dugaljra csatlakozik. A rövid próba
+  stabilan 1877–1904 W, átlagosan 1889,6 W és 8,244 A terhelést mutatott; a
+  standby fogyasztás a dugalj mérési felbontása alatt maradt.
+- A későbbi feladat a heti referenciaprogram, a SONOFF teljesítményéből képzett
+  tényleges fűtési ciklusok és az ebédlői hőmérséklet összerendezése. A
+  készülék jelenleg a hűtés–fűtés alapnézetben információs eszköz.
+
 ### Energia
 
 - A saját villany- és gázóraállások külön idősorok; a szolgáltató becsült

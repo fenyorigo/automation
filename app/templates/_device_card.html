@@ -2,17 +2,17 @@
   <div class="card-heading">
     <div><p class="source">{{ device.source_label }}</p><h3>{{ device.name }}</h3></div>
     <span class="badge {% if device.source_system == 'shelly_mqtt' %}{{ device.shelly_status_class }}{% elif device.source_system == 'zigbee2mqtt' %}{{ device.zigbee_status_class }}{{ ' contact-stale' if device.device_type == 'contact_sensor' and device.zigbee_status_class == 'warning' }}{% else %}{{ 'manual' if device.is_manual_visual or not device.polling_enabled else ('online' if device.online else 'offline') }}{% endif %}">
-      {% if device.source_system == 'zigbee2mqtt' %}{{ device.zigbee_status_label }}{% elif device.source_system == 'shelly_mqtt' %}{{ device.shelly_status_label }}{% else %}{{ 'Kézi állapot' if device.is_manual_visual else ('Lekérdezés kikapcsolva' if not device.polling_enabled else ('Elérhető' if device.online else 'Offline')) }}{% endif %}
+      {% if device.source_system == 'zigbee2mqtt' %}{{ device.zigbee_status_label }}{% elif device.source_system == 'shelly_mqtt' %}{{ device.shelly_status_label }}{% elif device.source_system == 'manual' and device.device_type == 'electric_heater' %}Helyi API nélkül{% else %}{{ 'Kézi állapot' if device.is_manual_visual else ('Lekérdezés kikapcsolva' if not device.polling_enabled else ('Elérhető' if device.online else 'Offline')) }}{% endif %}
     </span>
   </div>
-  {% if device.source_system in ['zigbee2mqtt', 'shelly_mqtt'] %}<span class="badge mqtt-sensor-type">{{ device.device_type_name or device.device_type }}</span>{% endif %}
+  {% if device.source_system in ['zigbee2mqtt', 'shelly_mqtt'] or device.device_type == 'electric_heater' %}<span class="badge mqtt-sensor-type">{{ device.device_type_name or device.device_type }}</span>{% endif %}
   {% if device.cooling_advice is defined and device.cooling_advice.cooling_demand %}<span class="badge cooling-demand">Hűtést kér</span>{% endif %}
   {% if device.heating_advice is defined and device.heating_advice.heating_demand %}<span class="badge heating-demand">Fűtést kér</span>{% endif %}
   {% if device.boiler_status is defined %}<span class="badge {{ 'boiler-on' if device.boiler_status.is_on else 'boiler-off' }}">{{ device.boiler_status.name }}: {{ 'bekapcsolva' if device.boiler_status.is_on else 'kikapcsolva' }}</span>{% endif %}
   {% if device.boiler_status is defined and device.boiler_status.heating_unavailable %}<span class="badge heating-alert">Fűtést kér, de a kazán ki van kapcsolva</span>{% endif %}
   {% if device.thermostat_target_too_high is defined and device.thermostat_target_too_high %}<span class="badge heating-alert">Célérték {{ device.maximum_heating_target_c|temperature }} °C fölött</span>{% endif %}
   {% if device.managed_manually %}<span class="badge {{ 'heating-alert' if device.boiler_panel_power_alert else ('boiler-on' if device.boiler_panel_power_state == 'on' else 'boiler-off') }}">{{ device.boiler_panel_power_label }}</span>{% endif %}
-  <p class="device-poll-interval">{% if device.source_system == 'zigbee2mqtt' %}Adatkapcsolat: <strong>folyamatos MQTT</strong>{% elif device.source_system == 'shelly_mqtt' %}Adatkapcsolat: <strong>Wi-Fi / MQTT · deep sleep</strong>{% else %}Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}{% endif %}</p>
+  <p class="device-poll-interval">{% if device.source_system == 'zigbee2mqtt' %}Adatkapcsolat: <strong>folyamatos MQTT</strong>{% elif device.source_system == 'shelly_mqtt' %}Adatkapcsolat: <strong>Wi-Fi / MQTT · deep sleep</strong>{% elif device.source_system == 'manual' and device.device_type == 'electric_heater' %}Adatkapcsolat: <strong>nincs közvetlen API</strong>{% else %}Lekérdezés: {% if device.polling_enabled %}<strong>{{ device.poll_interval_seconds // 60 }} perc</strong>{% else %}<strong>kikapcsolva</strong>{% endif %}{% endif %}</p>
   {% if device.managed_manually %}
   <dl class="state-grid boiler-state-grid">
     <div class="{{ 'state-enabled' if device.boiler_supply_power else 'state-disabled' }}"><dt><span class="state-dot" aria-hidden="true"></span> Feszültség alatt</dt><dd>{{ device.boiler_supply_source }}</dd></div>
@@ -23,6 +23,11 @@
     {% if device.derived_target_temperature_c is defined %}<strong>{{ device.derived_target_temperature_c|temperature }} °C</strong><small>{{ device.derived_target_source }}</small>
     {% else %}<strong>—</strong><small>nincs friss Computherm-adat</small>{% endif %}
   </div>
+  {% elif device.source_system == 'manual' and device.device_type == 'electric_heater' %}
+  <div class="manual-state stopped">
+    <span class="manual-state-label">Megfigyelés</span><strong>Külső fogyasztásmérővel</strong>
+  </div>
+  <p class="temperature-provenance"><strong>2000 W-os villanyfűtő</strong><br>A tényleges fűtést a Smart plug ebédlő méri.</p>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' %}
   <div class="contact-state {% if device.zigbee_contact_closed is none %}unknown{% elif device.zigbee_contact_closed %}closed{% else %}open{% endif %}">
@@ -180,6 +185,8 @@
   <div class="card-footer"><span>Utolsó Zigbee-jel</span><time>{{ device.zigbee_last_seen|local_time }}</time></div>
   {% elif device.source_system == 'shelly_mqtt' %}
   <div class="card-footer"><span>Utolsó Shelly-mérés</span><time>{{ device.shelly_last_measurement_at|local_time }}</time></div>
+  {% elif device.source_system == 'manual' and device.device_type == 'electric_heater' %}
+  <div class="card-footer"><span>Mérési forrás</span><strong>Smart plug ebédlő</strong></div>
   {% elif device.is_manual_visual %}
   <div class="card-footer"><span>Utolsó kézi mérés</span><time>{{ device.measurement_at|local_time }}</time></div>
   {% elif device.hostname %}<div class="card-footer"><span>{{ device.hostname }}</span><time>{{ device.last_poll_at|local_time }}</time></div>{% endif %}

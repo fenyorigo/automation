@@ -78,6 +78,7 @@ idősorosan gyűjtött eszköz.
 | Zigbee2MQTT | `SP emelet` | Zigbee IEEE-cím | Emelet / Emeleti fürdőszoba előtér | Zigbee router |
 | Zigbee2MQTT | `SP földszint` | Zigbee IEEE-cím | Földszint / Közlekedő | Zigbee router |
 | Zigbee2MQTT | `Smart plug ebédlő` | `0xa4c13811bed2ffff` | Földszint / Ebédlő-konyha | Klarstein-mérés és Zigbee router |
+| Kézi / külső mérés | `Klarstein Norderney` | helyi API nélkül | Földszint / Ebédlő-konyha | 2000 W-os villanyfűtő; a SONOFF méri |
 | Shelly MQTT | `Sh ebédlő` | `shellyhtg3-48f6eebb92d4` | Földszint / Ebédlő-konyha | Deep-sleep hőmérő |
 | Shelly MQTT | `Sh közlekedő` | `shellyhtg3-48f6eebb5c50` | Földszint / Közlekedő | Deep-sleep hőmérő |
 | Tasmota | `Nous main IT` | `nous-mainit` | Emelet / Kis nappali | IT fogyasztásmérő |
