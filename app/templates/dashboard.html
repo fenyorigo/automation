@@ -274,7 +274,7 @@
         checking = false;
       }
     }
-    window.setInterval(refreshAfterCompletedPoll, 5000);
+    window.setInterval(refreshAfterCompletedPoll, 30000);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) refreshAfterCompletedPoll();
     });

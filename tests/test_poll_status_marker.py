@@ -8,6 +8,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PollStatusMarkerTest(unittest.TestCase):
+    def test_dashboard_checks_for_refresh_every_thirty_seconds(self) -> None:
+        template = (ROOT / "app/templates/dashboard.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("setInterval(refreshAfterCompletedPoll, 30000)", template)
+        self.assertNotIn("setInterval(refreshAfterCompletedPoll, 5000)", template)
+
     def test_status_uses_same_attempt_timestamp_as_dashboard(self) -> None:
         source = (ROOT / "app/dashboard.py").read_text(encoding="utf-8")
         start = source.index("def poll_status():")

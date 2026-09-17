@@ -5,6 +5,8 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A kezdőlap a háttérben 30 másodpercenként ellenőrzi, érkezett-e új polladat;
+  a mérési és vezérlési ciklusok változatlanok.
 - Megszűnt a kezdőlap 5 másodpercenkénti téves újratöltési ciklusa: a dashboard
   és a poll-státusz most ugyanazt, az aktív eszközök legutóbbi pollindítási
   időpontját használja frissítési jelzőként. Ez megszünteti a MariaDB-t
