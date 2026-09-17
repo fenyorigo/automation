@@ -5,6 +5,10 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Globális beállítások mentése fájlrendszerhiba esetén nem ad többé nyers
+  HTTP 500 választ, hanem kezelhető hibaüzenetet jelenít meg. A Fedora
+  telepítésben a tényleges `.env` az `automation` tulajdonú `config`
+  könyvtárban él, így atomikusan írható a projektgyökér írási joga nélkül.
 - A kezdőlap a háttérben 30 másodpercenként ellenőrzi, érkezett-e új polladat;
   a mérési és vezérlési ciklusok változatlanok.
 - Megszűnt a kezdőlap 5 másodpercenkénti téves újratöltési ciklusa: a dashboard

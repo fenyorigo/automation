@@ -21,6 +21,14 @@ class GlobalSettingsUiTest(unittest.TestCase):
         self.assertIn(".service-mode-setting > .setting-label", stylesheet)
         self.assertIn("color:#b42318", stylesheet)
 
+    def test_filesystem_errors_are_reported_without_http_500(self) -> None:
+        source = (ROOT / "app/dashboard.py").read_text(encoding="utf-8")
+        self.assertIn("except (OSError, ValueError) as error:", source)
+
+    def test_settings_writer_follows_deployment_env_symlink(self) -> None:
+        source = (ROOT / "app/global_settings.py").read_text(encoding="utf-8")
+        self.assertIn('ENV_PATH = (ROOT / ".env").resolve()', source)
+
 
 if __name__ == "__main__":
     unittest.main()

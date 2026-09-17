@@ -11,7 +11,10 @@ from dotenv import dotenv_values
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ENV_PATH = ROOT / ".env"
+# Follow a deployment-time symlink so the real file may live in a dedicated,
+# service-writable configuration directory while every process can keep using
+# ROOT/.env as its stable entry point.
+ENV_PATH = (ROOT / ".env").resolve()
 
 # These values are captured while the dashboard process starts. Updating the
 # process environment cannot safely change them in an already running server.

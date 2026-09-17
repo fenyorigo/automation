@@ -110,6 +110,23 @@ chmod 600 /var/www/automation/.env
 A `.env` az `automation` felhasználó tulajdona, mert a dashboard Globális
 beállítások oldala nemcsak olvassa, hanem atomikusan módosíthatja is.
 
+Ha a forrásfájlokat később más telepítési felhasználó tulajdonába adjuk, a
+dashboard ne kapjon írási jogot a teljes projektgyökérre. A valódi `.env`
+kerüljön az `automation` tulajdonú konfigurációs könyvtárba, a megszokott
+projektgyökérbeli útvonal pedig legyen szimbolikus link:
+
+```sh
+install -o automation -g automation -m 0600 \
+  /var/www/automation/.env /var/www/automation/config/.env
+mv /var/www/automation/.env /root/automation.env.before-config-symlink
+ln -s config/.env /var/www/automation/.env
+```
+
+Az alkalmazás feloldja a linket, ezért az atomikus ideiglenes fájlt a
+`config` könyvtárban hozza létre. A szolgáltatások továbbra is a
+`/var/www/automation/.env` stabil útvonalat használják, miközben nem kapnak
+írási vagy törlési jogot az alkalmazáskódhoz.
+
 ## 4. Linux-specifikus `.env`
 
 A Mac `.env` fájlja kiindulásként használható, de legalább az útvonalakat, a

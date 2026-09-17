@@ -2498,7 +2498,7 @@ def global_settings() -> str:
             global GNUPLOT_BIN, GNUPLOT_ERROR
             GNUPLOT_BIN, GNUPLOT_ERROR = find_gnuplot()
             session["global_settings_notice"] = {"kind":"success","message":"A globális beállításokat elmentettük a .env fájlba."}
-        except ValueError as error:
+        except (OSError, ValueError) as error:
             session["global_settings_notice"] = {"kind":"error","message":str(error)}
         return redirect(url_for("global_settings"))
     return render_template("global_settings.html",settings=GLOBAL_SETTINGS,values=global_setting_values(),notice=session.pop("global_settings_notice",None))
