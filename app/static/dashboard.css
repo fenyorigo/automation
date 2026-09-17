@@ -285,6 +285,7 @@ dd.power-on { color: #d05a16; }
 .registry-reason { display:block; max-width:500px; margin-top:12px; }.primary-button.compact { margin:0; }
 .global-settings-form { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
 .global-settings-form label { color:var(--muted); font-size:.72rem; font-weight:700; }
+.global-settings-form .service-mode-setting > .setting-label { color:#b42318; font-weight:900; }
 .global-settings-form input,.global-settings-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; color:var(--ink); font:inherit; box-sizing:border-box; }
 .global-settings-form small { display:block; margin-top:4px; font-weight:400; line-height:1.35; }.global-settings-form button { justify-self:start; }
 .polling-summary { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin:15px 0; }

@@ -5,6 +5,8 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Globális beállítások oldalon a klíma- és gázkazánszerviz kapcsoló felirata
+  piros figyelmeztető színt kapott.
 - A Computherm szervizteszt az emeleti és a földszinti termosztáton egymástól
   függetlenül, akár egyidejűleg is futtatható. Mindkét próba saját eredeti
   állapotot őriz, külön engedhető el, és külön állítható vissza.
