@@ -203,8 +203,9 @@ auditnapló része.
 
 A Computherm-próba csak szerkesztőnek, bekapcsolt gázkazánszerviz mellett,
 feszültség alatt álló és kézzel fűtésre jelölt Bosch kazánnal használható.
-Egyszerre csak egy
-termosztát tesztelhető. Indítás előtt teljes állapotmentés készül. A teszt a
+Az emeleti és a földszinti termosztát egymástól függetlenül, akár egyidejűleg
+tesztelhető; ugyanazon a termosztáton egyszerre csak egy próba futhat. Indítás
+előtt eszközönként teljes állapotmentés készül. A teszt a
 termosztát kikapcsolása nélkül kézi módra vált, szükség esetén ideiglenesen
 megemeli a `22 °C` felső korlátot, majd beállítja a kért célértéket. A fűtési
 kérés megszüntetése a mért érték alatti kézi céllal engedi el a relét; nem

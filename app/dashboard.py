@@ -4729,11 +4729,15 @@ def load_service_test_context() -> dict[str, Any]:
         for item in tests:
             item["latest"] = json.loads(item["latest_state"]) if item.get("latest_state") else None
     finally: cursor.close(); connection.close()
-    active = next((item for item in tests if item["status"] in {"active","heat_requested","heat_suppressed"}), None)
+    active_by_device = {
+        int(item["device_id"]): item
+        for item in tests
+        if item["status"] in {"active", "heat_requested", "heat_suppressed"}
+    }
     dashboard_devices, _ = load_dashboard()
     annotate_boiler_operating_states(dashboard_devices)
     boiler = next((item for item in dashboard_devices if item["source_system"]=="manual" and item["device_type"]=="boiler"), None)
-    return {"devices":devices,"climate_devices":climate_devices,"tests":tests,"active":active,"boiler":boiler,
+    return {"devices":devices,"climate_devices":climate_devices,"tests":tests,"active_by_device":active_by_device,"boiler":boiler,
             "climate_service_mode":os.getenv("CLIMATE_SERVICE_MODE","false")=="true",
             "boiler_service_mode":os.getenv("BOILER_SERVICE_MODE","false")=="true"}
 
@@ -4762,9 +4766,9 @@ def run_computherm_service_test(device_id: int, action: str):
         if row is None: abort(404)
         cursor.execute("SELECT manual_power_state,manual_heating_state FROM devices WHERE is_active=1 AND source_system='manual' AND device_type='boiler' LIMIT 1"); boiler=cursor.fetchone()
         if boiler is None or not bool(boiler[0]) or not bool(boiler[1]): abort(409,"A Bosch tápellátása vagy fűtése nincs bekapcsolt állapotban.")
-        cursor.execute("SELECT id,device_id,original_state,status FROM thermostat_service_tests WHERE status IN ('active','heat_requested','heat_suppressed') ORDER BY started_at DESC LIMIT 1 FOR UPDATE"); active=cursor.fetchone()
-        if action=="start" and active is not None: abort(409,"Már fut Computherm szervizteszt.")
-        if action!="start" and (active is None or int(active[1])!=device_id): abort(409,"Ehhez az eszközhöz nincs aktív teszt.")
+        cursor.execute("SELECT id,device_id,original_state,status FROM thermostat_service_tests WHERE device_id=? AND status IN ('active','heat_requested','heat_suppressed') ORDER BY started_at DESC LIMIT 1 FOR UPDATE",(device_id,)); active=cursor.fetchone()
+        if action=="start" and active is not None: abort(409,"Ezen a Computhermen már fut szervizteszt.")
+        if action!="start" and active is None: abort(409,"Ehhez az eszközhöz nincs aktív teszt.")
         control=connect_computherm(computherm_config(str(row[0])))
         requested=None
         if action=="start":

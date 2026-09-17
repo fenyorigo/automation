@@ -421,8 +421,10 @@ indítása** elmenti az
 eredeti termosztátállapotot és ideiglenes kézi célértéket ad. A **Fűtési kérés
 megszüntetése** a Computherm kikapcsolása nélkül engedi el a relét. A munka
 végén kötelező a **Teszt lezárása és visszaállítás**, amely visszaállítja az
-eredeti automata módot, célértéket és korlátokat. Egyszerre csak egy teszt
-futhat; a napi program egyik műveletnél sem módosul.
+eredeti automata módot, célértéket és korlátokat. Az emeleti és földszinti
+próba egymástól függetlenül, akár egyszerre is futhat; ugyanazon a
+termosztáton egyszerre csak egy teszt indítható. A napi program egyik
+műveletnél sem módosul.
 
 ## 7. Elemzések és jelentések
 

@@ -5,6 +5,9 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Computherm szervizteszt az emeleti és a földszinti termosztáton egymástól
+  függetlenül, akár egyidejűleg is futtatható. Mindkét próba saját eredeti
+  állapotot őriz, külön engedhető el, és külön állítható vissza.
 - Az `SP ebédlő` az UI-ról be- és kikapcsolható; kikapcsolása külön piros
   megerősítést kér, kikapcsolt állapotban a kártya piros. Bekapcsolás után az
   alkalmazás jelzi, hogy a Klarsteint kézzel kell Standby-ból fűtésre
