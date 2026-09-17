@@ -198,6 +198,10 @@ MIGRATIONS = (
         "v1_48_boiler_operating_states",
         ROOT / "SQL" / "migrations" / "048_home_automation_v1.47_to_v1.48.sql",
     ),
+    (
+        "v1_49_dashboard_latest_value_indexes",
+        ROOT / "SQL" / "migrations" / "049_home_automation_v1.48_to_v1.49.sql",
+    ),
 )
 
 

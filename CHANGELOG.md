@@ -5,6 +5,13 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- Megszűnt a kezdőlap 5 másodpercenkénti téves újratöltési ciklusa: a dashboard
+  és a poll-státusz most ugyanazt, az aktív eszközök legutóbbi pollindítási
+  időpontját használja frissítési jelzőként. Ez megszünteti a MariaDB-t
+  túlterhelő párhuzamos kezdőlapi lekérdezéseket.
+- A legutóbbi szenzor-, eszközállapot- és pollrekordok rendezett visszaolvasása
+  célzott összetett indexeket kapott, így a dashboard nem rendez végig több
+  százezer idősoros rekordot minden oldalbetöltésnél.
 - A Globális beállítások oldalon a klíma- és gázkazánszerviz kapcsoló felirata
   piros figyelmeztető színt kapott.
 - A Computherm szervizteszt az emeleti és a földszinti termosztáton egymástól

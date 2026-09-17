@@ -951,12 +951,17 @@ def load_dashboard(
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='contact') AS zigbee_contact_closed,
-              (SELECT csr.observed_at
-                 FROM sensors cs
-                 JOIN sensor_readings csr ON csr.sensor_id=cs.id
-                WHERE cs.device_id=d.id AND cs.is_active=1
-                  AND cs.sensor_type='contact'
-                ORDER BY csr.observed_at DESC,csr.id DESC LIMIT 1) AS zigbee_contact_observed_at,
+              CASE WHEN d.source_system='zigbee2mqtt'
+                         AND d.device_type='contact_sensor'
+                   THEN (SELECT csr.observed_at
+                           FROM sensor_readings csr
+                          WHERE csr.sensor_id=(
+                            SELECT cs.id FROM sensors cs
+                             WHERE cs.device_id=d.id AND cs.is_active=1
+                               AND cs.sensor_type='contact'
+                             ORDER BY cs.id DESC LIMIT 1)
+                          ORDER BY csr.observed_at DESC,csr.id DESC LIMIT 1)
+              END AS zigbee_contact_observed_at,
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='tamper') AS zigbee_tamper,
@@ -964,24 +969,40 @@ def load_dashboard(
                                      JSON_UNQUOTE(zpc.value_json)))
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='state') AS zigbee_power_state,
-              (SELECT MAX(msr.observed_at)
-                 FROM sensors ms JOIN sensor_readings msr ON msr.sensor_id=ms.id
-                WHERE ms.device_id=d.id AND ms.is_active=1
-                  AND ms.sensor_type IN ('temperature','humidity','battery','battery_voltage'))
-                AS shelly_last_measurement_at,
-              (SELECT hsr.value
-                 FROM sensors hs JOIN sensor_readings hsr ON hsr.sensor_id=hs.id
-                WHERE hs.device_id=d.id AND hs.is_active=1 AND hs.sensor_type='humidity'
-                ORDER BY hsr.observed_at DESC,hsr.id DESC LIMIT 1) AS shelly_humidity_percent,
-              (SELECT bsr.value
-                 FROM sensors bs JOIN sensor_readings bsr ON bsr.sensor_id=bs.id
-                WHERE bs.device_id=d.id AND bs.is_active=1 AND bs.sensor_type='battery'
-                ORDER BY bsr.observed_at DESC,bsr.id DESC LIMIT 1) AS shelly_battery_percent,
-              (SELECT vsr.value
-                 FROM sensors vbs JOIN sensor_readings vsr ON vsr.sensor_id=vbs.id
-                WHERE vbs.device_id=d.id AND vbs.is_active=1
-                  AND vbs.sensor_type='battery_voltage'
-                ORDER BY vsr.observed_at DESC,vsr.id DESC LIMIT 1) AS shelly_battery_voltage,
+              CASE WHEN d.source_system='shelly_mqtt'
+                   THEN (SELECT MAX(msr.observed_at)
+                           FROM sensors ms
+                           JOIN sensor_readings msr ON msr.sensor_id=ms.id
+                          WHERE ms.device_id=d.id AND ms.is_active=1
+                            AND ms.sensor_type IN ('temperature','humidity','battery','battery_voltage'))
+              END AS shelly_last_measurement_at,
+              CASE WHEN d.source_system='shelly_mqtt'
+                   THEN (SELECT hsr.value FROM sensor_readings hsr
+                          WHERE hsr.sensor_id=(
+                            SELECT hs.id FROM sensors hs
+                             WHERE hs.device_id=d.id AND hs.is_active=1
+                               AND hs.sensor_type='humidity'
+                             ORDER BY hs.id DESC LIMIT 1)
+                          ORDER BY hsr.observed_at DESC,hsr.id DESC LIMIT 1)
+              END AS shelly_humidity_percent,
+              CASE WHEN d.source_system='shelly_mqtt'
+                   THEN (SELECT bsr.value FROM sensor_readings bsr
+                          WHERE bsr.sensor_id=(
+                            SELECT bs.id FROM sensors bs
+                             WHERE bs.device_id=d.id AND bs.is_active=1
+                               AND bs.sensor_type='battery'
+                             ORDER BY bs.id DESC LIMIT 1)
+                          ORDER BY bsr.observed_at DESC,bsr.id DESC LIMIT 1)
+              END AS shelly_battery_percent,
+              CASE WHEN d.source_system='shelly_mqtt'
+                   THEN (SELECT vsr.value FROM sensor_readings vsr
+                          WHERE vsr.sensor_id=(
+                            SELECT vbs.id FROM sensors vbs
+                             WHERE vbs.device_id=d.id AND vbs.is_active=1
+                               AND vbs.sensor_type='battery_voltage'
+                             ORDER BY vbs.id DESC LIMIT 1)
+                          ORDER BY vsr.observed_at DESC,vsr.id DESC LIMIT 1)
+              END AS shelly_battery_voltage,
               (SELECT mse.changed_at FROM manual_state_events mse
                WHERE mse.device_id = d.id
                ORDER BY mse.changed_at DESC, mse.id DESC LIMIT 1) AS manual_state_changed_at,
@@ -993,43 +1014,62 @@ def load_dashboard(
               sc.calibration_offset_c,
               sc.filter_tau_seconds,
               sc.calculation_version AS temperature_calculation_version,
-              (SELECT er.value
-                 FROM sensors es
-                 JOIN sensor_readings er ON er.sensor_id=es.id
-                WHERE es.device_id=d.id AND es.is_active=1
-                  AND es.sensor_type='energy_total'
-                ORDER BY er.observed_at DESC,er.id DESC LIMIT 1) AS energy_total_kwh,
-              (SELECT JSON_UNQUOTE(JSON_EXTRACT(er.raw_payload,'$.total_start_time'))
-                 FROM sensors es
-                 JOIN sensor_readings er ON er.sensor_id=es.id
-                WHERE es.device_id=d.id AND es.is_active=1
-                  AND es.sensor_type='energy_total'
-                  AND JSON_EXTRACT(er.raw_payload,'$.total_start_time') IS NOT NULL
-                ORDER BY er.observed_at DESC,er.id DESC LIMIT 1) AS energy_total_started_at,
-              (SELECT vr.value
-                 FROM sensors vs
-                 JOIN sensor_readings vr ON vr.sensor_id=vs.id
-                WHERE vs.device_id=d.id AND vs.is_active=1
-                  AND vs.sensor_type='voltage'
-                ORDER BY vr.observed_at DESC,vr.id DESC LIMIT 1) AS voltage_v,
-              (SELECT lr.value
-                 FROM sensors ls
-                 JOIN sensor_readings lr ON lr.sensor_id=ls.id
-                WHERE ls.device_id=d.id AND ls.is_active=1
-                  AND ls.sensor_type='load_1m'
-                ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1) AS load_1m,
-              (SELECT lr.value
-                 FROM sensors ls
-                 JOIN sensor_readings lr ON lr.sensor_id=ls.id
-                WHERE ls.device_id=d.id AND ls.is_active=1
-                  AND ls.sensor_type='load_5m'
-                ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1) AS load_5m,
-              (SELECT lr.value
-                 FROM sensors ls
-                 JOIN sensor_readings lr ON lr.sensor_id=ls.id
-                WHERE ls.device_id=d.id AND ls.is_active=1
-                  AND ls.sensor_type='load_15m'
-                ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1) AS load_15m,
+              CASE WHEN d.source_system='tasmota'
+                   THEN (SELECT er.value FROM sensor_readings er
+                          WHERE er.sensor_id=(
+                            SELECT es.id FROM sensors es
+                             WHERE es.device_id=d.id AND es.is_active=1
+                               AND es.sensor_type='energy_total'
+                             ORDER BY es.id DESC LIMIT 1)
+                          ORDER BY er.observed_at DESC,er.id DESC LIMIT 1)
+              END AS energy_total_kwh,
+              CASE WHEN d.source_system='tasmota'
+                   THEN (SELECT JSON_UNQUOTE(JSON_EXTRACT(er.raw_payload,'$.total_start_time'))
+                           FROM sensor_readings er
+                          WHERE er.sensor_id=(
+                            SELECT es.id FROM sensors es
+                             WHERE es.device_id=d.id AND es.is_active=1
+                               AND es.sensor_type='energy_total'
+                             ORDER BY es.id DESC LIMIT 1)
+                            AND JSON_EXTRACT(er.raw_payload,'$.total_start_time') IS NOT NULL
+                          ORDER BY er.observed_at DESC,er.id DESC LIMIT 1)
+              END AS energy_total_started_at,
+              CASE WHEN d.source_system='tasmota'
+                   THEN (SELECT vr.value FROM sensor_readings vr
+                          WHERE vr.sensor_id=(
+                            SELECT vs.id FROM sensors vs
+                             WHERE vs.device_id=d.id AND vs.is_active=1
+                               AND vs.sensor_type='voltage'
+                             ORDER BY vs.id DESC LIMIT 1)
+                          ORDER BY vr.observed_at DESC,vr.id DESC LIMIT 1)
+              END AS voltage_v,
+              CASE WHEN d.source_system='linux_system'
+                   THEN (SELECT lr.value FROM sensor_readings lr
+                          WHERE lr.sensor_id=(
+                            SELECT ls.id FROM sensors ls
+                             WHERE ls.device_id=d.id AND ls.is_active=1
+                               AND ls.sensor_type='load_1m'
+                             ORDER BY ls.id DESC LIMIT 1)
+                          ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1)
+              END AS load_1m,
+              CASE WHEN d.source_system='linux_system'
+                   THEN (SELECT lr.value FROM sensor_readings lr
+                          WHERE lr.sensor_id=(
+                            SELECT ls.id FROM sensors ls
+                             WHERE ls.device_id=d.id AND ls.is_active=1
+                               AND ls.sensor_type='load_5m'
+                             ORDER BY ls.id DESC LIMIT 1)
+                          ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1)
+              END AS load_5m,
+              CASE WHEN d.source_system='linux_system'
+                   THEN (SELECT lr.value FROM sensor_readings lr
+                          WHERE lr.sensor_id=(
+                            SELECT ls.id FROM sensors ls
+                             WHERE ls.device_id=d.id AND ls.is_active=1
+                               AND ls.sensor_type='load_15m'
+                             ORDER BY ls.id DESC LIMIT 1)
+                          ORDER BY lr.observed_at DESC,lr.id DESC LIMIT 1)
+              END AS load_15m,
               ds.power, ds.mode, ds.target_temperature_c, ds.fan_speed,
               ds.online AS reported_online, ds.active, ds.observed_at AS state_at,
               ds.raw_state AS state_raw,
@@ -2274,7 +2314,16 @@ def poll_status():
     connection = connect_database()
     cursor = connection.cursor()
     try:
-        cursor.execute("SELECT MAX(completed_at) FROM poll_attempts")
+        # The dashboard embeds the latest active device's attempted_at value as
+        # its refresh marker. Return the exact same marker here: comparing it
+        # with completed_at creates a permanent mismatch and a full-page
+        # reload loop every five seconds.
+        cursor.execute(
+            """SELECT MAX(pa.attempted_at)
+                 FROM poll_attempts pa
+                 JOIN devices d ON d.id=pa.device_id
+                WHERE d.is_active=1"""
+        )
         latest_poll = cursor.fetchone()[0]
     finally:
         cursor.close()
