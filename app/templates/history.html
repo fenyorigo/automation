@@ -37,9 +37,18 @@
       {% if devices %}
       <form class="history-controls" method="get">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <fieldset class="history-device-picker"><legend>Eszközök</legend><small>Tetszőleges számú görbe kijelölhető</small><div>
-          {% for device in devices %}<label class="{{ 'polling-disabled' if not device.polling_enabled }}"{% if not device.polling_enabled %} title="A lekérdezés jelenleg ki van kapcsolva; a korábbi mérések továbbra is megjeleníthetők."{% endif %}><input type="checkbox" name="device" value="{{ device.id }}" {{ 'checked' if device in selected_devices }}><span>{{ device.name }}</span></label>{% endfor %}
-        </div></fieldset>
+        <fieldset class="history-device-picker"><legend>Eszközök</legend><small>Tetszőleges számú görbe kijelölhető</small>
+          {% set active_devices = devices|selectattr('is_active')|list %}
+          {% set inactive_devices = devices|rejectattr('is_active')|list %}
+          <div class="history-device-groups">
+            <section><h3>Aktív eszközök</h3><div class="history-device-grid">
+              {% for device in active_devices %}<label class="{{ 'polling-disabled' if not device.polling_enabled }}"{% if not device.polling_enabled %} title="A lekérdezés jelenleg ki van kapcsolva; a korábbi mérések továbbra is megjeleníthetők."{% endif %}><input type="checkbox" name="device" value="{{ device.id }}" {{ 'checked' if device in selected_devices }}><span>{{ device.name }}</span></label>{% endfor %}
+            </div></section>
+            {% if inactive_devices %}<details class="history-inactive-devices" {% if selected_devices|selectattr('is_active','equalto',0)|list %}open{% endif %}><summary>Inaktivált eszközök ({{ inactive_devices|length }})</summary><div class="history-device-grid">
+              {% for device in inactive_devices %}<label class="inactive-device" title="Az eszköz már nem aktív; a megmaradt korábbi mérései továbbra is megjeleníthetők."><input type="checkbox" name="device" value="{{ device.id }}" {{ 'checked' if device in selected_devices }}><span>{{ device.name }}<small>{{ 'van megőrzött mérés' if device.has_readings else 'nincs megőrzött mérés' }}</small></span></label>{% endfor %}
+            </div></details>{% endif %}
+          </div>
+        </fieldset>
         <label>Időtáv
           <select name="range">
             <option value="1h" {{ 'selected' if range_key == '1h' }}>1 óra</option>

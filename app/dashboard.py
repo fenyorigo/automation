@@ -351,12 +351,23 @@ def load_history_devices() -> list[dict[str, Any]]:
     try:
         cursor.execute(
             """
-            SELECT DISTINCT d.id, d.name, d.source_system, d.polling_enabled
+            SELECT d.id, d.name, d.source_system, d.polling_enabled, d.is_active,
+                   EXISTS(
+                     SELECT 1
+                     FROM sensors hs
+                     JOIN sensor_readings sr ON sr.sensor_id = hs.id
+                     WHERE hs.device_id = d.id AND hs.sensor_type = 'temperature'
+                       AND sr.quality IN ('good', 'valid') AND sr.value IS NOT NULL
+                     LIMIT 1
+                   ) AS has_readings
             FROM devices d
-            JOIN sensors s ON s.device_id = d.id AND s.is_active = 1
-            WHERE d.is_active = 1 AND s.sensor_type = 'temperature'
-              AND d.source_system <> 'manual'
-            ORDER BY FIELD(d.source_system, 'esp32', 'computherm', 'connectlife'), d.name
+            WHERE d.source_system <> 'manual'
+              AND EXISTS (
+                SELECT 1 FROM sensors s
+                WHERE s.device_id = d.id AND s.sensor_type = 'temperature'
+              )
+            ORDER BY d.is_active DESC,
+                     FIELD(d.source_system, 'esp32', 'computherm', 'connectlife'), d.name
             """
         )
         return rows_as_dicts(cursor)

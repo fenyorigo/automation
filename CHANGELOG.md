@@ -5,6 +5,11 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Mérési előzmények eszközválasztója külön **Aktív eszközök** és
+  **Inaktivált eszközök** csoportot mutat. Az inaktivált hőmérők megőrzött
+  idősorai grafikonon és CSV-exportban is kiválaszthatók; a lista azt is jelzi,
+  hogy az adott inaktivált eszközhöz maradt-e mérés.
+
 - A Globális beállítások mentése fájlrendszerhiba esetén nem ad többé nyers
   HTTP 500 választ, hanem kezelhető hibaüzenetet jelenít meg. A Fedora
   telepítésben a tényleges `.env` az `automation` tulajdonú `config`

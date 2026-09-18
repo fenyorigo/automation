@@ -379,6 +379,12 @@ kiválaszthatók és nullázhatók az egyes hőmérséklet-szenzorok korábbi m�
 szenzorok, állapotok és pollingnapló megmaradnak. A törlés közös pollingzárat
 használ, ezért nem futhat egy időben adatgyűjtéssel.
 
+Az előzményoldal eszközválasztója az aktív és inaktivált hőmérőket külön
+csoportban adja vissza. A lista nem szűr az eszköz vagy a hőmérséklet-szenzor
+`is_active` értékére, ezért a megőrzött idősorok az eszköz nyugdíjazása után is
+lekérdezhetők és CSV-be exportálhatók. Az inaktivált eszközöknél a felület
+kijelzi, hogy maradt-e jó vagy érvényes hőmérsékleti mérés.
+
 ## Felhasználók és jogosultságok
 
 A dashboard minden adatoldala bejelentkezést igényel. Két szerepkör van:

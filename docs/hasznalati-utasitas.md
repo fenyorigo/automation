@@ -163,9 +163,12 @@ Ezen az oldalon a hőmérsékleti idősorok vizsgálhatók.
    időablak ettől az időponttól indul; üresen hagyva az időtáv a jelenig tart.
 4. Nyomd meg a **Megjelenítés** gombot.
 
-A lekérdezési körből kivett eszközök neve narancssárga, félkövér felirattal
-jelenik meg. Ezek továbbra is kijelölhetők, így a korábban eltárolt méréseik
-összehasonlíthatók az aktuálisan működő eszközök adataival.
+Az eszközválasztó az **Aktív eszközök** és az alapból összecsukott
+**Inaktivált eszközök** csoportot külön mutatja. Mindkét csoport elemei
+kijelölhetők, és a név alatt látható, maradt-e hozzájuk mérés. Az inaktivált
+eszköz csak akkor rajzolható grafikonra, ha a `sensor_readings` előzményeit nem
+törölték. A lekérdezési körből kivett, de továbbra is aktív eszközök neve
+narancssárga, félkövér felirattal jelenik meg.
 
 A kijelölt eszközök közös időtengelyen, külön színű görbékkel jelennek meg. A
 jelmagyarázat azonosítja a görbéket, alattuk pedig eszközönként látható:
