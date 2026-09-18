@@ -49,8 +49,14 @@
             </div></details>{% endif %}
           </div>
         </fieldset>
+        <label>Időablak megadása
+          <select name="window_mode" id="history-window-mode">
+            <option value="range" {{ 'selected' if window_mode == 'range' }}>Időtávval</option>
+            <option value="end" {{ 'selected' if window_mode == 'end' }}>Végidőponttal</option>
+          </select>
+        </label>
         <label>Időtáv
-          <select name="range">
+          <select name="range" id="history-range">
             <option value="1h" {{ 'selected' if range_key == '1h' }}>1 óra</option>
             <option value="2h" {{ 'selected' if range_key == '2h' }}>2 óra</option>
             <option value="6h" {{ 'selected' if range_key == '6h' }}>6 óra</option>
@@ -61,8 +67,12 @@
           </select>
         </label>
         <label>Kezdő időpont
-          <input type="datetime-local" name="start" value="{{ history_start }}">
-          <small>Üresen a kiválasztott időtáv a jelenlegi időpontig tart.</small>
+          <input type="datetime-local" name="start" id="history-start" value="{{ history_start }}">
+          <small>Időtávnál üresen a jelenlegi időponttól számolunk vissza.</small>
+        </label>
+        <label>Végidőpont
+          <input type="datetime-local" name="end" id="history-end" value="{{ history_end }}">
+          <small>Végidőpontos módban a kezdő és a végidőpont is kötelező.</small>
         </label>
         <button type="submit" formnovalidate>Megjelenítés</button>
         <button type="submit" formnovalidate formaction="{{ url_for('export_history_csv') }}">CSV letöltése</button>
@@ -73,7 +83,7 @@
       <p class="chart-error">{{ gnuplot_error }}</p>
       {% elif series|selectattr('points')|list %}
       <div class="chart-frame">
-        <img src="{{ url_for('history_chart', device=selected_devices|map(attribute='id')|list, range=range_key, start=history_start) }}" alt="A kiválasztott eszközök összehasonlító hőmérsékleti grafikonja">
+        <img src="{{ url_for('history_chart', device=selected_devices|map(attribute='id')|list, range=range_key, start=history_start, end=history_end, window_mode=window_mode) }}" alt="A kiválasztott eszközök összehasonlító hőmérsékleti grafikonja">
       </div>
       <div class="history-series-stats">
       {% for item in series if item.stats %}<section><h3>{{ item.device.name }}</h3><dl class="history-stats">
@@ -113,5 +123,23 @@
       {% endif %}
     </section>{% endif %}
   </main>
+  <script>
+    (() => {
+      const mode = document.getElementById('history-window-mode');
+      const range = document.getElementById('history-range');
+      const start = document.getElementById('history-start');
+      const end = document.getElementById('history-end');
+      if (!mode || !range || !start || !end) return;
+      const syncWindowInputs = () => {
+        const explicitEnd = mode.value === 'end';
+        range.disabled = explicitEnd;
+        end.disabled = !explicitEnd;
+        start.required = explicitEnd;
+        end.required = explicitEnd;
+      };
+      mode.addEventListener('change', syncWindowInputs);
+      syncWindowInputs();
+    })();
+  </script>
 </body>
 </html>

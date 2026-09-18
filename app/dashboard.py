@@ -1645,7 +1645,22 @@ def parse_local_datetime(value: str) -> str:
     return parsed.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
-def history_window(range_key: str, local_start: str) -> tuple[datetime, datetime]:
+def history_window(
+    range_key: str,
+    local_start: str,
+    local_end: str = "",
+    window_mode: str = "range",
+) -> tuple[datetime, datetime]:
+    if window_mode == "end":
+        if not local_start or not local_end:
+            raise ValueError("Explicit history window requires start and end")
+        started_at = datetime.fromisoformat(parse_local_datetime(local_start))
+        ended_at = datetime.fromisoformat(parse_local_datetime(local_end))
+        if ended_at <= started_at:
+            raise ValueError("History end must be later than start")
+        return started_at, ended_at
+    if window_mode != "range":
+        raise ValueError("Invalid history window mode")
     hours = HISTORY_RANGES[range_key]
     if local_start:
         started_at = datetime.fromisoformat(parse_local_datetime(local_start))
@@ -3880,12 +3895,15 @@ def history() -> str:
     history_notice = session.pop("history_notice", None)
     if not devices:
         return render_template(
-            "history.html", devices=[], selected_devices=[], range_key="24h", history_start="", series=[],
+            "history.html", devices=[], selected_devices=[], range_key="24h", history_start="",
+            history_end="", window_mode="range", series=[],
             gnuplot_error=GNUPLOT_ERROR, resettable_sensors=resettable_sensors,
             history_notice=history_notice, presets=presets,
         )
     requested_ids = list(dict.fromkeys(request.args.getlist("device", type=int)))
     range_key = request.args.get("range", "24h")
+    history_end = request.args.get("end", "").strip()
+    window_mode = request.args.get("window_mode", "end" if history_end else "range")
     preset_id = request.args.get("preset", type=int)
     if preset_id is not None:
         preset = next((item for item in presets if item["id"] == preset_id), None)
@@ -3893,16 +3911,22 @@ def history() -> str:
             abort(404)
         requested_ids = [int(item) for item in preset["device_ids"]]
         range_key = preset["range_key"]
+        history_end = ""
+        window_mode = "range"
     selected_devices = [item for item in devices if item["id"] in requested_ids]
     if not selected_devices:
         selected_devices = [devices[0]]
     if range_key not in HISTORY_RANGES:
         range_key = "24h"
+    if window_mode not in {"range", "end"}:
+        window_mode = "range"
     history_start = request.args.get("start", "").strip()
     try:
-        started_at, ended_at = history_window(range_key, history_start)
+        started_at, ended_at = history_window(
+            range_key, history_start, history_end, window_mode
+        )
     except ValueError:
-        abort(400, "Érvénytelen kezdő időpont.")
+        abort(400, "Érvénytelen időablak. A végidőpont legyen későbbi a kezdő időpontnál.")
     series = []
     for device in selected_devices:
         points = load_temperature_history(device["id"], started_at, ended_at)
@@ -3913,7 +3937,7 @@ def history() -> str:
         series.append({"device": device, "points": points, "stats": stats})
     return render_template(
         "history.html", devices=devices, selected_devices=selected_devices, range_key=range_key,
-        history_start=history_start,
+        history_start=history_start, history_end=history_end, window_mode=window_mode,
         series=series, gnuplot_error=GNUPLOT_ERROR,
         resettable_sensors=resettable_sensors, history_notice=history_notice,
         presets=presets,
@@ -3931,10 +3955,14 @@ def export_history_csv() -> Response:
     if range_key not in HISTORY_RANGES:
         abort(400, "Érvénytelen időtáv.")
     history_start = request.args.get("start", "").strip()
+    history_end = request.args.get("end", "").strip()
+    window_mode = request.args.get("window_mode", "end" if history_end else "range")
     try:
-        started_at, ended_at = history_window(range_key, history_start)
+        started_at, ended_at = history_window(
+            range_key, history_start, history_end, window_mode
+        )
     except ValueError:
-        abort(400, "Érvénytelen kezdő időpont.")
+        abort(400, "Érvénytelen időablak. A végidőpont legyen későbbi a kezdő időpontnál.")
 
     output = io.StringIO(newline="")
     writer = csv.writer(output, lineterminator="\r\n")
@@ -3959,6 +3987,12 @@ def save_history_preset():
     name = request.form.get("preset_name", "").strip()
     requested_ids = list(dict.fromkeys(request.form.getlist("device", type=int)))
     range_key = request.form.get("range", "")
+    if request.form.get("window_mode", "range") != "range":
+        session["history_notice"] = {
+            "kind": "warning",
+            "message": "Kedvencként ismétlődő időtáv menthető; rögzített végidőpont nem.",
+        }
+        return redirect(url_for("history"))
     if not name:
         session["history_notice"] = {
             "kind": "warning", "message": "A kedvenc mentéséhez adj nevet az összeállításnak."
@@ -4736,8 +4770,12 @@ def history_chart() -> Response:
     if range_key not in HISTORY_RANGES:
         abort(400)
     local_start = request.args.get("start", "").strip()
+    local_end = request.args.get("end", "").strip()
+    window_mode = request.args.get("window_mode", "end" if local_end else "range")
     try:
-        started_at, ended_at = history_window(range_key, local_start)
+        started_at, ended_at = history_window(
+            range_key, local_start, local_end, window_mode
+        )
     except ValueError:
         abort(400)
     series = [

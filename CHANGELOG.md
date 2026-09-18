@@ -9,6 +9,8 @@ helyi dátumok.
   **Inaktivált eszközök** csoportot mutat. Az inaktivált hőmérők megőrzött
   idősorai grafikonon és CSV-exportban is kiválaszthatók; a lista azt is jelzi,
   hogy az adott inaktivált eszközhöz maradt-e mérés.
+- A Mérési előzmények időablaka időtávval vagy explicit kezdő és végidőponttal
+  is megadható; ugyanaz a beállítás érvényes a grafikonra és a CSV-exportra.
 
 - A Globális beállítások mentése fájlrendszerhiba esetén nem ad többé nyers
   HTTP 500 választ, hanem kezelhető hibaüzenetet jelenít meg. A Fedora

@@ -158,10 +158,16 @@ pingelhető megbízhatóan.
 Ezen az oldalon a hőmérsékleti idősorok vizsgálhatók.
 
 1. Jelölj ki egy vagy több eszközt.
-2. Válassz időtávot: **1, 2, 6, 12 vagy 24 óra**, illetve **7 vagy 30 nap**.
-3. Szükség esetén adj meg kezdő időpontot. Ilyenkor a kiválasztott hosszúságú
-   időablak ettől az időponttól indul; üresen hagyva az időtáv a jelenig tart.
-4. Nyomd meg a **Megjelenítés** gombot.
+2. Válaszd ki az időablak megadási módját:
+   - **Időtávval**: válassz **1, 2, 6, 12 vagy 24 órát**, illetve **7 vagy 30
+     napot**. Opcionálisan adj meg kezdő időpontot; üresen hagyva az időtáv a
+     jelenig tart.
+   - **Végidőponttal**: add meg a kezdő és a végidőpontot is. A végidőpontnak
+     későbbinek kell lennie a kezdő időpontnál.
+3. Nyomd meg a **Megjelenítés** gombot.
+
+A választott időablak a grafikonra és a CSV-exportra egyformán érvényes. A
+Kedvencek ismétlődő időtávot tárolhatnak; konkrét végidőpontot nem.
 
 Az eszközválasztó az **Aktív eszközök** és az alapból összecsukott
 **Inaktivált eszközök** csoportot külön mutatja. Mindkét csoport elemei
