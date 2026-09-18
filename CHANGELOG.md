@@ -14,6 +14,8 @@ helyi dátumok.
 - A Mérési előzmények eszközválasztója teljes szélességű sorba került az
   időablak mezői fölé; a nevek olvasható, automatikusan tördelődő oszlopokban
   jelennek meg, az idő- és műveleti mezők pedig több sorba rendeződhetnek.
+- A mérési időablak dátuma és opcionális ideje külön mezőbe került. Az üres
+  időmező 00:00 értéket jelent, így dátumok önmagukban is megadhatók.
 
 - A Globális beállítások mentése fájlrendszerhiba esetén nem ad többé nyers
   HTTP 500 választ, hanem kezelhető hibaüzenetet jelenít meg. A Fedora

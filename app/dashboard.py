@@ -1645,6 +1645,28 @@ def parse_local_datetime(value: str) -> str:
     return parsed.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
+def combine_history_boundary(local_date: str, local_time: str = "") -> str:
+    """Return an ISO local datetime, defaulting a date-only boundary to midnight."""
+    local_date = local_date.strip()
+    local_time = local_time.strip()
+    if not local_date:
+        return ""
+    if "T" in local_date or " " in local_date:
+        return local_date
+    return f"{local_date}T{local_time or '00:00'}"
+
+
+def split_history_boundary(value: str) -> tuple[str, str]:
+    """Split new date-only and legacy datetime-local query values for the form."""
+    value = value.strip().replace(" ", "T", 1)
+    if not value:
+        return "", ""
+    if "T" not in value:
+        return value, ""
+    local_date, local_time = value.split("T", 1)
+    return local_date, local_time[:5]
+
+
 def history_window(
     range_key: str,
     local_start: str,
@@ -3895,14 +3917,24 @@ def history() -> str:
     history_notice = session.pop("history_notice", None)
     if not devices:
         return render_template(
-            "history.html", devices=[], selected_devices=[], range_key="24h", history_start="",
-            history_end="", window_mode="range", series=[],
+            "history.html", devices=[], selected_devices=[], range_key="24h",
+            history_start_date="", history_start_time="", history_end_date="",
+            history_end_time="", window_mode="range", series=[],
             gnuplot_error=GNUPLOT_ERROR, resettable_sensors=resettable_sensors,
             history_notice=history_notice, presets=presets,
         )
     requested_ids = list(dict.fromkeys(request.args.getlist("device", type=int)))
     range_key = request.args.get("range", "24h")
-    history_end = request.args.get("end", "").strip()
+    history_start_date, legacy_start_time = split_history_boundary(
+        request.args.get("start", "")
+    )
+    history_start_time = request.args.get("start_time", legacy_start_time).strip()
+    history_end_date, legacy_end_time = split_history_boundary(
+        request.args.get("end", "")
+    )
+    history_end_time = request.args.get("end_time", legacy_end_time).strip()
+    history_start = combine_history_boundary(history_start_date, history_start_time)
+    history_end = combine_history_boundary(history_end_date, history_end_time)
     window_mode = request.args.get("window_mode", "end" if history_end else "range")
     preset_id = request.args.get("preset", type=int)
     if preset_id is not None:
@@ -3911,6 +3943,8 @@ def history() -> str:
             abort(404)
         requested_ids = [int(item) for item in preset["device_ids"]]
         range_key = preset["range_key"]
+        history_end_date = ""
+        history_end_time = ""
         history_end = ""
         window_mode = "range"
     selected_devices = [item for item in devices if item["id"] in requested_ids]
@@ -3920,7 +3954,6 @@ def history() -> str:
         range_key = "24h"
     if window_mode not in {"range", "end"}:
         window_mode = "range"
-    history_start = request.args.get("start", "").strip()
     try:
         started_at, ended_at = history_window(
             range_key, history_start, history_end, window_mode
@@ -3937,7 +3970,9 @@ def history() -> str:
         series.append({"device": device, "points": points, "stats": stats})
     return render_template(
         "history.html", devices=devices, selected_devices=selected_devices, range_key=range_key,
-        history_start=history_start, history_end=history_end, window_mode=window_mode,
+        history_start_date=history_start_date, history_start_time=history_start_time,
+        history_end_date=history_end_date, history_end_time=history_end_time,
+        window_mode=window_mode,
         series=series, gnuplot_error=GNUPLOT_ERROR,
         resettable_sensors=resettable_sensors, history_notice=history_notice,
         presets=presets,
@@ -3954,8 +3989,12 @@ def export_history_csv() -> Response:
     range_key = request.args.get("range", "24h")
     if range_key not in HISTORY_RANGES:
         abort(400, "Érvénytelen időtáv.")
-    history_start = request.args.get("start", "").strip()
-    history_end = request.args.get("end", "").strip()
+    history_start = combine_history_boundary(
+        request.args.get("start", ""), request.args.get("start_time", "")
+    )
+    history_end = combine_history_boundary(
+        request.args.get("end", ""), request.args.get("end_time", "")
+    )
     window_mode = request.args.get("window_mode", "end" if history_end else "range")
     try:
         started_at, ended_at = history_window(
@@ -4769,8 +4808,12 @@ def history_chart() -> Response:
     range_key = request.args.get("range", "24h")
     if range_key not in HISTORY_RANGES:
         abort(400)
-    local_start = request.args.get("start", "").strip()
-    local_end = request.args.get("end", "").strip()
+    local_start = combine_history_boundary(
+        request.args.get("start", ""), request.args.get("start_time", "")
+    )
+    local_end = combine_history_boundary(
+        request.args.get("end", ""), request.args.get("end_time", "")
+    )
     window_mode = request.args.get("window_mode", "end" if local_end else "range")
     try:
         started_at, ended_at = history_window(

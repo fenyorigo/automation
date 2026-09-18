@@ -182,7 +182,7 @@ dd.power-on { color: #d05a16; }
 .history-panel { margin-bottom: 56px; padding: 22px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
 .history-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 20px; }
 .history-controls label { flex: 1 1 220px; color: var(--muted); font-size: .72rem; font-weight: 700; }
-.history-controls select, .history-controls input[type="datetime-local"], .history-controls input[type="date"], .history-controls input[type="search"] { display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
+.history-controls select, .history-controls input[type="datetime-local"], .history-controls input[type="date"], .history-controls input[type="time"], .history-controls input[type="search"] { display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
 .history-controls input[type="text"] { display:block; width:100%; min-height:44px; margin-top:6px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:white; color:var(--ink); font:inherit; }
 .history-presets { margin-bottom:20px; padding-bottom:18px; border-bottom:1px solid var(--line); }
 .history-preset-list { display:flex; flex-wrap:wrap; gap:9px; margin-top:12px; }

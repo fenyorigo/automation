@@ -166,6 +166,9 @@ Ezen az oldalon a hőmérsékleti idősorok vizsgálhatók.
      későbbinek kell lennie a kezdő időpontnál.
 3. Nyomd meg a **Megjelenítés** gombot.
 
+A kezdő és végdátum mellett az idő külön, opcionális mező. Ha az időt üresen
+hagyod, az alkalmazás az adott dátum **00:00** időpontját használja.
+
 A választott időablak a grafikonra és a CSV-exportra egyformán érvényes. A
 Kedvencek ismétlődő időtávot tárolhatnak; konkrét végidőpontot nem.
 
