@@ -212,6 +212,9 @@ kérés megszüntetése a mért érték alatti kézi céllal engedi el a relét;
 kapcsolja ki a Computhermet. A teszt lezárása visszaállítja az eredeti módot,
 célértéket és haladó korlátokat. A napi program tartalma egyik lépésben sem
 íródik felül. Minden parancs és visszaolvasott állapot auditnaplóba kerül.
+A Szervizteszt oldal csak akkor engedi a gázkazánszerviz mód kikapcsolását és a
+normál működés visszaállítását, ha nincs aktív, fűtést kérő vagy elnyomott
+Computherm-próba.
 
 ### Helyiségi igény
 

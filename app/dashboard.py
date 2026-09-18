@@ -44,6 +44,7 @@ from global_settings import (
     SETTINGS as GLOBAL_SETTINGS,
     reload_environment,
     save as save_global_settings,
+    set_value as set_global_setting_value,
     values as global_setting_values,
 )
 from analysis_experiment import build_evidence
@@ -4795,6 +4796,43 @@ def load_service_test_context() -> dict[str, Any]:
 @editor_required
 def service_tests() -> str:
     return render_template("service_tests.html", **load_service_test_context(), notice=session.pop("service_test_notice",None))
+
+
+@app.post("/service-tests/boiler-service-mode/disable")
+@editor_required
+def disable_boiler_service_mode():
+    validate_csrf()
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT COUNT(*) FROM thermostat_service_tests
+               WHERE status IN ('active','heat_requested','heat_suppressed')"""
+        )
+        active_test_count = int(cursor.fetchone()[0])
+    finally:
+        cursor.close()
+        connection.close()
+
+    if active_test_count:
+        session["service_test_notice"] = {
+            "kind": "error",
+            "message": (
+                "A normál mód előtt minden aktív Computherm-próbát le kell "
+                "zárni a Teszt lezárása és visszaállítás gombbal."
+            ),
+        }
+        return redirect(url_for("service_tests"))
+
+    try:
+        set_global_setting_value("BOILER_SERVICE_MODE", "false")
+        session["service_test_notice"] = {
+            "kind": "success",
+            "message": "A gázkazánszerviz mód kikapcsolva; a rendszer normál módban működik.",
+        }
+    except (OSError, ValueError) as error:
+        session["service_test_notice"] = {"kind": "error", "message": str(error)}
+    return redirect(url_for("service_tests"))
 
 
 def computherm_config(source_device_id: str) -> dict[str, Any]:

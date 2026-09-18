@@ -89,6 +89,15 @@ def values() -> dict[str, str]:
     return {item.key: os.getenv(item.key, item.default) for item in SETTINGS}
 
 
+def set_value(key: str, value: str) -> None:
+    """Persist one UI-managed setting without resetting the others."""
+    if key not in {item.key for item in SETTINGS}:
+        raise ValueError(f"Ismeretlen globális beállítás: {key}")
+    updated = values()
+    updated[key] = value
+    save(updated)
+
+
 def reload_environment() -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Reload values present in .env into the current dashboard process.
 
@@ -151,6 +160,7 @@ def save(values_to_save: dict[str, str]) -> None:
     if heating_secondary_weight >= 1:
         raise ValueError("A fűtési Hisense és Computherm együttes súlyának 1-nél kisebbnek kell lennie.")
 
+    original_stat = ENV_PATH.stat()
     original = ENV_PATH.read_text(encoding="utf-8").splitlines(keepends=True)
     remaining = dict(normalized)
     output = []
@@ -169,7 +179,8 @@ def save(values_to_save: dict[str, str]) -> None:
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             handle.writelines(output); handle.flush(); os.fsync(handle.fileno())
-        os.chmod(temporary, ENV_PATH.stat().st_mode)
+        os.chmod(temporary, original_stat.st_mode)
+        os.chown(temporary, original_stat.st_uid, original_stat.st_gid)
         os.replace(temporary, ENV_PATH)
     finally:
         if os.path.exists(temporary): os.unlink(temporary)

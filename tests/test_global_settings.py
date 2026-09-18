@@ -10,6 +10,27 @@ from app import global_settings
 
 
 class ReloadEnvironmentTest(unittest.TestCase):
+    def test_set_value_preserves_other_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            env_path = Path(directory) / ".env"
+            env_path.write_text(
+                "BOILER_SERVICE_MODE=true\nPOLL_TIMEOUT_SECONDS=9\n",
+                encoding="utf-8",
+            )
+            environment = {
+                item.key: item.default for item in global_settings.SETTINGS
+            }
+            environment.update(
+                BOILER_SERVICE_MODE="true", POLL_TIMEOUT_SECONDS="9"
+            )
+            with patch.object(global_settings, "ENV_PATH", env_path), patch.dict(
+                os.environ, environment, clear=True
+            ):
+                global_settings.set_value("BOILER_SERVICE_MODE", "false")
+                saved = env_path.read_text(encoding="utf-8")
+        self.assertIn("BOILER_SERVICE_MODE=false", saved)
+        self.assertIn("POLL_TIMEOUT_SECONDS=9", saved)
+
     def test_ventilation_timing_defaults_are_ui_managed(self) -> None:
         settings = {item.key: item for item in global_settings.SETTINGS}
         self.assertEqual(settings["VENTILATION_LONG_THRESHOLD_MINUTES"].default, "5")

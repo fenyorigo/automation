@@ -424,7 +424,11 @@ végén kötelező a **Teszt lezárása és visszaállítás**, amely visszaáll
 eredeti automata módot, célértéket és korlátokat. Az emeleti és földszinti
 próba egymástól függetlenül, akár egyszerre is futhat; ugyanazon a
 termosztáton egyszerre csak egy teszt indítható. A napi program egyik
-műveletnél sem módosul.
+műveletnél sem módosul. Ha már egyik termosztáton sincs aktív próba, a Bosch
+állapotkártyáján megjelenő **Gázkazánszerviz lezárása – vissza normál módba**
+gomb közvetlenül a Szervizteszt oldalról kikapcsolja a globális szervizmódot.
+Aktív próba mellett a gomb le van tiltva, így az eredeti termosztátállapot
+visszaállítása nem maradhat ki.
 
 ## 7. Elemzések és jelentések
 

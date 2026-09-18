@@ -3,7 +3,13 @@
 {% if notice %}<p class="poll-notice {{ notice.kind }}">{{ notice.message }}</p>{% endif %}
 <section class="history-panel"><h2>Biztonsági feltételek</h2>
 <p class="notice">A Computherm soha nem kerül kikapcsolásra. A teszt kézi célértékkel kér vagy enged el fűtést, végül visszaállítja a mentett eredeti módot, célértéket és korlátokat. A napi program tartalma nem módosul.</p>
-<p>Klímaszerviz: <strong>{{ 'aktív' if climate_service_mode else 'kikapcsolva' }}</strong> · Gázkazánszerviz: <strong>{{ 'aktív' if boiler_service_mode else 'kikapcsolva' }}</strong> · {{ boiler.name if boiler else 'Bosch kazán' }} tápellátás: <strong>{{ 'van' if boiler and boiler.boiler_supply_power else 'nincs' }}</strong> · fűtés: <strong>{{ 'engedélyezve' if boiler and boiler.boiler_heating_enabled else 'nincs engedélyezve' }}</strong></p>
+<p>Klímaszerviz: <strong>{{ 'aktív' if climate_service_mode else 'kikapcsolva' }}</strong> · Gázkazánszerviz: <strong>{{ 'aktív' if boiler_service_mode else 'kikapcsolva' }}</strong></p>
+<div class="service-test-grid"><article class="service-test-card"><h3>{{ boiler.name if boiler else 'Bosch kazán' }}</h3>
+{% if boiler %}<p>Tápellátás: <strong>{{ 'van' if boiler.boiler_supply_power else 'nincs' }}</strong> · Kazán power: <strong>{{ boiler.boiler_panel_power_label }}</strong> · Melegvíz: <strong>{{ 'aktív' if boiler.boiler_hot_water_enabled else 'kikapcsolva' }}</strong> · Fűtés: <strong>{{ 'engedélyezve' if boiler.boiler_heating_enabled else 'nincs engedélyezve' }}</strong></p>{% else %}<p>A Bosch kazán nyilvántartási eleme nem található.</p>{% endif %}
+{% if boiler_service_mode %}<form method="post" action="{{ url_for('disable_boiler_service_mode') }}" onsubmit="return confirm('Biztosan lezártál minden próbát és visszaállsz normál módba?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="primary-button" {% if active_by_device %}disabled{% endif %}>Gázkazánszerviz lezárása – vissza normál módba</button></form>
+{% if active_by_device %}<p class="service-mode-banner">A gázkazánszerviz mód csak az összes aktív Computherm-próba lezárása és visszaállítása után kapcsolható ki.</p>{% endif %}
+{% else %}<p><strong>A gázkazánszerviz mód már ki van kapcsolva.</strong></p>{% endif %}
+</article></div>
 {% if not boiler_service_mode %}<p class="service-mode-banner">A teszthez kapcsold be a Gázkazánszerviz módot a Globális beállításoknál.</p>{% elif not boiler or not boiler.boiler_supply_power or not boiler.boiler_heating_enabled %}<p class="service-mode-banner">A teszt csak feszültség alatt álló, kézzel fűtésre engedélyezett Bosch kazán mellett használható.</p>{% endif %}
 </section>
 <section class="history-panel"><h2>Hisense klímák</h2>

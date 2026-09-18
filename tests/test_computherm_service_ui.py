@@ -23,6 +23,20 @@ class ComputhermServiceUiTest(unittest.TestCase):
         )
         self.assertIn('"active_by_device":active_by_device', source)
 
+    def test_service_page_can_safely_return_to_normal_mode(self) -> None:
+        template = (ROOT / "app/templates/service_tests.html").read_text(
+            encoding="utf-8"
+        )
+        source = (ROOT / "app/dashboard.py").read_text(encoding="utf-8")
+        self.assertIn("Gázkazánszerviz lezárása", template)
+        self.assertIn("{% if active_by_device %}disabled{% endif %}", template)
+        self.assertIn(
+            '@app.post("/service-tests/boiler-service-mode/disable")', source
+        )
+        self.assertIn(
+            'set_global_setting_value("BOILER_SERVICE_MODE", "false")', source
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
