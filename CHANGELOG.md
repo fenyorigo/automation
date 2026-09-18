@@ -11,6 +11,9 @@ helyi dátumok.
   hogy az adott inaktivált eszközhöz maradt-e mérés.
 - A Mérési előzmények időablaka időtávval vagy explicit kezdő és végidőponttal
   is megadható; ugyanaz a beállítás érvényes a grafikonra és a CSV-exportra.
+- A Mérési előzmények eszközválasztója teljes szélességű sorba került az
+  időablak mezői fölé; a nevek olvasható, automatikusan tördelődő oszlopokban
+  jelennek meg, az idő- és műveleti mezők pedig több sorba rendeződhetnek.
 
 - A Globális beállítások mentése fájlrendszerhiba esetén nem ad többé nyers
   HTTP 500 választ, hanem kezelhető hibaüzenetet jelenít meg. A Fedora
