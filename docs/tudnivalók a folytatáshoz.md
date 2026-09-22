@@ -148,7 +148,7 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
 [`dontesi-logika.md`](dontesi-logika.md) és az
 [`app/global_settings.py`](../app/global_settings.py) tartalmazza.
 
-### Bosch 7000i és Nous kazándugalj
+### Bosch 7000i, Nous kazándugalj és villanybojler
 
 - A `nous-kazan.home` és az `SP ebédlő` a két UI-ból kapcsolható dugalj. A
   többi Zigbee-router és IT-dugalj nincs engedélyezve. Kikapcsolásuk piros
@@ -163,6 +163,11 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
 - A `nous-kazan` feszültsége 235,5 V referencia alapján kalibrált. A
   részletes mérési tények és óvintézkedések a
   [`nous-tasmota.md`](nous-tasmota.md) fájlban vannak.
+- A `nous-bojler` a Télikert WC-ben lévő 1,8 kW-os villanybojlert táplálja.
+  A dugalj 235 V referencia alapján kalibrált (`VoltageCal=1515`). A napi
+  05:00–12:00 tápablakot kizárólag az automation kezeli; a Tasmota saját
+  időzítői kikapcsolva maradnak. Az időablak a Globális beállításoknál
+  módosítható vagy felfüggeszthető.
 
 ### Klarstein Norderney és ebédlői SONOFF
 

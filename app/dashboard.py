@@ -38,6 +38,7 @@ from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_clim
 from cooling_observer import annotate_upstairs_cooling
 from heating_observer import annotate_ground_floor_heating, annotate_upstairs_heating
 from power_switch_control import control_tasmota_power, control_zigbee_power
+from scheduled_power import WATER_HEATER_HOSTNAME, water_heater_schedule_details
 from computherm_service import connect_device as connect_computherm, restore_test, snapshot as computherm_snapshot, start_test, suppress_heat
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import (
@@ -129,10 +130,21 @@ COMPUTHERM_LOCATION = {
 
 POWER_SWITCH_ALLOWLIST = {
     ("tasmota", "nous-kazan"),
+    ("tasmota", WATER_HEATER_HOSTNAME),
     ("zigbee2mqtt", "0xa4c13811bed2ffff"),
 }
 
 KLARSTEIN_SUPPLY_SOURCE_ID = "0xa4c13811bed2ffff"
+
+
+def power_switch_allowlist_key(device: dict[str, Any]) -> tuple[str, str]:
+    source_system = str(device.get("source_system") or "")
+    identifier = (
+        device.get("hostname")
+        if source_system == "tasmota"
+        else device.get("source_device_id")
+    )
+    return source_system, str(identifier or device.get("source_device_id") or "")
 
 MANUAL_BOILER_STATE_SELECT_SQL = """
     SELECT manual_power_state,manual_hot_water_state,manual_heating_state
@@ -1208,10 +1220,15 @@ def load_dashboard(
             device["source_system"] == "zigbee2mqtt"
             and device["source_device_id"] == KLARSTEIN_SUPPLY_SOURCE_ID
         )
+        device["is_water_heater_supply"] = bool(
+            device["source_system"] == "tasmota"
+            and device.get("hostname") == WATER_HEATER_HOSTNAME
+        )
+        if device["is_water_heater_supply"]:
+            device["water_heater_schedule"] = water_heater_schedule_details()
         device["switch_controllable"] = bool(
             device.get("control_enabled")
-            and (device["source_system"], device["source_device_id"])
-                in POWER_SWITCH_ALLOWLIST
+            and power_switch_allowlist_key(device) in POWER_SWITCH_ALLOWLIST
             and (
                 device["source_system"] == "tasmota"
                 or (
@@ -5599,7 +5616,7 @@ def load_switchable_device(device_id: int) -> dict[str, Any] | None:
         if not rows:
             return None
         device = rows[0]
-        if (device["source_system"], device["source_device_id"]) not in POWER_SWITCH_ALLOWLIST:
+        if power_switch_allowlist_key(device) not in POWER_SWITCH_ALLOWLIST:
             return None
         return device
     finally:
@@ -5698,12 +5715,17 @@ def switch_device_power(device_id: int):
 
     connection = connect_database()
     cursor = connection.cursor()
+    requested_at = datetime.now(UTC).replace(tzinfo=None)
     try:
         cursor.execute(
             """INSERT INTO device_power_control_attempts
-                 (device_id,source_system,requested_power,requested_by,status)
-               VALUES (?,?,?,?,'pending')""",
-            (device_id, device["source_system"], requested_power, g.current_user["id"]),
+                 (device_id,source_system,requested_power,requested_at,
+                  requested_by,status)
+               VALUES (?,?,?,?,?,'pending')""",
+            (
+                device_id, device["source_system"], requested_power,
+                requested_at, g.current_user["id"],
+            ),
         )
         attempt_id = int(cursor.lastrowid)
         connection.commit()

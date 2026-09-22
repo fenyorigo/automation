@@ -59,6 +59,9 @@ SETTINGS = (
     Setting("CLIMATE_SERVICE_MODE", "Klímaszerviz folyamatban", "false", "boolean", "Minden automatikus klímaszabályt felfüggeszt; a kézi szervizpróbákat nem korlátozza.", validator=lambda value: value in {"true", "false"}),
     Setting("BOILER_SERVICE_MODE", "Gázkazánszerviz folyamatban", "false", "boolean", "Felfüggeszti a fűtési szabályokat és engedélyezi a védett Computherm szerviztesztet.", validator=lambda value: value in {"true", "false"}),
     Setting("BOILER_PANEL_ON_MIN_POWER_W", "Bosch power bekapcsolási teljesítményhatára", "2.0", "number", "Watt; bekapcsolt Nous mellett legalább ekkora friss fogyasztás igazolja a kazán power kapcsolójának bekapcsolt állapotát. A mért nyugalmi fogyasztás kb. 5 W.", number_between(0.1, 100)),
+    Setting("WATER_HEATER_SCHEDULE_ENABLED", "Villanybojler automatikus időablaka", "true", "boolean", "A Nous bojler tápellátását kizárólag az automation kapcsolja a megadott napi időablak szerint.", validator=lambda value: value in {"true", "false"}),
+    Setting("WATER_HEATER_ON_TIME", "Villanybojler bekapcsolási idő", "05:00", "time", "A napi tápellátási időablak kezdete.", validator=lambda value: re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value) is not None),
+    Setting("WATER_HEATER_OFF_TIME", "Villanybojler kikapcsolási idő", "12:00", "time", "A napi tápellátási időablak vége; éjfélen átnyúló időablak is megadható.", validator=lambda value: re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value) is not None),
     Setting("COOLING_MIN_ROOM_TEMPERATURE_C", "Hűtés abszolút alsó szobahőmérsékleti korlátja", "25", "number", "Biztonsági korlát; ez alatt hűtési igény nem állhat fenn.", number_between(5, 40)),
     Setting("COOLING_MIN_TARGET_C", "Hűtés legkisebb célhőmérséklete", "25", "number", "Az observer jelzi, ha a klímán ennél kisebb kézi célértéket észlel.", number_between(5, 40)),
     Setting("COOLING_ROOM_REQUEST_ON_C", "Hűtési igény bekapcsolási határa", "27.5", "number", "A cselekedeti helyiséghőmérséklet ettől az értéktől kér hűtést, ha a klíma nem hűt.", number_between(5, 40)),
@@ -153,6 +156,8 @@ def save(values_to_save: dict[str, str]) -> None:
         normalized["HEATING_ROOM_REQUEST_OFF_C"].replace(",", ".")
     ):
         raise ValueError("A fűtési igény bekapcsolási határának kisebbnek kell lennie a kikapcsolási határnál.")
+    if normalized["WATER_HEATER_ON_TIME"] == normalized["WATER_HEATER_OFF_TIME"]:
+        raise ValueError("A villanybojler be- és kikapcsolási ideje nem lehet azonos.")
     heating_secondary_weight = sum(
         float(normalized[key].replace(",", "."))
         for key in ("HEATING_HISENSE_WEIGHT", "HEATING_COMPUTHERM_WEIGHT")

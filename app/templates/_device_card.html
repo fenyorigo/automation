@@ -145,6 +145,9 @@
     <div><dt>Aktív</dt><dd>{% if device.active is none %}—{% elif device.active %}Igen{% else %}Nem{% endif %}</dd></div>
   </dl>
   {% endif %}
+  {% if device.is_water_heater_supply and device.water_heater_schedule.enabled %}
+    <p class="device-schedule-note"><strong>Automatikus tápablak: {{ device.water_heater_schedule.start }}–{{ device.water_heater_schedule.end }}</strong><br>Most {{ 'engedélyezett' if device.water_heater_schedule.desired_power else 'tiltott' }}. A kézi kapcsolást az automation legfeljebb egy percen belül az időablakhoz igazítja.</p>
+  {% endif %}
   {% if can_write and device.switch_controllable %}
     {% if device.is_klarstein_supply and device.switch_power is sameas true %}
     <p class="klarstein-standby-warning"><strong>Figyelem:</strong> a bekapcsolt dugalj csak tápot ad. A Klarsteint kézzel kell Standby-ból fűtésre kapcsolni.</p>
@@ -152,7 +155,7 @@
     {% if pending_power_off and pending_power_off.device_id == device.id %}
     <section class="power-off-confirmation" role="alert">
       <strong>⚠ Kikapcsolási megerősítés</strong>
-      <p>A dugalj kikapcsolása megszakítja a rákötött eszközök tápellátását{% if device.is_klarstein_supply %}; a Klarstein nem fog fűteni{% elif device.source_system == 'zigbee2mqtt' %}, és gyengítheti a Zigbee mesh-t{% endif %}. Biztosan folytatod?</p>
+      <p>A dugalj kikapcsolása megszakítja a rákötött eszközök tápellátását{% if device.is_klarstein_supply %}; a Klarstein nem fog fűteni{% elif device.is_water_heater_supply %}; a villanybojler nem fog vizet melegíteni{% elif device.source_system == 'zigbee2mqtt' %}, és gyengítheti a Zigbee mesh-t{% endif %}. Biztosan folytatod?</p>
       <div class="power-switch-actions">
         <form method="post" action="{{ url_for('switch_device_power',device_id=device.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

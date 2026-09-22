@@ -350,8 +350,8 @@ riasztást.
 
 ### Okosdugaljak kézi kapcsolása
 
-A kezdőlapon a Bosch tápellátását adó **Nous kazán**, valamint a Klarsteint
-ellátó **SP ebédlő** kártyáján látható külön **Bekapcsolás** és
+A kezdőlapon a Bosch tápellátását adó **Nous kazán**, a villanybojlert ellátó
+**Nous bojler**, valamint a Klarsteint ellátó **SP ebédlő** kártyáján látható külön **Bekapcsolás** és
 **Kikapcsolás** gomb a szerkesztőknek. A többi IT- és Zigbee router-dugalj
 csak megfigyelhető. A bekapcsolás azonnal elküldhető. Az SP ebédlő
 bekapcsolása után külön figyelmeztetés emlékeztet rá, hogy a Klarsteint a saját
@@ -359,6 +359,12 @@ kezelőjén kézzel kell Standby-ból fűtésre kapcsolni. Kikapcsoláskor előb
 figyelmeztetés jelenik meg a következményekkel, és csak a külön **Igen,
 kikapcsolom** megerősítés küldi el a parancsot. A megerősítés öt percig
 érvényes és csak az adott dugaljhoz használható.
+
+A **Nous bojler** alapértelmezett automatikus tápablaka naponta 05:00–12:00.
+A kártya kiírja az aktuális időablakot és azt, hogy pillanatnyilag engedélyezett
+vagy tiltott szakaszban járunk. Aktív ütemezés mellett a kézi kapcsolás csak
+átmeneti: az automation legfeljebb egy percen belül visszaállítja az időablak
+szerinti reléállapotot. A Tasmota saját időzítőit ehhez nem kell beállítani.
 
 A kikapcsolt, kapcsolható dugalj teljes kártyája piros jelölést kap. Ez a
 Klarsteinnél azt jelenti, hogy a fűtő nem kaphat tápot; a relé visszakapcsolása
@@ -391,7 +397,8 @@ megfelelő eszközéhez vezet.
 A szerkesztők a főmenü **Globális beállítások** oldalán módosíthatják a
 rendszerszintű működési értékeket: az alap lekérdezési időt, az időkorlátot,
 az adatmentés paramétereit, a gnuplot elérési útját, valamint az
-előkészített hűtési és fűtési biztonsági határokat, továbbá a rövid/hosszú
+előkészített hűtési és fűtési biztonsági határokat, a villanybojler napi
+tápablakát, továbbá a rövid/hosszú
 szellőztetés és a nyílászáró-zárás késleltetésének határát. A mentés közvetlenül, de
 atomikusan frissíti a projekt `.env` fájlját, és a kezelt értékeket azonnal
 átvezeti a dashboard futó folyamatába. A periodikus poller minden ciklusban

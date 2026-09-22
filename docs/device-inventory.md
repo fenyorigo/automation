@@ -85,6 +85,7 @@ idősorosan gyűjtött eszköz.
 | Tasmota | `Nous main IT` | `nous-mainit` | Emelet / Kis nappali | IT fogyasztásmérő |
 | Tasmota | `Nous auxiliary IT` | `nous-auxit` | Emelet / Dolgozó | IT fogyasztásmérő |
 | Tasmota | `Nous kazán` | `nous-kazan.home` | Földszint / Kazánház | Bosch táp és fogyasztás |
+| Tasmota | `Nous bojler` | `nous-bojler` / `192.168.0.47` | Földszint / Télikert WC | 1,8 kW-os villanybojler tápja, fogyasztásmérés és automation-időzítés |
 
 A SONOFF S60ZBTPF Zigbee router-dugaljak `power`, `current`, `voltage` és
 `energy` értékei idősorosan is bekerülnek a `sensor_readings` táblába. A

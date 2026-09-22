@@ -172,8 +172,9 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertIn(".device-card.is-power-off", stylesheet)
 
     def test_power_switch_allowlist_is_limited_to_dedicated_supplies(self) -> None:
-        self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 2)
+        self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 3)
         self.assertIn(("tasmota", "nous-kazan"), POWER_SWITCH_ALLOWLIST)
+        self.assertIn(("tasmota", "nous-bojler"), POWER_SWITCH_ALLOWLIST)
         self.assertIn(
             ("zigbee2mqtt", "0xa4c13811bed2ffff"), POWER_SWITCH_ALLOWLIST
         )

@@ -1,9 +1,10 @@
 # Nous/Tasmota fogyasztásmérők
 
-Az alkalmazás a Tasmota firmware-t futtató Nous okosdugaljakat hálózaton
-teljesítmény- és energiamérőként kezeli. A periodikus lekérdezés nem kapcsolja
-a relét és nem módosítja az eszköz konfigurációját. Kézi kapcsolás kizárólag
-a `nous-kazan` kezdőlapi kártyájáról indítható szerkesztőként.
+Az alkalmazás a Tasmota firmware-t futtató Nous okosdugaljakat közvetlen HTTP-
+lekérdezéssel kezeli; ezeknél az MQTT nem része az adatútnak. A periodikus
+lekérdezés önmagában nem kapcsolja a relét és nem módosítja az eszköz
+konfigurációját. Kézi kapcsolás a `nous-kazan` és a `nous-bojler` kezdőlapi
+kártyájáról indítható szerkesztőként.
 
 ## Nyilvántartott eszközök
 
@@ -12,6 +13,7 @@ a `nous-kazan` kezdőlapi kártyájáról indítható szerkesztőként.
 | `nous-mainit` | `192.168.0.44` | fő informatikai infrastruktúra |
 | `nous-auxit` | `192.168.0.45` | dolgozószobai kiegészítő informatikai infrastruktúra |
 | `nous-kazan` | `192.168.0.46` | Bosch 7000i tápellátásának felügyelete |
+| `nous-bojler` | `192.168.0.47` | 1,8 kW-os villanybojler tápellátása, fogyasztásmérése és időzítése |
 
 A címeket statikus DHCP-foglalás biztosítja. Az alkalmazásban hostnév
 használandó, hogy a címzés központilag, a helyi DNS-ben maradjon kezelhető.
@@ -59,6 +61,7 @@ A rögzített kalibrációs beállítások:
 | `nous-auxit` | 230 V | 1950 → 1522 |
 | `nous-mainit` | 226 V | → 1454 |
 | `nous-kazan` | 235,5 V | 1950 → 1498 |
+| `nous-bojler` | 235 V | 1950 → 1515 |
 
 A `nous-kazan` 2026. szeptember 11-i kalibrációja előtt a Tasmota 306 V-ot,
 utána egész voltos felbontással 235 V-ot jelzett. A kalibráció idején a relé
@@ -69,10 +72,29 @@ energiamérés pontosságának ellenőrzéséhez ismert, lehetőleg közel ohmos
 terhelés és külön referencia teljesítménymérő szükséges. Terhelés nélküli
 állapotból a teljesítménykalibráció nem állapítható meg.
 
+## Villanybojler időzítése
+
+A `nous-bojler` napi tápablakának egyetlen igazságforrása az automation.
+A Tasmota saját időzítői kikapcsolva maradnak. A Globális beállítások között
+állítható az ütemezés engedélyezése, a bekapcsolási idő és a kikapcsolási idő;
+az alapérték minden nap `05:00–12:00`.
+
+A poller legfeljebb egyperces ciklusban közvetlen HTTP-állapotolvasással
+egyezteti a relét a kívánt állapottal. Ha a szerver vagy a dugalj a kapcsolási
+időpontban nem volt elérhető, a kapcsolat helyreállása után a soron következő
+egyeztetés állítja be a helyes állapotot. A kézi UI-kapcsolás megmarad, de aktív
+ütemezés mellett csak átmeneti: az automation visszaállítja az időablak szerinti
+állapotot. A tényleges automatikus kapcsolások és a hibák a
+`device_power_control_attempts` táblába kerülnek `schedule` eredettel.
+
 ## Üzemeltetési megjegyzések
 
 - A `nous-mainit` kritikus hálózati eszközöket táplál; kapcsolása az egész
   helyi infrastruktúrát leállíthatja.
+- A `nous-bojler` 1,8 kW-os névleges terhelése 235 V mellett kb. 7,7 A. A
+  fizikailag 16 A-es A1T ehhez megfelelő tartalékkal rendelkezik; az első
+  teljes felfűtési ciklus alatt az aljzat és a csatlakozó melegedését ellenőrizni
+  kell.
 - A `nous-kazan` bekapcsolása közvetlenül kérhető. A kikapcsolás első
   gombnyomása még nem
   küld parancsot: piros következményjelzés jelenik meg, és csak az öt percig

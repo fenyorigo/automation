@@ -5,6 +5,14 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A `nous-bojler` közvetlen HTTP-lekérdezésű Tasmota eszközként bekerült a
+  villanybojler táp- és fogyasztásfelügyeletébe. A 235 V-os referencia alapján
+  kalibrált feszültségméréshez `VoltageCal=1515` tartozik.
+- A villanybojler napi, alapból 05:00–12:00 közötti tápablakát kizárólag az
+  automation egyezteti legfeljebb egyperces késéssel. Az időablak a Globális
+  beállításoknál kezelhető, a Tasmota saját időzítőire nincs szükség, a tényleges
+  automatikus kapcsolások és hibák auditáltak.
+
 - A Mérési előzmények eszközválasztója külön **Aktív eszközök** és
   **Inaktivált eszközök** csoportot mutat. Az inaktivált hőmérők megőrzött
   idősorai grafikonon és CSV-exportban is kiválaszthatók; a lista azt is jelzi,

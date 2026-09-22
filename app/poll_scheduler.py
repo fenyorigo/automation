@@ -15,6 +15,7 @@ from poll_devices import DEFAULT_CONFIG, load_devices, poll_all
 from polling_lock import PollCycleBusy, polling_cycle_lock
 from outdoor_weather import poll_active_outdoor_sources
 from scheduled_climate import process_due_climate_schedules
+from scheduled_power import reconcile_water_heater_schedule
 
 
 async def run_cycle(
@@ -135,6 +136,18 @@ async def main() -> None:
             print(
                 f"{datetime.now().isoformat(timespec='seconds')} "
                 f"scheduled climate command failed: {error}", flush=True,
+            )
+        try:
+            switched = await asyncio.to_thread(reconcile_water_heater_schedule)
+            if switched:
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} "
+                    "water-heater schedule reconciled", flush=True,
+                )
+        except Exception as error:
+            print(
+                f"{datetime.now().isoformat(timespec='seconds')} "
+                f"water-heater schedule failed: {error}", flush=True,
             )
         try:
             if scheduled_backup_due():

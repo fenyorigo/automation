@@ -202,6 +202,10 @@ MIGRATIONS = (
         "v1_49_dashboard_latest_value_indexes",
         ROOT / "SQL" / "migrations" / "049_home_automation_v1.48_to_v1.49.sql",
     ),
+    (
+        "v1_50_scheduled_power_control",
+        ROOT / "SQL" / "migrations" / "050_home_automation_v1.49_to_v1.50.sql",
+    ),
 )
 
 

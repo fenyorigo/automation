@@ -130,6 +130,7 @@ dd.power-on { color: #d05a16; }
 .power-switch-actions form { margin:0; }
 .power-switch-actions .secondary-link { color:#7a1812; font-size:.74rem; font-weight:800; }
 .klarstein-standby-warning { margin-top:14px; padding:11px 13px; border-radius:10px; background:#fff3bf; color:#5f4600; font-size:.76rem; line-height:1.45; }
+.device-schedule-note { margin-top:14px; padding:11px 13px; border-radius:10px; background:#e8f3ef; color:#174c3b; font-size:.76rem; line-height:1.45; }
 .manual-state { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 25px 0 20px; padding: 19px; border-radius: 14px; background: #ece9df; }
 .manual-state.powered { background: var(--green-soft); }
 .manual-state-label { color: var(--muted); font-size: .78rem; }

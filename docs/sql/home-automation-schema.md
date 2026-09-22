@@ -29,9 +29,9 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `thermostat_service_commands`: a szerviztesztek parancs- és visszaolvasási auditnaplója
 - `climate_control_attempts`: a közvetlen, időzített és szervizcélú
   ConnectLife-parancsok auditja; a `requested_mode` a kért üzemmódot is megőrzi
-- `device_power_control_attempts`: a dedikált Bosch-tápdugalj kézi kapcsolási
-  kérései, kérő felhasználója, előzetes és visszaigazolt reléállapota, valamint
-  hibája
+- `device_power_control_attempts`: a dedikált kapcsolható dugaljak kézi vagy
+  ütemezett kapcsolási kérései, opcionális kérő felhasználója, `ui`/`schedule`
+  eredete, előzetes és visszaigazolt reléállapota, valamint hibája
 - `boiler_mode_state_events`: a Bosch kézzel rögzített melegvíz- és
   fűtésállapotának időbélyeges változásai
 - `sensor_readings`: mért értékek idősorokhoz

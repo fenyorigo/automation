@@ -56,6 +56,12 @@ class ReloadEnvironmentTest(unittest.TestCase):
         self.assertEqual(settings["HEATING_MIN_COP"].default, "2.5")
         self.assertEqual(settings["BOILER_PANEL_ON_MIN_POWER_W"].default, "2.0")
 
+    def test_water_heater_schedule_defaults_are_ui_managed(self) -> None:
+        settings = {item.key: item for item in global_settings.SETTINGS}
+        self.assertEqual(settings["WATER_HEATER_SCHEDULE_ENABLED"].default, "true")
+        self.assertEqual(settings["WATER_HEATER_ON_TIME"].default, "05:00")
+        self.assertEqual(settings["WATER_HEATER_OFF_TIME"].default, "12:00")
+
     def test_save_rejects_reversed_cooling_hysteresis(self) -> None:
         values = {item.key: item.default for item in global_settings.SETTINGS}
         values["COOLING_ROOM_REQUEST_ON_C"] = "26"
@@ -68,6 +74,13 @@ class ReloadEnvironmentTest(unittest.TestCase):
         values["HEATING_ROOM_REQUEST_ON_C"] = "21"
         values["HEATING_ROOM_REQUEST_OFF_C"] = "20"
         with self.assertRaisesRegex(ValueError, "fűtési igény bekapcsolási"):
+            global_settings.save(values)
+
+    def test_save_rejects_empty_water_heater_window(self) -> None:
+        values = {item.key: item.default for item in global_settings.SETTINGS}
+        values["WATER_HEATER_ON_TIME"] = "05:00"
+        values["WATER_HEATER_OFF_TIME"] = "05:00"
+        with self.assertRaisesRegex(ValueError, "nem lehet azonos"):
             global_settings.save(values)
 
     def test_reload_updates_values_and_reports_restart_keys(self) -> None:
