@@ -1215,6 +1215,7 @@ def load_dashboard(
             device["network_http_ok"] = network_state.get("http_ok")
             device["network_http_status"] = network_state.get("http_status")
             device["network_resolved_ip"] = network_state.get("resolved_ip")
+            device["network_check_mode"] = network_state.get("check_mode", "http")
         device["switch_power"] = normalized_switch_power(device)
         device["is_klarstein_supply"] = bool(
             device["source_system"] == "zigbee2mqtt"

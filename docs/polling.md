@@ -149,6 +149,11 @@ A teljes, normalizált JSON megtekintéséhez hagyjuk el a `--summary` kapcsoló
   futási ideje és esetleges hibája a `poll_attempts` táblába kerül, a sikeres
   állapot részletei pedig a `device_states.raw_state` mezőbe.
 
+  A `network_check_mode: "ping"` konfigurációjú hálózati infrastruktúránál a
+  siker feltétele kizárólag az ICMP-válasz; HTTP-kérés nem készül. Ezt használja
+  az öt Deco mesh-egység, mert a felügyelet célja a csomópont hálózati
+  elérhetősége, nem egy esetleges webfelület vizsgálata.
+
 Az első ilyen eszköz a Xerox B235 nyomtató: `xeroxb235.home`
 (`192.168.0.2`). Az alapértelmezett lekérdezési időköz 10 perc.
 

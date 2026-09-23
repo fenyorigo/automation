@@ -66,6 +66,19 @@
       "mac_address": "",
       "device_id": "printer",
       "display_name": "Hálózati nyomtató",
+      "network_check_mode": "http",
+      "network_device_kind": "printer",
+      "enabled": true
+    },
+    {
+      "source_system": "network_device",
+      "hostname": "mesh-node.home",
+      "expected_ip": "192.0.2.61",
+      "mac_address": "02:00:00:00:00:61",
+      "device_id": "mesh-node",
+      "display_name": "Wi-Fi mesh node",
+      "network_check_mode": "ping",
+      "network_device_kind": "deco",
       "enabled": true
     }
   ]

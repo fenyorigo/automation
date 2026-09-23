@@ -1,6 +1,6 @@
 # Otthonautomatizálási eszközleltár
 
-Frissítve az éles adatbázis alapján: **2026-09-16**.
+Frissítve az éles adatbázis és a hálózati leltár alapján: **2026-09-23**.
 
 A tényleges, aktuális név, aktív állapot és helyiség-hozzárendelés elsődleges
 forrása a `think260x` adatbázisa és az alkalmazás **Nyilvántartás** oldala. Ez a
@@ -103,6 +103,21 @@ szenzorrekordok inaktívak, történeti méréseik és helytörténetük megmara
 | Linux | `260x` | `think260x.home` | Emelet / Kis nappali |
 | Linux | `t470` | `t470` (`192.168.10.2`) | Emelet / Kis nappali |
 | Hálózati felügyelet | `Xerox B235` | `xeroxb235.home` | Emelet / Kis nappali |
+
+### Deco Wi-Fi mesh
+
+| MAC-cím | Statikus DHCP-cím | Név |
+|---|---|---|
+| `e4:fa:c4:b7:ec:54` | `192.168.0.38` | `deco-main` |
+| `e4:fa:c4:b7:bc:b0` | `192.168.0.39` | `deco-office` |
+| `e4:fa:c4:b7:d1:80` | `192.168.0.40` | `deco-stair` |
+| `ac:a7:f1:d0:6d:78` | `192.168.0.48` | `deco-konyha` |
+| `ac:a7:f1:d0:2b:08` | `192.168.0.200` | `deco-telikert` |
+
+Mind az öt egységet az automation `network_device` illesztője ICMP-pinggel
+figyeli. A `deco-konyha` és a `deco-telikert` vezeték nélküli mesh-tag; a
+télikerti egység a bojler és a napelemes inverter irányában is javítja a
+lefedettséget.
 
 A korábbi `thinkpad220x` nyilvántartási rekordot 2026-09-16-án a helyére
 került `t470` vette át. Az eszköz- és szenzorrekordok azonosítói, a korábbi

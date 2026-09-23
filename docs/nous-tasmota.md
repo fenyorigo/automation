@@ -99,6 +99,14 @@ egyeztetés állítja be a helyes állapotot. A kézi UI-kapcsolás megmarad, de
 
 ## Üzemeltetési megjegyzések
 
+- A 2026-09-23-i áramkimaradások után egyik A1T sem volt stabilan elérhető:
+  a `nous-mainit`, `nous-auxit` és `nous-kazan` nem csatlakozott a hálózathoz,
+  a `nous-bojler` pedig csak időszakosan válaszolt pingre, HTTP-n nem. Mind a
+  négy dugaljat fizikailag kivettük; visszahelyezés előtt egyenként ellenőrizni
+  kell a Wi-Fi-konfigurációt, a `PowerOnState` értéket és a megmaradt mérési
+  kalibrációkat. Az adatbázis bekapcsolt reléjelzése csak az utolsó ismert
+  állapot, nem a kivett eszközök jelenlegi állapota.
+
 - A `nous-mainit` kritikus hálózati eszközöket táplál; kapcsolása az egész
   helyi infrastruktúrát leállíthatja.
 - A `nous-bojler` 1,8 kW-os névleges terhelése 235 V mellett kb. 7,7 A. A

@@ -174,6 +174,14 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
   Az első üzemi napon a gyenge Wi-Fi miatt a 05:00-s bekapcsolás csak 07:23-kor
   sikerült; a tervezett vezeték nélküli Deco-bővítés ezért üzembiztonsági
   jelentőségű, nem pusztán lefedettségi kényelmi fejlesztés.
+- Az öt Deco MAC-címe, statikus DHCP-címe és neve a
+  [`device-inventory.md`](device-inventory.md) fájlban van. Mindegyiket az
+  automation ping-alapú hálózati felügyelete figyeli; a `deco-konyha` és a
+  `deco-telikert` vezeték nélküli mesh-tag.
+- A 2026-09-23-i áramkimaradások után mind a négy Nous A1T-t fizikailag
+  kivettük, mert egyik sem állt helyre megbízhatóan. Visszahelyezésük előtt
+  eszközönként ellenőrizendő a Wi-Fi, a `PowerOnState` és a kalibráció; addig az
+  automation utolsó ismert állapota nem tekinthető tényleges reléállapotnak.
 
 ### Klarstein Norderney és ebédlői SONOFF
 

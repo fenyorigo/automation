@@ -5,6 +5,12 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- Az öt TP-Link Deco mesh-egység bekerült ping-alapú hálózati felügyeletbe,
+  HTTP-követelmény nélkül. A hálózati leltár rögzíti a MAC-címeket, a statikus
+  DHCP-címeket és a két vezeték nélküli bővítő szerepét.
+- Dokumentáltuk a négy Nous A1T áramkimaradás utáni kiesését és a
+  visszahelyezés előtt szükséges Wi-Fi-, `PowerOnState`- és kalibrációellenőrzést.
+
 - Az ESP32 nyers/cselekedeti hőmérséklet-váltó lekerült a kezdőlapról; a
   főmenü új **ESP32 (historikus)** oldalán az inaktivált eszközök megőrzött
   utolsó nyers és cselekedeti értékei külön megtekinthetők.

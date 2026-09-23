@@ -50,6 +50,8 @@ class DeviceConfig:
     ssh_user: str = "automation-monitor"
     ssh_identity_file: str = "/var/lib/automation/.ssh/id_ed25519_system_metrics"
     ssh_known_hosts_file: str = "/var/lib/automation/.ssh/known_hosts"
+    network_check_mode: str = "http"
+    network_device_kind: str = "generic"
 
 
 @dataclass
@@ -77,6 +79,12 @@ def load_devices(path: Path) -> list[DeviceConfig]:
     if data.get("schema_version") != 1:
         raise ValueError("Unsupported device configuration schema")
     devices = [DeviceConfig(**item) for item in data["devices"]]
+    for device in devices:
+        if device.network_check_mode not in {"http", "ping"}:
+            raise ValueError(
+                f"Unsupported network_check_mode for {device.device_id}: "
+                f"{device.network_check_mode!r}"
+            )
     identities = [(item.source_system, item.device_id) for item in devices]
     if len(identities) != len(set(identities)):
         raise ValueError("Duplicate source_system/device_id in device configuration")
@@ -265,6 +273,32 @@ def poll_network_device(config: DeviceConfig, timeout: float) -> PollResult:
     except (OSError, subprocess.TimeoutExpired):
         ping_ok = False
 
+    if config.network_check_mode == "ping":
+        return PollResult(
+            source_system=config.source_system,
+            device_id=config.device_id,
+            hostname=config.hostname,
+            observed_at=utc_now(),
+            success=ping_ok,
+            duration_ms=round((time.monotonic() - started) * 1000),
+            state={
+                "online": ping_ok,
+                "active": ping_ok,
+                "raw": {
+                    "resolved_ip": resolved_ip,
+                    "expected_ip": config.expected_ip or None,
+                    "ping_ok": ping_ok,
+                    "http_ok": None,
+                    "http_status": None,
+                    "url": None,
+                    "check_mode": "ping",
+                },
+            },
+            identity={"resolved_ip": resolved_ip, "mac_address": config.mac_address},
+            error_code=None if ping_ok else "ping_unreachable",
+            error_message=None if ping_ok else "Az eszköz nem válaszolt az ICMP pingre.",
+        )
+
     url = f"http://{target}/"
     try:
         with urllib.request.urlopen(url, timeout=timeout) as response:
@@ -296,6 +330,7 @@ def poll_network_device(config: DeviceConfig, timeout: float) -> PollResult:
                 "http_ok": http_ok,
                 "http_status": http_status,
                 "url": url,
+                "check_mode": "http",
             },
         },
         identity={"resolved_ip": resolved_ip, "mac_address": config.mac_address},

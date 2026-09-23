@@ -206,6 +206,10 @@ MIGRATIONS = (
         "v1_50_scheduled_power_control",
         ROOT / "SQL" / "migrations" / "050_home_automation_v1.49_to_v1.50.sql",
     ),
+    (
+        "v1_51_network_infrastructure_monitoring",
+        ROOT / "SQL" / "migrations" / "051_home_automation_v1.50_to_v1.51.sql",
+    ),
 )
 
 

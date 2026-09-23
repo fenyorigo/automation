@@ -18,7 +18,7 @@ DEVICE_METADATA = {
     "connectlife": ("climate", "Hisense ConnectLife"),
     "tasmota": ("power_meter", "NOUS A1T / Tasmota"),
     "linux_system": ("server", "Linux system"),
-    "network_device": ("printer", "Xerox B235"),
+    "network_device": ("network_node", "Network device"),
 }
 
 
@@ -169,13 +169,26 @@ class Database:
             raise RuntimeError(f"Device upsert failed for {config.device_id}")
         device_id = int(row[0])
         if config.source_system == "network_device":
+            if config.network_device_kind == "printer":
+                type_code, manufacturer_code, legacy_type, model = (
+                    "printer", "xerox", "printer", "Xerox B235"
+                )
+            elif config.network_device_kind == "deco":
+                type_code, manufacturer_code, legacy_type, model = (
+                    "network_node", "tp_link", "network_node", "TP-Link Deco"
+                )
+            else:
+                type_code, manufacturer_code, legacy_type, model = (
+                    "network_node", None, "network_node", "Network device"
+                )
             cursor.execute(
                 """UPDATE devices
-                   SET device_type_id=(SELECT id FROM device_types WHERE code='printer'),
-                       manufacturer_id=(SELECT id FROM manufacturers WHERE code='xerox'),
+                   SET device_type=?,model=?,
+                       device_type_id=(SELECT id FROM device_types WHERE code=?),
+                       manufacturer_id=(SELECT id FROM manufacturers WHERE code=?),
                        capability_mode='read_only',access_mode='network',control_enabled=0
                    WHERE id=?""",
-                (device_id,),
+                (legacy_type, model, type_code, manufacturer_code, device_id),
             )
         return device_id
 

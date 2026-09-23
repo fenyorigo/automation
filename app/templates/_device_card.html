@@ -133,8 +133,10 @@
   {% elif device.source_system == 'network_device' %}
   <dl class="state-grid">
     <div><dt>Ping</dt><dd>{% if device.network_ping_ok is sameas true %}Válaszol{% elif device.network_ping_ok is sameas false %}Nem válaszol{% else %}—{% endif %}</dd></div>
+    {% if device.network_check_mode != 'ping' %}
     <div><dt>Webfelület</dt><dd>{% if device.network_http_ok is sameas true %}Elérhető{% elif device.network_http_ok is sameas false %}Nem elérhető{% else %}—{% endif %}</dd></div>
     <div><dt>HTTP</dt><dd>{{ device.network_http_status or '—' }}</dd></div>
+    {% endif %}
     <div><dt>Feloldott IP</dt><dd>{{ device.network_resolved_ip or device.expected_ip or '—' }}</dd></div>
   </dl>
   {% elif device.source_system not in ['esp32', 'manual'] %}
