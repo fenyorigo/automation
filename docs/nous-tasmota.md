@@ -72,6 +72,16 @@ energiamérés pontosságának ellenőrzéséhez ismert, lehetőleg közel ohmos
 terhelés és külön referencia teljesítménymérő szükséges. Terhelés nélküli
 állapotból a teljesítménykalibráció nem állapítható meg.
 
+A `nous-bojler` első felfűtési ciklusában a még gyári `PowerCal=12530`
+`2231–2297 W` teljesítményt jelzett, miközben az egyidejű feszültség- és
+áramértékek szorzata `1,81–1,88 kW` volt. Stabil, tisztán ellenállásos
+terhelésnél a `PowerSet 1870` paranccsal a végleges érték `PowerCal=10132` lett;
+utána a kijelzés `1862–1875 W` között stabilizálódott. A kalibráció előtti
+135 mérési sort töröltük, az eszköz napi és összes energiaértéke pedig
+2026. szeptember 23-án 08:33:37-kor új, nulláról induló mérési életet kezdett.
+Az előző adatállapot mentése:
+`/var/backups/automation/home_automation_before_nous_bojler_measurement_reset_20260923T0832CEST.sql.gz`.
+
 ## Villanybojler időzítése
 
 A `nous-bojler` napi tápablakának egyetlen igazságforrása az automation.

@@ -164,10 +164,14 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
   részletes mérési tények és óvintézkedések a
   [`nous-tasmota.md`](nous-tasmota.md) fájlban vannak.
 - A `nous-bojler` a Télikert WC-ben lévő 1,8 kW-os villanybojlert táplálja.
-  A dugalj 235 V referencia alapján kalibrált (`VoltageCal=1515`). A napi
+  A dugalj 235 V referencia alapján kalibrált (`VoltageCal=1515`), a stabil
+  fűtési terheléssel beállított teljesítménykalibrációja `PowerCal=10132`. A napi
   05:00–12:00 tápablakot kizárólag az automation kezeli; a Tasmota saját
   időzítői kikapcsolva maradnak. Az időablak a Globális beállításoknál
   módosítható vagy felfüggeszthető.
+  Az első üzemi napon a gyenge Wi-Fi miatt a 05:00-s bekapcsolás csak 07:23-kor
+  sikerült; a tervezett vezeték nélküli Deco-bővítés ezért üzembiztonsági
+  jelentőségű, nem pusztán lefedettségi kényelmi fejlesztés.
 
 ### Klarstein Norderney és ebédlői SONOFF
 

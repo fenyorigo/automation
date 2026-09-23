@@ -7,7 +7,9 @@ helyi dátumok.
 
 - A `nous-bojler` közvetlen HTTP-lekérdezésű Tasmota eszközként bekerült a
   villanybojler táp- és fogyasztásfelügyeletébe. A 235 V-os referencia alapján
-  kalibrált feszültségméréshez `VoltageCal=1515` tartozik.
+  kalibrált feszültségméréshez `VoltageCal=1515`, a stabil 1,87 kW-os
+  fűtőterheléshez `PowerCal=10132` tartozik. A kalibráció előtti mérési sorok és
+  energiaösszesítők törlése után az üzemi idősor tiszta kezdőpontról indul.
 - A villanybojler napi, alapból 05:00–12:00 közötti tápablakát kizárólag az
   automation egyezteti legfeljebb egyperces késéssel. Az időablak a Globális
   beállításoknál kezelhető, a Tasmota saját időzítőire nincs szükség, a tényleges
