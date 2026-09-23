@@ -1265,6 +1265,57 @@ def load_dashboard(
     return devices, attempts
 
 
+def load_historic_esp32_devices() -> list[dict[str, Any]]:
+    """Return the preserved last raw/action temperatures of retired ESP32s."""
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT d.id,d.name,d.is_active,r.name AS room_name,z.name AS zone_name,
+                   sr.value AS temperature_c,sr.observed_at AS measurement_at,
+                   dtr.action_temperature_c,dtr.observed_at AS action_measurement_at,
+                   sc.calibration_offset_c,sc.filter_tau_seconds,
+                   sc.calculation_version
+              FROM devices d
+              LEFT JOIN rooms r ON r.id=d.room_id
+              LEFT JOIN zones z ON z.id=COALESCE(r.zone_id,d.zone_id)
+              LEFT JOIN sensors s ON s.id=(
+                    SELECT s2.id
+                      FROM sensors s2
+                     WHERE s2.device_id=d.id AND s2.sensor_type='temperature'
+                     ORDER BY s2.is_active DESC,s2.id DESC LIMIT 1
+              )
+              LEFT JOIN sensor_readings sr ON sr.id=(
+                    SELECT sr2.id
+                      FROM sensor_readings sr2
+                     WHERE sr2.sensor_id=s.id
+                     ORDER BY sr2.observed_at DESC,sr2.id DESC LIMIT 1
+              )
+              LEFT JOIN derived_temperature_readings dtr ON dtr.id=(
+                    SELECT dtr2.id
+                      FROM derived_temperature_readings dtr2
+                     WHERE dtr2.sensor_id=s.id
+                       AND dtr2.is_action_point=1
+                       AND dtr2.action_temperature_c IS NOT NULL
+                     ORDER BY dtr2.observed_at DESC,dtr2.id DESC LIMIT 1
+              )
+              LEFT JOIN sensor_calibrations sc ON sc.id=(
+                    SELECT sc2.id
+                      FROM sensor_calibrations sc2
+                     WHERE sc2.sensor_id=s.id
+                     ORDER BY sc2.valid_from DESC,sc2.id DESC LIMIT 1
+              )
+             WHERE d.source_system='esp32'
+             ORDER BY FIELD(z.name,'Emelet','Földszint'),z.name,r.name,d.name
+            """
+        )
+        return rows_as_dicts(cursor)
+    finally:
+        cursor.close()
+        connection.close()
+
+
 def annotate_boiler_operating_states(devices: list[dict[str, Any]]) -> None:
     """Separate observable mains supply from manually recorded boiler modes."""
     boiler = next(
@@ -2264,39 +2315,13 @@ def dashboard() -> str:
     if requested_view in {"device", "room"}:
         session["dashboard_view"] = requested_view
     view_mode = session.get("dashboard_view", "device")
-    requested_temperature = request.args.get("temperature")
-    if requested_temperature in {"raw", "action"}:
-        session["dashboard_temperature"] = requested_temperature
-    temperature_mode = session.get("dashboard_temperature", "raw")
-    has_action_temperature = any(
-        device.get("action_temperature_c") is not None
-        or device.get("cooling_action_temperature_c") is not None
-        for device in devices
-    )
+    temperature_mode = "raw"
     now_utc = datetime.now(UTC).replace(tzinfo=None)
     for device in devices:
-        use_action = temperature_mode == "action" and (
-            device["source_system"] == "esp32"
-            or device.get("cooling_action_temperature_c") is not None
-        )
-        if use_action:
-            device["display_temperature_c"] = (
-                device.get("cooling_action_temperature_c")
-                if device.get("cooling_action_temperature_c") is not None
-                else device["action_temperature_c"]
-            )
-            device["display_temperature_at"] = (
-                device["measurement_at"]
-                if device.get("cooling_action_temperature_c") is not None
-                else device["action_measurement_at"]
-            )
-            device["display_temperature_kind"] = "Cselekedeti hőmérséklet"
-            device["display_temperature_available"] = device["action_temperature_c"] is not None
-        else:
-            device["display_temperature_c"] = device["temperature_c"]
-            device["display_temperature_at"] = device["measurement_at"]
-            device["display_temperature_kind"] = "Nyers mérés"
-            device["display_temperature_available"] = device["temperature_c"] is not None
+        device["display_temperature_c"] = device["temperature_c"]
+        device["display_temperature_at"] = device["measurement_at"]
+        device["display_temperature_kind"] = "Nyers mérés"
+        device["display_temperature_available"] = device["temperature_c"] is not None
         device["display_temperature_is_stale"] = bool(
             device["display_temperature_at"]
             and now_utc - device["display_temperature_at"] > timedelta(hours=1)
@@ -2320,7 +2345,6 @@ def dashboard() -> str:
         pending_power_off=session.get("pending_power_off"),
         view_mode=view_mode,
         temperature_mode=temperature_mode,
-        has_active_esp32=has_action_temperature,
         cooling_advice=cooling_advice,
         heating_advice=heating_advice,
         climate_service_mode=climate_service_mode,
@@ -3924,6 +3948,18 @@ def poll_now():
     finally:
         manual_poll_lock.release()
     return redirect(url_for("dashboard"))
+
+
+@app.get("/esp32-history")
+def esp32_history() -> str:
+    temperature_mode = request.args.get("temperature", "raw")
+    if temperature_mode not in {"raw", "action"}:
+        temperature_mode = "raw"
+    return render_template(
+        "esp32_history.html",
+        devices=load_historic_esp32_devices(),
+        temperature_mode=temperature_mode,
+    )
 
 
 @app.get("/history")

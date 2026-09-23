@@ -42,14 +42,14 @@ lehet kijelentkezni.
 A kezdőlap az adatbázisban levő **utolsó ismert állapotot** mutatja. Az oldal
 megnyitása vagy frissítése önmagában nem kérdezi le az eszközöket.
 
-Az ESP32-k kijelzése a **Nyers mérés** és a **Cselekedeti** hőmérséklet között
-váltható. A választás az Eszközök, valamint a Zónák és helyiségek nézetben
-egyaránt érvényes, tehát nem kötődik zónához. A munkamenet megőrzi a választást.
-A cselekedeti érték csak kész `rézcső + doboz` kialakítással, érvényes
-kalibrációval és döntési engedéllyel rendelkező ESP–DS szenzornál jelenik meg.
-Más ESP32-nél a felület nem helyettesíti észrevétlenül nyers értékkel, hanem
-jelzi, hogy még nincs cselekedeti adat. A kártya megmutatja az EMA
-időállandóját, a kalibrációs korrekciót és a cselekedeti pont időpontját is.
+Az inaktivált ESP32-k már nem foglalnak helyet a kezdőlapon. A főmenü
+**ESP32 (historikus)** pontja külön oldalon mutatja a megőrzött utolsó értékeket,
+ahol a **Nyers mérés** és a **Cselekedeti** hőmérséklet között lehet váltani.
+A cselekedeti érték csak olyan ESP–DS szenzornál érhető el, amelyhez korábban
+érvényes kalibráció és döntési célú származtatott mérés készült. A historikus
+kártya az EMA időállandóját, a kalibrációs korrekciót és az utolsó érték
+időpontját is megmutatja. A teljes ESP32-idősor továbbra is a **Mérési
+előzmények** oldalon, az inaktivált eszközök közül választható ki.
 
 ### Nézetváltás
 
@@ -237,9 +237,8 @@ Nullázás előtt mindig készíts adatbázismentést. Kalibráció indításako
 a törlés után rögtön egy kézi lekérdezést futtatni, hogy az idősorok közös
 kezdőpontot kapjanak.
 
-A kezdőlapi **ESP32 hőmérséklet – Nyers mérés / Cselekedeti** választó csak
-akkor jelenik meg, ha van aktív ESP32 eszköz a nyilvántartásban. Az összes
-ESP32 archiválása után a már nem alkalmazható választó automatikusan eltűnik.
+Az ESP32 **Nyers mérés / Cselekedeti** választó az archiválás után a külön
+**ESP32 (historikus)** oldalra került, így a kezdőlapon nem jelenik meg.
 
 Ugyanez eszközszinten a **Nyilvántartás** oldalon, az adott eszköz lenyitása
 után az **Új mérési élet kezdése** részből is elvégezhető. Ez az eszközhöz

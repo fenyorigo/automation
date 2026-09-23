@@ -119,6 +119,8 @@ forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
   A temperature, humidity, battery és `battery_voltage` külön idősor; az
   `/online=false` normális. A frissességi színek határa 1, 2 és 4 óra.
 - Az ESP32-eszközök inaktívak és már nem vesznek részt a pollkörben; a
+  főmenü **ESP32 (historikus)** oldalán az utolsó nyers/cselekedeti értékük,
+  a **Mérési előzményekben** pedig a megőrzött teljes idősoruk elérhető. A
   jelenlegi hőmérsékleti gerinc Zigbee és Shelly.
 - A 2026-09-16-i élő leltárban 24 aktív Zigbee-eszköz volt: 9
   nyitásérzékelő, 9 hőmérő, 2 TRV és 4 router-dugalj. Az `SP ebédlő` a

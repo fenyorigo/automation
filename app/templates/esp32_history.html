@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>ESP32 hőmérsékletek – Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body class="{{ 'read-only' if not can_write }}">
+  <header class="topbar history-topbar">
+    <div><p class="eyebrow">Historikus eszközök</p><h1>ESP32 hőmérsékletek</h1></div>
+    <a class="back-link" href="{{ url_for('dashboard') }}">Vissza az áttekintőhöz</a>
+    {% include '_account_menu.html' %}
+  </header>
+  <main>
+    <section class="history-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">Megőrzött utolsó értékek</p><h2>Nyers és cselekedeti hőmérséklet</h2></div>
+        <nav class="view-switch temperature-mode-switch" aria-label="ESP32 hőmérséklet típusa">
+          <a class="{{ 'selected' if temperature_mode == 'raw' }}" href="{{ url_for('esp32_history', temperature='raw') }}">Nyers mérés</a>
+          <a class="{{ 'selected' if temperature_mode == 'action' }}" href="{{ url_for('esp32_history', temperature='action') }}">Cselekedeti</a>
+        </nav>
+      </div>
+      <p class="notice">Az ESP32 eszközök már nem vesznek részt az üzemi adatgyűjtésben. Ez a nézet a megőrzött utolsó értékeket mutatja; a teljes idősor a Mérési előzmények oldalon érhető el.</p>
+      {% if devices %}<div class="device-grid esp32-history-grid">
+        {% for device in devices %}
+        {% set value = device.temperature_c if temperature_mode == 'raw' else device.action_temperature_c %}
+        {% set observed_at = device.measurement_at if temperature_mode == 'raw' else device.action_measurement_at %}
+        <article class="device-card historic-device-card">
+          <div class="card-heading"><div><p class="source">ESP32 · {{ device.zone_name or 'Zónán kívül' }}</p><h3>{{ device.name }}</h3></div><span class="badge warning">Historikus</span></div>
+          <p class="room-name">{{ device.room_name or 'Nincs helyiséghez rendelve' }}</p>
+          <div class="temperature"><span class="temperature-value">{{ value|temperature if value is not none else '—' }}</span><span class="temperature-unit">°C</span></div>
+          {% if temperature_mode == 'action' %}
+            {% if value is not none %}<p class="temperature-provenance"><strong>Cselekedeti</strong>{% if device.filter_tau_seconds %} · EMA {{ device.filter_tau_seconds // 60 }} perc{% endif %}{% if device.calibration_offset_c is not none %} · korrekció {{ '%+.3f'|format(device.calibration_offset_c|float) }} °C{% endif %}</p>
+            {% else %}<p class="temperature-provenance unavailable"><strong>Nincs megőrzött cselekedeti adat</strong></p>{% endif %}
+          {% else %}<p class="temperature-provenance"><strong>Nyers mérés</strong> · változatlan szenzoradat</p>{% endif %}
+          <footer class="card-footer"><span>{{ 'Inaktivált eszköz' if not device.is_active else 'Aktív nyilvántartási elem' }}</span><time>{{ observed_at|local_time if observed_at else 'nincs adat' }}</time></footer>
+        </article>
+        {% endfor %}
+      </div>{% else %}<p class="empty-state">Nincs ESP32 eszköz a nyilvántartásban.</p>{% endif %}
+      <p><a class="history-link" href="{{ url_for('history') }}">Teljes mérési előzmények megnyitása</a></p>
+    </section>
+  </main>
+</body>
+</html>

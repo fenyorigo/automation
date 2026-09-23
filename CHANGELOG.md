@@ -5,6 +5,10 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- Az ESP32 nyers/cselekedeti hőmérséklet-váltó lekerült a kezdőlapról; a
+  főmenü új **ESP32 (historikus)** oldalán az inaktivált eszközök megőrzött
+  utolsó nyers és cselekedeti értékei külön megtekinthetők.
+
 - A `nous-bojler` közvetlen HTTP-lekérdezésű Tasmota eszközként bekerült a
   villanybojler táp- és fogyasztásfelügyeletébe. A 235 V-os referencia alapján
   kalibrált feszültségméréshez `VoltageCal=1515`, a stabil 1,87 kW-os
