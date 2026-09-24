@@ -99,6 +99,35 @@ a célértéküket, üzemmódjukat vagy szelepállásukat. Új TRV párosítás 
 automatikusan létrejön, de a megfelelő helyiséget a **Nyilvántartás** oldalon
 hozzá kell rendelni.
 
+A kezdőlap **Eszköztípus** listájának **Problémás eszközök** nézete az
+egyértelmű beavatkozást igénylő állapotokat gyűjti össze. Ide tartozik a TRV
+hibakódja vagy sikertelen kalibrációja, az explicit Zigbee2MQTT `offline`
+állapot, a 24 óránál régebbi nem-kontakt Zigbee-adat, a 4 óránál régebbi
+Shelly-mérés, valamint az engedélyezett periodikus lekérdezés hibája. A
+szándékosan kikapcsolt lekérdezés és az elérhető, de ritkán jelentkező
+nyitásérzékelő régi állapota nem minősül problémának. A kártya a besorolás
+konkrét okát is kiírja.
+
+#### TRV szelepút újrakalibrálása
+
+A `valve_adjustment_issue_detected` jelzésnél nincs szükség gyári
+visszaállításra vagy újrapárosításra. Először ellenőrizni kell, hogy az adapter,
+a megfelelő hosszabbító tüske és az alsó fémanya stabilan, központosan illeszkedik,
+valamint az elem töltöttsége megfelelő. Ezután a Zigbee2MQTT eszközoldalán az
+**Exposes** résznél a **Valve travel calibration** műveletet kell `calibrate`
+értékkel elindítani. A készüléket a folyamat alatt nem szabad elfordítani vagy
+levenni. A művelet ugyanígy MQTT-n is kiadható:
+
+```text
+topic: zigbee2mqtt/FRIENDLY_NAME/set
+payload: {"valve_travel_calibration":"calibrate"}
+```
+
+A végén a `motor_travel_calibration_status` értékének `success` állapotba, a
+`fault_code` értékének pedig `none` állapotba kell kerülnie. Ha a kalibráció
+látszólag sikeres, de a hibakód megmarad, az adapter/tüskehossz mechanikai
+illesztését kell korrigálni, majd ismét kalibrálni.
+
 A Shelly H&T Gen3 elemes, deep-sleep eszköz; az `/online=false` nem offline
 hiba. A kártya a legutóbbi tényleges mérés kora alapján fokozatosan változik:
 

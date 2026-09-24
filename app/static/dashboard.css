@@ -56,6 +56,7 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .device-card.is-warning { border-color: #dfc66e; }
 .device-card.is-delayed { border-color: #dda05f; }
 .device-card.is-power-off { border-color: #b42318; background: #fff0ed; }
+.device-card.has-problem { border-color: #b42318; }
 .device-location { margin-top:7px; color:var(--muted); font-size:.68rem; }
 .device-poll-interval { margin-top:8px; color:var(--muted); font-size:.68rem; }
 .device-poll-interval strong { color:var(--ink); }
@@ -74,6 +75,8 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .badge.boiler-on { margin-top: 8px; background: var(--green-soft); color: var(--green); }
 .badge.boiler-off { margin-top: 8px; background: #ece6d5; color: #171717; }
 .badge.heating-alert { margin-top: 8px; background: #b42318; color: #fff; white-space: normal; }
+.device-problem { display:grid; gap:4px; margin-top:10px; padding:10px 12px; border-radius:10px; background:#fff0ed; color:#7a1812; font-size:.74rem; line-height:1.4; }
+.device-problem span { display:block; }
 .temperature { display: flex; align-items: start; margin: 25px 0 20px; font-variant-numeric: tabular-nums; }
 .temperature-value { font-size: clamp(3.1rem, 8vw, 4.6rem); font-weight: 700; line-height: .85; letter-spacing: -.075em; }
 .temperature-unit { padding: 2px 0 0 8px; color: var(--muted); font-size: 1rem; font-weight: 700; }

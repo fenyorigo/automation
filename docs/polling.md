@@ -227,6 +227,14 @@ kártya mutatja, de ezekből nem készül numerikus mérési idősor. Frissen
 párosított TRV az elem százalékát később is jelentheti; a hiányzó első
 elemérték nem collectorhiba.
 
+A szelepút a párosítás megtartásával újrakalibrálható. A Zigbee2MQTT
+eszközoldalán az **Exposes / Valve travel calibration** mezőnél a `calibrate`
+műveletet kell indítani, amely MQTT-n a
+`zigbee2mqtt/FRIENDLY_NAME/set` topicra küldött
+`{"valve_travel_calibration":"calibrate"}` üzenetnek felel meg. A befejezést a
+`motor_travel_calibration_status=success`, a mechanikai hiba megszűnését a
+`fault_code=none` igazolja.
+
 Az SNZB-02WD kültéri hőmérő jelentései ezen felül időbélyeges
 `outdoor_temperature_observations` sorokat hoznak létre. A hozzá tartozó
 Zigbee2MQTT-forrás automatikusan aktív, 1. prioritású és 120 percig friss;

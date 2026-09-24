@@ -5,6 +5,13 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A kezdőlap **Eszköztípus** választója új **Problémás eszközök** nézetet kapott.
+  A nézet indoklással együtt mutatja a TRV-hibákat, a tényleges Zigbee-kiesést,
+  a nagyon régi Zigbee- és Shelly-adatot, valamint az aktív polling hibáját;
+  az alvó nyitásérzékelő régi állapota és a kikapcsolt polling nem téves riasztás.
+- Dokumentáltuk a SONOFF TRV Gen2 párosítás nélküli szelepút-kalibrálását és
+  annak ellenőrző státuszait.
+
 - Az öt TP-Link Deco mesh-egység bekerült ping-alapú hálózati felügyeletbe,
   HTTP-követelmény nélkül. A hálózati leltár rögzíti a MAC-címeket, a statikus
   DHCP-címeket és a két vezeték nélküli bővítő szerepét.

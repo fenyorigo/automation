@@ -123,6 +123,8 @@ DEVICE_GROUPS = (
     ("network_device", "Hálózati eszközök"),
 )
 
+PROBLEMATIC_ZIGBEE_STALE_AFTER = timedelta(hours=24)
+
 COMPUTHERM_LOCATION = {
     "iot-computherm-emelet": "emelet",
     "iot-computherm-foldszint": "földszint",
@@ -1515,6 +1517,59 @@ def mark_climate_control_devices(
         item["climate_control_relevant"] = int(item["id"]) in relevant_ids
 
 
+def mark_problematic_devices(
+    devices: list[dict[str, Any]],
+    now_utc: datetime | None = None,
+) -> None:
+    """Mark actionable faults without treating sleeping contacts as failed."""
+    now = now_utc or datetime.now(UTC).replace(tzinfo=None)
+    for item in devices:
+        reasons: list[str] = []
+        source = str(item.get("source_system") or "")
+        device_type = str(item.get("device_type") or "")
+
+        if source == "zigbee2mqtt":
+            fault_code = str(item.get("trv_fault_code") or "").casefold()
+            if fault_code not in {"", "none"}:
+                reasons.append(
+                    "Szelepbeállítás szükséges"
+                    if fault_code == "valve_adjustment_issue_detected"
+                    else f"Eszközhiba: {item['trv_fault_code']}"
+                )
+
+            calibration_status = str(
+                item.get("trv_calibration_status") or ""
+            ).casefold()
+            if calibration_status in {"error", "failed", "failure"}:
+                reasons.append("Szelepkalibráció sikertelen")
+
+            if str(item.get("zigbee_availability") or "").casefold() == "offline":
+                reasons.append("A Zigbee-eszköz nem elérhető")
+            elif device_type != "contact_sensor":
+                last_message = item.get("mqtt_message_at")
+                if last_message is None:
+                    reasons.append("Még nincs Zigbee-adat")
+                elif max(now - last_message, timedelta(0)) > PROBLEMATIC_ZIGBEE_STALE_AFTER:
+                    reasons.append("Több mint 24 órája nem érkezett Zigbee-adat")
+
+        elif source == "shelly_mqtt":
+            last_measurement = item.get("shelly_last_measurement_at")
+            if last_measurement is None:
+                reasons.append("Még nincs Shelly-mérés")
+            elif max(now - last_measurement, timedelta(0)) > timedelta(hours=4):
+                reasons.append("Több mint 4 órája nem érkezett Shelly-mérés")
+
+        elif (
+            item.get("polling_enabled")
+            and not item.get("is_manual_visual")
+            and item.get("online") is False
+        ):
+            reasons.append("A legutóbbi lekérdezés sikertelen")
+
+        item["problem_reasons"] = reasons
+        item["problematic"] = bool(reasons)
+
+
 def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     connection = connect_database()
     cursor = connection.cursor()
@@ -2311,6 +2366,7 @@ def dashboard() -> str:
         heating_advice = annotate_upstairs_heating(devices, outdoor_temperature)
         annotate_ground_floor_heating(devices)
     mark_climate_control_devices(devices, outdoor_temperature)
+    mark_problematic_devices(devices)
     outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")
     if requested_view in {"device", "room"}:
