@@ -66,6 +66,11 @@ előzmények** oldalon, az inaktivált eszközök közül választható ki.
   **Lekérdezési körben** jelölővel az összes vagy a kiválasztott típuson belül
   csak az automatikusan lekérdezett eszközök maradnak láthatók. A böngésző a
   típust és a jelölő állapotát is megjegyzi.
+- A fejléc elérhetőségi összesítője három csoportot különít el. Az
+  **elérhető** tört csak az aktívan felügyelt eszközöket számolja; a **Kézi**
+  érték a kizárólag kézzel nyilvántartott berendezések száma; az **Offline**
+  érték pedig az aktív nyilvántartásban maradó, de a lekérdezési/gyűjtési
+  körből szándékosan kivett nem kézi eszközök száma.
 - **Zónák és helyiségek:** emelet, földszint és zónán kívüli terület szerint
   csoportosít; az eszköz nélküli helyiségeket is megmutatja. A helyiségszűrő
   egyetlen kiválasztott szobára szűkítheti a nézetet.

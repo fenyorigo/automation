@@ -1570,6 +1570,21 @@ def mark_problematic_devices(
         item["problematic"] = bool(reasons)
 
 
+def dashboard_device_counts(
+    devices: list[dict[str, Any]],
+) -> tuple[int, int, int, int]:
+    """Return online/monitored, manual and intentionally offline counts."""
+    monitored = [item for item in devices if item.get("polling_enabled")]
+    successful = sum(1 for item in monitored if item.get("online"))
+    manual = sum(1 for item in devices if item.get("is_manual_visual"))
+    offline = sum(
+        1
+        for item in devices
+        if not item.get("polling_enabled") and not item.get("is_manual_visual")
+    )
+    return successful, len(monitored), manual, offline
+
+
 def load_outdoor_sources() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     connection = connect_database()
     cursor = connection.cursor()
@@ -2383,8 +2398,9 @@ def dashboard() -> str:
             device["display_temperature_at"]
             and now_utc - device["display_temperature_at"] > timedelta(hours=1)
         )
-    successful = sum(1 for item in devices if item["online"])
-    monitored_count = sum(1 for item in devices if item["polling_enabled"])
+    successful, monitored_count, manual_count, offline_count = dashboard_device_counts(
+        devices
+    )
     latest_poll = max(
         (item["last_poll_at"] for item in devices if item["last_poll_at"]),
         default=None,
@@ -2396,6 +2412,8 @@ def dashboard() -> str:
         attempt_origin=attempt_origin,
         successful=successful,
         monitored_count=monitored_count,
+        manual_count=manual_count,
+        offline_count=offline_count,
         latest_poll=latest_poll,
         poll_marker=latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
         poll_notice=session.pop("poll_notice", None),

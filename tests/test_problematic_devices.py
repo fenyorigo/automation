@@ -9,7 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "app"))
 
-from dashboard import mark_problematic_devices
+from dashboard import dashboard_device_counts, mark_problematic_devices
 
 
 class ProblematicDevicesTest(unittest.TestCase):
@@ -88,6 +88,16 @@ class ProblematicDevicesTest(unittest.TestCase):
         )
         self.assertIn('<option value="problematic">Problémás eszközök</option>', template)
         self.assertIn('data-problematic="{{ \'true\' if device.problematic else \'false\' }}"', card)
+
+    def test_dashboard_counts_monitored_manual_and_offline_separately(self) -> None:
+        devices = [
+            {"polling_enabled": True, "online": True, "is_manual_visual": False},
+            {"polling_enabled": True, "online": False, "is_manual_visual": False},
+            {"polling_enabled": False, "online": None, "is_manual_visual": True},
+            {"polling_enabled": False, "online": False, "is_manual_visual": False},
+        ]
+
+        self.assertEqual(dashboard_device_counts(devices), (1, 2, 1, 1))
 
 
 if __name__ == "__main__":

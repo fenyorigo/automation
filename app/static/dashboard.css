@@ -26,7 +26,8 @@ h1 { font-size: clamp(2rem, 6vw, 3.4rem); letter-spacing: -.055em; line-height: 
 h2 { font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.035em; }
 h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .eyebrow, .source { color: var(--green); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.system-status { flex: 0 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 11px 16px; box-shadow: var(--shadow); color: var(--muted); }
+.system-status { flex: 0 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 11px 16px; box-shadow: var(--shadow); color: var(--muted); white-space:nowrap; }
+.system-status-secondary { margin-left:4px; }
 .history-link, .back-link { color: var(--green); font-size: .82rem; font-weight: 800; text-decoration: none; }
 .history-link:hover, .back-link:hover { text-decoration: underline; }
 .account-menu { display:flex; align-items:center; gap:9px; padding:7px 8px 7px 12px; border:1px solid var(--line); border-radius:999px; background:var(--card); }

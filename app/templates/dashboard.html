@@ -35,6 +35,7 @@
     <div class="system-status" aria-label="Elérhető eszközök">
       <span class="status-dot"></span>
       <strong>{{ successful }}/{{ monitored_count }}</strong> eszköz elérhető
+      <span class="system-status-secondary">· Kézi: <strong>{{ manual_count }}</strong> · Offline: <strong>{{ offline_count }}</strong></span>
     </div>
     {% include '_account_menu.html' %}
     {% if can_write %}

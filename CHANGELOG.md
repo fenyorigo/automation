@@ -5,6 +5,8 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A fejléc elérhetőségi összesítője az aktívan felügyelt eszközök törtje mellett
+  külön mutatja a kézi és a lekérdezési körből kivett offline eszközök számát.
 - A kezdőlap **Eszköztípus** választója új **Problémás eszközök** nézetet kapott.
   A nézet indoklással együtt mutatja a TRV-hibákat, a tényleges Zigbee-kiesést,
   a nagyon régi Zigbee- és Shelly-adatot, valamint az aktív polling hibáját;
