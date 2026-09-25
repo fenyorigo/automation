@@ -64,8 +64,9 @@ class WaterHeaterScheduleTest(unittest.TestCase):
         template = (ROOT / "app/templates/_device_card.html").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Automatikus tápablak", template)
-        self.assertIn("legfeljebb egy percen belül", template)
+        self.assertIn("Engedélyezett időablak", template)
+        self.assertIn("Program {{ 'aktív'", template)
+        self.assertIn("A program nem vezérli a dugaljat", template)
 
 
 if __name__ == "__main__":

@@ -2697,6 +2697,34 @@ def reload_global_settings():
     return redirect(url_for("global_settings"))
 
 
+@app.post("/devices/<int:device_id>/water-heater-schedule")
+@editor_required
+def set_water_heater_schedule(device_id: int):
+    validate_csrf()
+    requested_value = request.form.get("schedule_enabled")
+    if requested_value not in {"0", "1"}:
+        abort(400)
+    device = load_switchable_device(device_id)
+    if device is None or device.get("hostname") != WATER_HEATER_HOSTNAME:
+        abort(404)
+    enabled = requested_value == "1"
+    try:
+        set_global_setting_value(
+            "WATER_HEATER_SCHEDULE_ENABLED", "true" if enabled else "false"
+        )
+        session["poll_notice"] = {
+            "kind": "success",
+            "message": (
+                "A villanybojler automatikus programját bekapcsoltuk."
+                if enabled
+                else "A villanybojler automatikus programját kikapcsoltuk."
+            ),
+        }
+    except (OSError, ValueError) as error:
+        session["poll_notice"] = {"kind": "error", "message": str(error)}
+    return redirect(url_for("dashboard") + f"#device-{device_id}")
+
+
 @app.post("/backups")
 @editor_required
 def create_backup():

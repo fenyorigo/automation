@@ -124,11 +124,14 @@ Az 1.3.1 verzió az emeleti fűtés megfigyelő modelljét vezeti be. Kiszámolj
 helyiségi igényeket és a zónaszintű hőforrás-javaslatot, de sem a Hisense
 klímákat, sem a Computhermet nem vezérli.
 
-Minden klimatizált emeleti helyiségben az aktív Zigbee hőmérő a mérvadó. A
-Hisense saját mérése `0,20`, a dolgozóban lévő Computherm mérése `0,10` súllyal
-korrigálhatja a helyiségi cselekedeti hőmérsékletet. Az alapértelmezett fűtési
-igény `20,0 °C` alatt indulna, aktív fűtésnél pedig `20,5 °C`-ig maradna fenn.
-Az értékek, súlyok és a mérési adatok legnagyobb kora a Globális beállításokban
+Minden klimatizált emeleti helyiségben az aktív Zigbee hőmérő a mérvadó. Ha
+ugyanahhoz a helyiséghez friss Computherm-mérés is tartozik, a két forrás
+közösen adja a cselekedeti hőmérsékletet; az alapértelmezett `0,50` Computherm-
+súly számtani átlagot jelent. Az összerendelés kizárólag az aktuális
+helyiség-hozzárendelés alapján történik, ezért a Computherm áthelyezése nem
+igényel kódmódosítást. Computherm nélküli klimatizált helyiségben a Hisense
+saját mérése `0,20` súllyal korrigálhatja a Zigbee-mérést. A határértékek,
+súlyok és a mérési adatok legnagyobb kora a Globális beállításokban
 módosítható.
 
 A hőforrás-választás zónaszintű és kölcsönösen kizáró:
@@ -169,10 +172,11 @@ első új pollig az állapot ellenőrzésre vár. A felismerési határ a
 mért nyugalmi fogyasztás stabil 5 W.
 
 A földszinti zónában nincs klíma, ezért ott nincs hőforrás-választás. A
-földszinti Computherm kártyájának külön, gáz-only javaslata a termosztát `active`
-jelét és a Bosch fűtési elérhetőségét értékeli. Fűtési kérés és elérhető
-kazánfűtés esetén aktív gázfűtést jelez; ellenkező esetben helyszíni
-bekapcsolást kér; reléjel nélkül nincs földszinti fűtési igény. Ez továbbra is
+Computherm aktuális helyiségében lévő friss Zigbee-hőmérő és a CT mérése
+alapértelmezetten 50–50%-os cselekedeti átlagot ad; ha csak az egyik friss, az
+marad az átmeneti alap. A kártya külön jelzi a Computherm tényleges `active`
+reléigényét és az automation határértékből számított hőigényét. A Bosch
+bekapcsolási figyelmeztetése továbbra is a valódi CT-reléigényt követi. Ez
 megfigyelő információ, eszközparancsot nem küld.
 
 ## Radiátortermosztátok

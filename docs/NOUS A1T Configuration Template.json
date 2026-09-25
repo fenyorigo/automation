@@ -1,0 +1,29 @@
+{"NAME":"NOUS A1T","GPIO":[32,0,0,0,2720,2656,0,0,2624,320,224,0,0,0],"FLAG":0,"BASE":49}
+
+Activate:	on
+
+lekérdezés: PowerOnState
+beállítás:	PowerOnState 1
+
+Ha a helyére került:
+
+A Console-on:
+VoltageSet xxx
+
+Visszakérdezni:
+Status 10
+VoltageCal
+PowerOnState
+Template
+
+A legutolsó mérés:
+auxit:   VoltageSet 229
+mainit:  VoltageSet 230
+kazan:   VoltageSet 229
+bojler:  VoltageSet 230
+
+HTTP API engedélyezés a konzolon:
+SetOption128 1
+
+Ellenőrzés
+SetOption128

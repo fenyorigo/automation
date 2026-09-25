@@ -7,7 +7,7 @@
   <title>Otthonklíma</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 </head>
-<body class="{{ 'read-only' if not can_write }}">
+<body class="dashboard-page {{ 'read-only' if not can_write }}">
   <header class="topbar dashboard-topbar">
     <div class="dashboard-heading">
       <p class="eyebrow">Otthoni automatizálás</p>

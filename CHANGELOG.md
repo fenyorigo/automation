@@ -5,6 +5,12 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Klarstein Norderney kártyáján a **Külső fogyasztásmérővel** kiegészítő
+  felirat a Villanyfűtő típusjelöléssel arányos, kisebb betűméretet kapott.
+- A kezdőlap korábbi, rögzített háromoszlopos eszközrácsa reszponzív lett. A
+  dashboard nagy képernyőn akár öt kártyát is megjelenít egy sorban, kisebb
+  szélességen automatikusan 4/3/2/1 oszlopra vált, vízszintes görgetés nélkül;
+  a többi oldal keskenyebb, űrlapokhoz igazított szélessége nem változott.
 - A fejléc elérhetőségi összesítője az aktívan felügyelt eszközök törtje mellett
   külön mutatja a kézi és a lekérdezési körből kivett offline eszközök számát.
 - A kezdőlap **Eszköztípus** választója új **Problémás eszközök** nézetet kapott.

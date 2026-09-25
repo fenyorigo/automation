@@ -137,11 +137,12 @@ forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
   nyitott–bukó váltás pillanatnyi csukását.
 - Az emeleti hűtési és fűtési logika **megfigyelő módban** működik: megmutatja,
   mit tenne, de automatikus parancsot még nem küld. A mérvadó helyiségi adat a
-  Zigbee hőmérő; a Hisense és a dolgozóban a Computherm csak kisebb súlyú
-  korrekció.
-- A földszinti zóna csak gázfűtéses; a vendégszobai Zigbee hőmérő és a
-  földszinti Computherm információforrásként látszik. A rendszer ott sem
-  vezérli még a kazánt.
+  Zigbee hőmérő. Ha ugyanabban a helyiségben friss Computherm-mérés is van, a
+  két érték alapértelmezetten 50–50%-os cselekedeti átlagot ad; az
+  összerendelés helyiség-alapú, nem eszköz- vagy szobanévhez huzalozott.
+- A földszinti zóna csak gázfűtéses. A Computherm kártyája külön mutatja a CT
+  tényleges reléigényét és a CT–Zigbee cselekedeti átlagból számított
+  automation-hőigényt. A rendszer ott sem vezérli még a kazánt.
 - Kézi és programozott Hisense-vezérlés már működik preflighttal,
   visszaolvasással és audittal. A klíma- és gázkazánszerviz módok, valamint a
   visszaállítható Computherm szervizteszt elkészültek.
@@ -150,27 +151,21 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
 [`dontesi-logika.md`](dontesi-logika.md) és az
 [`app/global_settings.py`](../app/global_settings.py) tartalmazza.
 
-### Bosch 7000i, Nous kazándugalj és villanybojler
+### Bosch 7000i és villanybojler
 
-- A `nous-kazan.home` és az `SP ebédlő` a két UI-ból kapcsolható dugalj. A
-  többi Zigbee-router és IT-dugalj nincs engedélyezve. Kikapcsolásuk piros
-  második megerősítést kér; az állapottal azonos kapcsológomb inaktív, a
-  kikapcsolt kártya pedig piros jelölést kap.
-- Az igazolt Nous-lekapcsolás a Bosch táp-, melegvíz- és fűtésjelzését is
-  kikapcsolja és naplózza. Visszakapcsolás jelenleg csak a tápot állítja
-  aktívra; a másik két jelölés kézi.
-- A friss, legalább 2 W-os fogyasztás igazolja a Bosch saját power kapcsolóját;
-  a mért nyugalmi érték kb. 5 W. Bekapcsolt Nous és friss 0 W piros
-  figyelmeztetés.
-- A `nous-kazan` feszültsége 235,5 V referencia alapján kalibrált. A
-  részletes mérési tények és óvintézkedések a
-  [`nous-tasmota.md`](nous-tasmota.md) fájlban vannak.
-- A `nous-bojler` a Télikert WC-ben lévő 1,8 kW-os villanybojlert táplálja.
-  A dugalj 235 V referencia alapján kalibrált (`VoltageCal=1515`), a stabil
-  fűtési terheléssel beállított teljesítménykalibrációja `PowerCal=10132`. A napi
+- A Bosch tápellátását ismét a `nous-kazan` (`.47`,
+  `C8:C9:A3:2B:35:60`) kapcsolja és méri. A kazánpanel, a melegvíz- és a
+  fűtésengedély állapota továbbra is kézi nyilvántartású. A dugalj a teljes
+  Tasmota-reset után új rekordként, nulláról induló mérési előzménnyel került
+  vissza; az első ellenőrzött terhelés 8 W és 231 V volt.
+- Az aktív `nous-bojler` a Télikert WC-ben lévő 1,8 kW-os villanybojlert
+  táplálja: `.46`, `C8:C9:A3:2B:34:11`, Tasmota `tasmota-2B3411-5137`.
+  Feszültségét 229 V referenciával kalibráltuk. A napi
   05:00–12:00 tápablakot kizárólag az automation kezeli; a Tasmota saját
   időzítői kikapcsolva maradnak. Az időablak a Globális beállításoknál
-  módosítható vagy felfüggeszthető.
+  módosítható vagy felfüggeszthető. A programot a nyilvántartás rendezése után
+  ismét bekapcsoltuk; az első teljes felfűtési ciklus teljesítményét továbbra
+  is ellenőrizni kell.
   Az első üzemi napon a gyenge Wi-Fi miatt a 05:00-s bekapcsolás csak 07:23-kor
   sikerült; a tervezett vezeték nélküli Deco-bővítés ezért üzembiztonsági
   jelentőségű, nem pusztán lefedettségi kényelmi fejlesztés.
@@ -253,6 +248,19 @@ A részletes, karbantartandó lista a [`teendok.md`](teendok.md). A következő
 6. A Zigbee2MQTT ismert leállási `write after end` upstream hibájának követése,
    és egy későbbi teljes házas áramszünet-visszatérési próba minden
    nyitásérzékelővel.
+7. A dashboard korábbi, rögzített háromoszlopos eszközrácsa elkészült
+   reszponzív változatban. A dashboard legfeljebb 1840 pixel széles lehet, a
+   CSS-rács pedig legalább 300 pixeles kártyákkal automatikusan 1–5 oszlopot
+   képez, vízszintes görgetés nélkül. A többi, űrlapközpontú oldal megtartotta
+   az 1180 pixeles tartalomszélességet. Külön JavaScriptes szélességmérés nincs.
+8. Home Assistant Container próba a `think260x` Fedora rendszerén, a meglévő
+   Mosquitto és Zigbee2MQTT megtartásával. A HA lehetséges szerepe az általános
+   kezelőfelület, mobilos értesítés és eszközintegráció; az automation maradjon
+   az összetett döntési szabályok, az energiaszámítás, az idősoros adatbázis és
+   a biztonsági kapuzás igazságforrása. Külön ellenőrizendő, hogy a HA Tasmota-
+   integráció az itt használt firmware-eknél pontosan milyen frissítésjelzést
+   és OTA-frissítési folyamatot biztosít. Automatikus beavatkozásnak egyszerre
+   csak egy gazdája lehet.
 
 ## 7. Gyors folytatási ellenőrzőlista
 
@@ -275,7 +283,7 @@ A részletes, karbantartandó lista a [`teendok.md`](teendok.md). A következő
    git diff --check
    ```
 
-   A dokumentum készítése előtti utolsó teljes futás 121 tesztből 121 sikeres
+   A dokumentum legutóbbi frissítése előtti teljes futás 163 tesztből 163 sikeres
    volt.
 5. Sémaváltozásnál új, következő sorszámú migráció készüljön, és az kerüljön be
    az `app/migrate_database.py` listájába. A régi migrációt ne írd át.

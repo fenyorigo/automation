@@ -50,9 +50,30 @@ class HeatingObserverTest(unittest.TestCase):
             now=NOW,
             params=self.params,
         )
-        self.assertAlmostEqual(result["action_temperature_c"], 19.12)
+        self.assertAlmostEqual(result["action_temperature_c"], 19.10)
+        self.assertEqual(
+            [(source["name"], source["weight"]) for source in result["sources"]],
+            [("Zb dolgozó", 0.5), ("CT400 emelet", 0.5)],
+        )
         self.assertTrue(result["heating_demand"])
         self.assertEqual(result["status"], "climate_eligible")
+
+    def test_computherm_in_another_room_does_not_affect_action_temperature(self) -> None:
+        result = evaluate_room(
+            [
+                device(1, "Zb háló", "zigbee2mqtt", 19.0, room_id=2),
+                device(2, "HS háló", "connectlife", 19.5, room_id=2),
+                device(3, "CT400 emelet", "computherm", 22.0, room_id=1),
+            ],
+            {"temperature_c": 7.0},
+            now=NOW,
+            params=self.params,
+        )
+        self.assertAlmostEqual(result["action_temperature_c"], 19.10)
+        self.assertEqual(
+            [source["name"] for source in result["sources"]],
+            ["Zb háló", "HS háló"],
+        )
 
     def test_low_outdoor_temperature_selects_gas(self) -> None:
         result = evaluate_room(
@@ -181,6 +202,35 @@ class HeatingObserverTest(unittest.TestCase):
         advice = annotate_ground_floor_heating(devices)
         self.assertEqual(advice["status"], "gas")
         self.assertFalse(advice["boiler_action_required"])
+
+    def test_ground_floor_uses_same_room_zigbee_and_computherm_average(self) -> None:
+        devices = [
+            device(
+                1, "CT400 földszint", "computherm", 19.3,
+                room_id=7, room_name="Vendégszoba", zone_name="Földszint",
+                active=False,
+            ),
+            device(
+                2, "Zb vendégszoba", "zigbee2mqtt", 18.9,
+                room_id=7, room_name="Vendégszoba", zone_name="Földszint",
+            ),
+            device(
+                3, "Zb másik szoba", "zigbee2mqtt", 25.0,
+                room_id=8, room_name="Nappali", zone_name="Földszint",
+            ),
+        ]
+
+        advice = annotate_ground_floor_heating(devices)
+
+        self.assertAlmostEqual(advice["action_temperature_c"], 19.1)
+        self.assertEqual(
+            [(source["name"], source["weight"]) for source in advice["sources"]],
+            [("Zb vendégszoba", 0.5), ("CT400 földszint", 0.5)],
+        )
+        self.assertTrue(advice["automation_heating_demand"])
+        self.assertFalse(advice["thermostat_calling"])
+        self.assertEqual(advice["status"], "automation_demand")
+        self.assertTrue(devices[1]["heating_advice"]["heating_demand"])
 
 
 if __name__ == "__main__":

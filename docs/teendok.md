@@ -1,5 +1,33 @@
 # Teendők
 
+## Dashboard helykihasználás
+
+- [x] Az eszközkártyák rögzített háromoszlopos rácsát reszponzívvá tenni.
+  Az oszlopszámot a tartalom számára ténylegesen rendelkezésre álló szélesség
+  határozza meg: nagy iMac-képernyőn akár öt, kisebb szélességen automatikusan
+  4/3/2/1 oszlop legyen. A kártyák kapjanak minimális olvasható szélességet,
+  és az elrendezés semmilyen nézetben ne okozzon vízszintes görgetést.
+- [x] Tisztán CSS-es, a kártyarács tényleges szélességéhez igazodó
+  `auto-fill`/`minmax` elrendezés készült. Külön
+  felhasználói oszlopszám- vagy kártyasűrűség-beállítás csak akkor készüljön,
+  ha a reszponzív alapviselkedés önmagában nem elég.
+
+## Home Assistant integrációs próba
+
+- [ ] Külön próbaként Home Assistant Containert indítani a `think260x` Fedora
+  rendszerén, a meglévő Mosquitto és Zigbee2MQTT szolgáltatások változatlan
+  megtartásával.
+- [ ] Kipróbálni, mennyit ad a HA az általános eszköz-UI, mobilos értesítés és
+  integrációk terén. Az automation maradjon a döntési logika, az energia- és
+  számlamodell, az idősoros tárolás és a biztonsági szabályok igazságforrása.
+- [ ] Ellenőrizni a Tasmota-integráció tényleges frissítési képességeit a
+  használt eszközökön: verziófelismerés, frissítésjelzés, OTA indítás,
+  kompatibilitás és hibából való visszaállás. Csak ellenőrzött eszközön és
+  mentési/visszaállítási tervvel engedni automatikusabb folyamatot.
+- [ ] Az automatikus eszközvezérlésnek egyetlen gazdája legyen. Ha később a HA
+  is adhat kézi vagy ütemezett kérést, azt az automation biztonsági kapuin
+  keresztül tegye, ne közvetlen, párhuzamos szabályrendszerrel.
+
 ## Zigbee újraindítási megbízhatóság
 
 - [x] Kontrollált Sonoff/Tasmota Zigbee bridge-áramtalanítási próba. A teszt előtt

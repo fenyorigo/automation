@@ -15,7 +15,7 @@ class HeatingParameters:
     climate_min_outdoor_c: float = 5.0
     minimum_cop: float = 2.5
     hisense_weight: float = 0.20
-    computherm_weight: float = 0.10
+    computherm_weight: float = 0.50
     max_data_age_minutes: int = 180
     close_stabilization_minutes: int = 10
 
@@ -33,7 +33,7 @@ def parameters_from_environment() -> HeatingParameters:
         climate_min_outdoor_c=_number("HEATING_CLIMATE_MIN_OUTDOOR_C", 5.0),
         minimum_cop=_number("HEATING_MIN_COP", 2.5),
         hisense_weight=_number("HEATING_HISENSE_WEIGHT", 0.20),
-        computherm_weight=_number("HEATING_COMPUTHERM_WEIGHT", 0.10),
+        computherm_weight=_number("HEATING_COMPUTHERM_WEIGHT", 0.50),
         max_data_age_minutes=int(_number("HEATING_MAX_DATA_AGE_MINUTES", 180)),
         close_stabilization_minutes=int(
             _number("HEATING_WINDOW_CLOSE_STABILIZATION_MINUTES", 10)
@@ -57,12 +57,35 @@ def _action_temperature(
 ) -> tuple[float, list[dict[str, Any]]]:
     maximum_age = timedelta(minutes=params.max_data_age_minutes)
     primary_value = float(primary["temperature_c"])
+
+    # A Computherm may be moved between rooms. Pair it dynamically with the
+    # accepted Zigbee thermometer assigned to the same room; device and room
+    # names deliberately play no role. When both readings are fresh, their
+    # arithmetic mean is the room's action temperature. The Hisense reading is
+    # then only a fallback secondary source for rooms without a paired CT.
+    if _fresh(computherm, now, maximum_age):
+        computherm_value = float(computherm["temperature_c"])
+        computherm_weight = params.computherm_weight
+        primary_weight = 1 - computherm_weight
+        return round(
+            primary_value * primary_weight + computherm_value * computherm_weight,
+            2,
+        ), [
+            {
+                "name": primary["name"],
+                "value": primary_value,
+                "weight": primary_weight,
+            },
+            {
+                "name": computherm["name"],
+                "value": computherm_value,
+                "weight": computherm_weight,
+            },
+        ]
+
     value = primary_value
     sources = [{"name": primary["name"], "value": primary_value, "weight": 1.0}]
-    for device, weight in (
-        (hisense, params.hisense_weight),
-        (computherm, params.computherm_weight),
-    ):
+    for device, weight in ((hisense, params.hisense_weight),):
         if weight <= 0 or not _fresh(device, now, maximum_age):
             continue
         source_value = float(device["temperature_c"])
@@ -95,7 +118,13 @@ def evaluate_room(
         (item for item in devices if item.get("source_system") == "connectlife"), None
     )
     computherm = next(
-        (item for item in devices if item.get("source_system") == "computherm"), None
+        (
+            item
+            for item in devices
+            if item.get("source_system") == "computherm"
+            and item.get("room_id") == primary.get("room_id")
+        ),
+        None,
     )
     if primary is None or hisense is None:
         return None
@@ -109,7 +138,7 @@ def evaluate_room(
         "status_label": "Nincs elég friss fűtési adat",
         "heating_demand": False,
         "blockers": [],
-        "calculation_version": "heating-observer-v1",
+        "calculation_version": "heating-observer-v2",
     }
     maximum_age = timedelta(minutes=params.max_data_age_minutes)
     if not _fresh(primary, now, maximum_age):
@@ -355,34 +384,117 @@ def annotate_ground_floor_heating(
         boiler and boiler.get("boiler_heating_enabled", boiler.get("manual_power_state"))
     )
     thermostat_calling = bool(thermostat.get("active"))
+    params = parameters_from_environment()
+    now = datetime.now(UTC).replace(tzinfo=None)
+    maximum_age = timedelta(minutes=params.max_data_age_minutes)
+    zigbee = next(
+        (
+            item
+            for item in devices
+            if item.get("source_system") == "zigbee2mqtt"
+            and item.get("device_type") == "temperature_sensor"
+            and item.get("room_id") == thermostat.get("room_id")
+            and _fresh(item, now, maximum_age)
+        ),
+        None,
+    )
+    thermostat_fresh = _fresh(thermostat, now, maximum_age)
+    sources: list[dict[str, Any]] = []
+    action_temperature: float | None = None
+    if thermostat_fresh and zigbee is not None:
+        thermostat_value = float(thermostat["temperature_c"])
+        zigbee_value = float(zigbee["temperature_c"])
+        computherm_weight = params.computherm_weight
+        zigbee_weight = 1 - computherm_weight
+        action_temperature = round(
+            thermostat_value * computherm_weight + zigbee_value * zigbee_weight,
+            2,
+        )
+        sources = [
+            {
+                "name": zigbee["name"],
+                "value": zigbee_value,
+                "weight": zigbee_weight,
+            },
+            {
+                "name": thermostat["name"],
+                "value": thermostat_value,
+                "weight": computherm_weight,
+            },
+        ]
+    elif thermostat_fresh:
+        action_temperature = round(float(thermostat["temperature_c"]), 2)
+        sources = [
+            {
+                "name": thermostat["name"],
+                "value": action_temperature,
+                "weight": 1.0,
+            }
+        ]
+    elif zigbee is not None:
+        action_temperature = round(float(zigbee["temperature_c"]), 2)
+        sources = [
+            {"name": zigbee["name"], "value": action_temperature, "weight": 1.0}
+        ]
+
+    heating_active = thermostat_calling and boiler_on
+    room_threshold = params.room_off_c if heating_active else params.room_on_c
+    automation_heating_demand = bool(
+        action_temperature is not None
+        and action_temperature <= room_threshold
+        and action_temperature < params.maximum_room_c
+    )
+
     if thermostat_calling and boiler_on:
         status = "gas"
-        label = "Gázfűtés aktív"
+        label = "Computherm fűtést kér · gázfűtés aktív"
     elif thermostat_calling:
         status = "gas_required"
-        label = "Fűtést kér, a kazán bekapcsolandó"
+        label = "Computherm fűtést kér · a kazán bekapcsolandó"
+    elif automation_heating_demand:
+        status = "automation_demand"
+        label = "Automation szerint fűtési igény van"
     else:
         status = "no_demand"
-        label = "Nincs földszinti fűtési igény"
+        label = "Sem a Computherm, sem az automation nem kér fűtést"
 
     advice = {
         "zone_label": "Földszinti",
         "climate_selection": False,
         "status": status,
         "status_label": label,
-        "preferred_source": "gas" if thermostat_calling else "none",
+        "preferred_source": "gas" if automation_heating_demand else "none",
         "demanded_rooms": [thermostat.get("room_name") or thermostat["name"]]
-        if thermostat_calling else [],
+        if automation_heating_demand else [],
         "climate_rooms": [],
         "gas_required_rooms": [thermostat.get("room_name") or thermostat["name"]]
         if thermostat_calling else [],
         "blocked_rooms": [],
         "thermostat_calling": thermostat_calling,
+        "automation_heating_demand": automation_heating_demand,
+        "action_temperature_c": action_temperature,
+        "room_threshold_c": room_threshold,
+        "sources": sources,
         "boiler_on": boiler_on,
         "boiler_name": boiler["name"] if boiler else "Bosch kazán",
         "boiler_action_required": thermostat_calling and not boiler_on,
         "mixed_operation_allowed": False,
-        "calculation_version": "ground-floor-heating-observer-v1",
+        "calculation_version": "ground-floor-heating-observer-v2",
     }
     thermostat["heating_zone_advice"] = advice
+    if zigbee is not None:
+        zigbee["heating_advice"] = {
+            "status": "gas_required" if automation_heating_demand else "no_demand",
+            "status_label": (
+                "Automation szerint fűtést kér"
+                if automation_heating_demand
+                else "Automation szerint nem kér fűtést"
+            ),
+            "heating_demand": automation_heating_demand,
+            "action_temperature_c": action_temperature,
+            "room_threshold_c": room_threshold,
+            "sources": sources,
+            "target_too_high": False,
+            "blockers": [],
+        }
     return advice

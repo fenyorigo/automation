@@ -1,4 +1,4 @@
-<article id="device-{{ device.id }}" data-polling-enabled="{{ 'true' if device.polling_enabled else 'false' }}" data-climate-control="{{ 'true' if device.climate_control_relevant else 'false' }}" data-problematic="{{ 'true' if device.problematic else 'false' }}" class="device-card {{ 'has-problem' if device.problematic }} {{ 'is-offline' if device.polling_enabled and device.online is sameas false }} {{ 'is-warning' if (device.source_system == 'shelly_mqtt' and device.shelly_status_class == 'warning') or (device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' and device.zigbee_status_class == 'warning') or (device.boiler_status is defined and device.boiler_status.heating_unavailable) or (device.boiler_panel_power_alert is defined and device.boiler_panel_power_alert) }} {{ 'is-delayed' if device.source_system == 'shelly_mqtt' and device.shelly_status_class == 'delayed' }} {{ 'is-power-off' if device.switch_controllable and device.switch_power is sameas false }} {{ 'is-manual' if device.is_manual_visual }}">
+<article id="device-{{ device.id }}" data-polling-enabled="{{ 'true' if device.polling_enabled else 'false' }}" data-climate-control="{{ 'true' if device.climate_control_relevant else 'false' }}" data-problematic="{{ 'true' if device.problematic else 'false' }}" class="device-card {{ 'has-problem' if device.problematic }} {{ 'is-offline' if device.polling_enabled and device.online is sameas false }} {{ 'is-warning' if (device.source_system == 'shelly_mqtt' and device.shelly_status_class == 'warning') or (device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' and device.zigbee_status_class == 'warning') or (device.boiler_status is defined and device.boiler_status.heating_unavailable) or (device.boiler_panel_power_alert is defined and device.boiler_panel_power_alert) }} {{ 'is-delayed' if device.source_system == 'shelly_mqtt' and device.shelly_status_class == 'delayed' }} {{ 'is-power-off' if device.switch_controllable and device.switch_power is sameas false and not (device.is_water_heater_supply and device.water_heater_schedule.enabled and not device.water_heater_schedule.desired_power) }} {{ 'is-manual' if device.is_manual_visual }}">
   <div class="card-heading">
     <div><p class="source">{{ device.source_label }}</p><h3>{{ device.name }}</h3></div>
     <span class="badge {% if device.source_system == 'shelly_mqtt' %}{{ device.shelly_status_class }}{% elif device.source_system == 'zigbee2mqtt' %}{{ device.zigbee_status_class }}{{ ' contact-stale' if device.device_type == 'contact_sensor' and device.zigbee_status_class == 'warning' }}{% else %}{{ 'manual' if device.is_manual_visual or not device.polling_enabled else ('online' if device.online else 'offline') }}{% endif %}">
@@ -31,7 +31,7 @@
   </div>
   {% elif device.source_system == 'manual' and device.device_type == 'electric_heater' %}
   <div class="manual-state stopped">
-    <span class="manual-state-label">Megfigyelés</span><strong>Külső fogyasztásmérővel</strong>
+    <span class="manual-state-label">Megfigyelés</span><strong class="external-meter-note">Külső fogyasztásmérővel</strong>
   </div>
   <p class="temperature-provenance"><strong>2000 W-os villanyfűtő</strong><br>A tényleges fűtést az SP ebédlő méri.</p>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
@@ -153,10 +153,25 @@
     <div><dt>Aktív</dt><dd>{% if device.active is none %}—{% elif device.active %}Igen{% else %}Nem{% endif %}</dd></div>
   </dl>
   {% endif %}
-  {% if device.is_water_heater_supply and device.water_heater_schedule.enabled %}
-    <p class="device-schedule-note"><strong>Automatikus tápablak: {{ device.water_heater_schedule.start }}–{{ device.water_heater_schedule.end }}</strong><br>Most {{ 'engedélyezett' if device.water_heater_schedule.desired_power else 'tiltott' }}. A kézi kapcsolást az automation legfeljebb egy percen belül az időablakhoz igazítja.</p>
+  {% if device.is_water_heater_supply %}
+    <div class="device-schedule-note {{ 'schedule-active' if device.water_heater_schedule.enabled else 'schedule-inactive' }}">
+      <strong>Program {{ 'aktív' if device.water_heater_schedule.enabled else 'inaktív' }}</strong>
+      {% if device.water_heater_schedule.enabled %}
+      <span>Engedélyezett időablak: {{ device.water_heater_schedule.start }}–{{ device.water_heater_schedule.end }}</span>
+      <span>Jelenlegi állapot: {{ 'időablakon belül' if device.water_heater_schedule.desired_power else 'időablakon kívül, kikapcsolva' }}</span>
+      {% else %}
+      <span>A program nem vezérli a dugaljat.</span>
+      {% endif %}
+    </div>
+    {% if can_write %}
+    <form class="schedule-toggle-control" method="post" action="{{ url_for('set_water_heater_schedule',device_id=device.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="schedule_enabled" value="{{ '0' if device.water_heater_schedule.enabled else '1' }}">
+      <button class="{{ 'danger-button' if device.water_heater_schedule.enabled else '' }}" type="submit">Program {{ 'kikapcsolása' if device.water_heater_schedule.enabled else 'bekapcsolása' }}</button>
+    </form>
+    {% endif %}
   {% endif %}
-  {% if can_write and device.switch_controllable %}
+  {% if can_write and device.switch_controllable and not device.is_water_heater_supply %}
     {% if device.is_klarstein_supply and device.switch_power is sameas true %}
     <p class="klarstein-standby-warning"><strong>Figyelem:</strong> a bekapcsolt dugalj csak tápot ad. A Klarsteint kézzel kell Standby-ból fűtésre kapcsolni.</p>
     {% endif %}
@@ -190,6 +205,9 @@
     {% if device.heating_zone_advice.climate_rooms %}<small>Klímával fűthető: {{ device.heating_zone_advice.climate_rooms|join(', ') }}.</small>{% endif %}
     {% if device.heating_zone_advice.gas_required_rooms %}<small>Gázt igényel: {{ device.heating_zone_advice.gas_required_rooms|join(', ') }}.</small>{% endif %}
     {% if device.heating_zone_advice.blocked_rooms %}<small>Blokkolt helyiség: {{ device.heating_zone_advice.blocked_rooms|join(', ') }}.</small>{% endif %}
+    {% if device.heating_zone_advice.action_temperature_c is defined and device.heating_zone_advice.action_temperature_c is not none %}<small>Cselekedeti: {{ device.heating_zone_advice.action_temperature_c|temperature }} °C · automation-határ: {{ device.heating_zone_advice.room_threshold_c|temperature }} °C.</small>{% endif %}
+    {% if device.heating_zone_advice.sources is defined and device.heating_zone_advice.sources %}<small>{% for source in device.heating_zone_advice.sources %}{{ source.name }} {{ (source.weight * 100)|round|int }}%{% if not loop.last %} · {% endif %}{% endfor %}.</small>{% endif %}
+    {% if not device.heating_zone_advice.climate_selection %}<small>Computherm reléigény: {{ 'aktív' if device.heating_zone_advice.thermostat_calling else 'inaktív' }} · automation hőigény: {{ 'igen' if device.heating_zone_advice.automation_heating_demand else 'nem' }}.</small>{% endif %}
     {% if device.heating_zone_advice.climate_selection %}<small>Klímás alsó kültéri határ: {{ device.heating_zone_advice.climate_min_outdoor_c|temperature }} °C · COP-elvárás: {{ device.heating_zone_advice.minimum_cop }}.</small>{% else %}<small>A földszinti zóna hőforrása kizárólag a Bosch gázkazán.</small>{% endif %}
     {% if device.heating_zone_advice.boiler_action_required %}<small class="heating-action-required">A {{ device.heating_zone_advice.boiler_name }} helyben bekapcsolandó.</small>{% endif %}
     <small>Kevert klíma–gáz üzem nincs. Megfigyelő mód, parancsküldés nélkül.</small>

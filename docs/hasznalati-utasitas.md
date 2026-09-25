@@ -77,6 +77,12 @@ előzmények** oldalon, az inaktivált eszközök közül választható ki.
 
 ### Eszközkártyák értelmezése
 
+A kezdőlap a rendelkezésre álló szélességhez automatikusan igazítja a
+kártyák számát. Nagy képernyőn akár öt kártya is megjelenhet egymás mellett,
+keskenyebb ablakban pedig az elrendezés fokozatosan kevesebb oszlopra vált. A
+kártyák minimális olvasható szélessége megmarad, ezért a nézet nem igényel
+vízszintes görgetést.
+
 A kártyák az eszköz típusától függően mutathatják:
 
 - az utolsó hőmérsékletet és mérési időpontot;
@@ -363,30 +369,18 @@ pontosan egyeznie kell a firmware `/api/v1/measurements` válaszának `device_id
 mezőjével; a jelenlegi konfigurációban ez a hostname. A panelre írt gyári
 azonosítót ettől elkülönítve kell nyilvántartani.
 
-A Bosch 7000i elé kötött `nous-kazan` Tasmota dugalj a fűtési eszközök
-alapnézetének része. A dugalj **Bekapcsolva** állapota a kazán tápellátását
-jelzi, nem a Bosch melegvíz- vagy fűtési üzemének állapotát. A Bosch kártyája
-ezért három külön jelzőpontot mutat: **Feszültség alatt**, **Melegvíz-
-szolgáltatás** és **Fűtés**. Az első forrása normál esetben a Nous, annak
-elérhetetlenségekor a kézi tartalékjelzés; a másik kettő kézzel rögzített adat.
-A Kézi állapot űrlapon mindhárom egyszerű jelölőnégyzet, külön ki/be
-választópár nélkül.
-
-A Bosch kártyájának külön státusza a kazán saját power kapcsolóját is
-ellenőrzi. Bekapcsolt Nous és friss, legalább a globálisan beállított
-teljesítményhatárt elérő mérés esetén **Kazán power aktív** jelenik meg. A
-teszten mért nyugalmi érték kb. 5 W; az alapértelmezett felismerési határ 2 W.
-Bekapcsolt Nous melletti friss 0 W piros figyelmeztetés: a kazán power
-kapcsolója nincs bekapcsolva. Közvetlenül relékapcsolás után a következő új
-mérésig **ellenőrzésre vár** állapot látható, így a korábbi 0 W nem okoz téves
-riasztást.
+A Bosch 7000i jelenleg közvetlen hálózati táplálást kap, nincs előtte aktív
+Nous dugalj. A Bosch kártyáján ezért a **Feszültség alatt**, **Melegvíz-
+szolgáltatás** és **Fűtés** állapotot kézzel kell nyilvántartani. A Kézi
+állapot űrlapon mindhárom egyszerű jelölőnégyzet, külön ki/be választópár
+nélkül. A korábbi fogyasztásalapú kazán-power felismerés csak új kazándugalj
+telepítése esetén használható ismét.
 
 ### Okosdugaljak kézi kapcsolása
 
-A kezdőlapon a Bosch tápellátását adó **Nous kazán**, a villanybojlert ellátó
-**Nous bojler**, valamint a Klarsteint ellátó **SP ebédlő** kártyáján látható külön **Bekapcsolás** és
-**Kikapcsolás** gomb a szerkesztőknek. A többi IT- és Zigbee router-dugalj
-csak megfigyelhető. A bekapcsolás azonnal elküldhető. Az SP ebédlő
+A kezdőlapon a villanybojlert ellátó **Nous bojler** programja, valamint a
+Klarsteint ellátó **SP ebédlő** reléje vezérelhető. A többi IT- és Zigbee
+router-dugalj csak megfigyelhető. Az SP ebédlő
 bekapcsolása után külön figyelmeztetés emlékeztet rá, hogy a Klarsteint a saját
 kezelőjén kézzel kell Standby-ból fűtésre kapcsolni. Kikapcsoláskor előbb piros
 figyelmeztetés jelenik meg a következményekkel, és csak a külön **Igen,
@@ -394,10 +388,14 @@ kikapcsolom** megerősítés küldi el a parancsot. A megerősítés öt percig
 érvényes és csak az adott dugaljhoz használható.
 
 A **Nous bojler** alapértelmezett automatikus tápablaka naponta 05:00–12:00.
-A kártya kiírja az aktuális időablakot és azt, hogy pillanatnyilag engedélyezett
-vagy tiltott szakaszban járunk. Aktív ütemezés mellett a kézi kapcsolás csak
-átmeneti: az automation legfeljebb egy percen belül visszaállítja az időablak
-szerinti reléállapotot. A Tasmota saját időzítőit ehhez nem kell beállítani.
+A bélyeg külön mutatja a dugalj pillanatnyi állapotát és az automatikus program
+állapotát. Aktív programnál az időablakon kívüli kikapcsolás normál állapot,
+nem hiba. A bélyegen ilyenkor a **Program kikapcsolása**, inaktív programnál a
+**Program bekapcsolása** művelet jelenik meg; közvetlen relékapcsolás helyett a
+program kezelhető, így az ütemezés nem írja felül félreérthetően a kézi
+parancsot.
+A kártya kiírja az aktuális időablakot és azt, hogy pillanatnyilag azon belül
+vagy kívül járunk. A Tasmota saját időzítőit ehhez nem kell beállítani.
 
 A kikapcsolt, kapcsolható dugalj teljes kártyája piros jelölést kap. Ez a
 Klarsteinnél azt jelenti, hogy a fűtő nem kaphat tápot; a relé visszakapcsolása

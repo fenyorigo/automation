@@ -208,6 +208,23 @@ class Database:
                      AND source_sensor_id <> ? AND is_active = 1""",
                 (device_id, config.source_system, sensor_id),
             )
+        elif config.source_system == "tasmota":
+            # A physical plug can be reassigned to another integration role.
+            # Tasmota has one channel of each measurement type, so the former
+            # role's channel must not remain active beside the new identifier.
+            cursor.execute(
+                """UPDATE sensors
+                   SET is_active = 0
+                   WHERE device_id = ? AND source_system = ?
+                     AND sensor_type = ? AND source_sensor_id <> ?
+                     AND is_active = 1""",
+                (
+                    device_id,
+                    config.source_system,
+                    measurement["sensor_type"],
+                    sensor_id,
+                ),
+            )
         cursor.execute(
             """
             INSERT INTO sensors (

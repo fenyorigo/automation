@@ -171,6 +171,22 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertIn("klarstein-standby-warning", template)
         self.assertIn(".device-card.is-power-off", stylesheet)
 
+    def test_water_heater_card_controls_schedule_instead_of_relay(self) -> None:
+        template = (ROOT / "app" / "templates" / "_device_card.html").read_text()
+        dashboard = (ROOT / "app" / "dashboard.py").read_text()
+        self.assertIn("Program {{ 'aktív'", template)
+        self.assertIn("Program {{ 'kikapcsolása'", template)
+        self.assertIn("set_water_heater_schedule", template)
+        self.assertIn("and not device.is_water_heater_supply", template)
+        self.assertIn(
+            '@app.post("/devices/<int:device_id>/water-heater-schedule")',
+            dashboard,
+        )
+        self.assertIn(
+            'set_global_setting_value(\n            "WATER_HEATER_SCHEDULE_ENABLED"',
+            dashboard,
+        )
+
     def test_power_switch_allowlist_is_limited_to_dedicated_supplies(self) -> None:
         self.assertEqual(len(POWER_SWITCH_ALLOWLIST), 3)
         self.assertIn(("tasmota", "nous-kazan"), POWER_SWITCH_ALLOWLIST)

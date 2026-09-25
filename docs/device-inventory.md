@@ -31,7 +31,7 @@ létre, és az eszköz aktív szenzorainak helyét is együtt frissíti.
 | ConnectLife | `HS Kristófék` | `hisense-chris` | Emelet / Kristófék |
 | ConnectLife | `HS Rita` | `hisense-rita` | Emelet / Rita |
 | ConnectLife | `HS Veronika` | `hisense-veronica` | Emelet / Veronika |
-| Kézi | `Bosch 7000i` | kézi állapot + `nous-kazan` tápforrás | Földszint / Kazánház |
+| Kézi | `Bosch 7000i` | közvetlen tápellátás, kézzel nyilvántartott állapot | Földszint / Kazánház |
 
 A ConnectLife adapter az AUID és a felhőben látható név együttesével ellenőrzi
 az eszközazonosságot. Ezek a titkot nem tartalmazó, de telepítésspecifikus
@@ -84,8 +84,13 @@ idősorosan gyűjtött eszköz.
 | Shelly MQTT | `Sh közlekedő` | `shellyhtg3-48f6eebb5c50` | Földszint / Közlekedő | Deep-sleep hőmérő |
 | Tasmota | `Nous main IT` | `nous-mainit` | Emelet / Kis nappali | IT fogyasztásmérő |
 | Tasmota | `Nous auxiliary IT` | `nous-auxit` | Emelet / Dolgozó | IT fogyasztásmérő |
-| Tasmota | `Nous kazán` | `nous-kazan.home` | Földszint / Kazánház | Bosch táp és fogyasztás |
-| Tasmota | `Nous bojler` | `nous-bojler` / `192.168.0.47` | Földszint / Télikert WC | 1,8 kW-os villanybojler tápja, fogyasztásmérés és automation-időzítés |
+| Tasmota | `Nous bojler` | `nous-bojler` / `192.168.0.46` / `C8:C9:A3:2B:34:11` | Földszint / Télikert WC | 1,8 kW-os villanybojler tápja, fogyasztásmérés és automation-időzítés |
+| Tasmota | `Nous kazán` | `nous-kazan` / `192.168.0.47` / `C8:C9:A3:2B:35:60` | Földszint / Kazánház | Bosch tápellátása, kapcsolása és fogyasztásmérése |
+
+A `.47` címes dugalj reléje az áramkimaradások után hibásnak látszott, de a
+teljes Tasmota-reset és újrakonfigurálás után ismét működik. 2026. szeptember
+24-én `Nous kazán` néven új mérési életet kezdett; a hibásként nyilvántartott
+régi rekordot és annak 180 mérését a felhasználó kérésére töröltük.
 
 A SONOFF S60ZBTPF Zigbee router-dugaljak `power`, `current`, `voltage` és
 `energy` értékei idősorosan is bekerülnek a `sensor_readings` táblába. A

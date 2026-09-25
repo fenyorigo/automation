@@ -79,7 +79,7 @@ SETTINGS = (
     Setting("HEATING_CLIMATE_MIN_OUTDOOR_C", "Klímás fűtés kültéri alsó határa", "5.0", "number", "Ideiglenes COP-helyettesítő küszöb; alatta az observer a gázfűtést részesíti előnyben.", number_between(-30, 30)),
     Setting("HEATING_MIN_COP", "Klímás fűtés legkisebb elfogadott COP-ja", "2.5", "number", "Döntési alapelv; tényleges COP-görbe hiányában az observer még a kültéri alsó határt használja.", number_between(1, 10)),
     Setting("HEATING_HISENSE_WEIGHT", "Hisense fűtési mérés súlya", "0.20", "number", "A klíma saját érzékelőjének súlya a fűtési cselekedeti hőmérsékletben.", number_between(0, 0.5)),
-    Setting("HEATING_COMPUTHERM_WEIGHT", "Computherm fűtési mérés súlya", "0.10", "number", "A Computherm súlya ott, ahol ugyanabban a helyiségben rendelkezésre áll.", number_between(0, 0.5)),
+    Setting("HEATING_COMPUTHERM_WEIGHT", "Computherm fűtési mérés súlya", "0.50", "Ha a Computherm helyiségében van friss Zigbee-hőmérő, a két mérés közös cselekedeti értékében ekkora a Computherm súlya. Az 0,50 számtani átlagot jelent.", number_between(0, 0.5)),
     Setting("HEATING_MAX_DATA_AGE_MINUTES", "Fűtési döntési adat legnagyobb kora", "180", "number", "Perc; ennél régebbi mérés nem kerül a fűtési cselekedeti hőmérsékletbe.", integer_between(1, 1440)),
     Setting("HEATING_WINDOW_CLOSE_STABILIZATION_MINUTES", "Ablakzárás utáni fűtési várakozás", "10", "number", "Perc; a legutolsó nyílászáró bezárása után eddig még blokkolt maradna a fűtés.", integer_between(0, 180)),
     Setting("VENTILATION_LONG_THRESHOLD_MINUTES", "Hosszú szellőztetés határa", "5", "number", "Perc; ennél rövidebb esemény rövid szellőztetésnek számít.", integer_between(1, 180)),

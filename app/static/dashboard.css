@@ -10,12 +10,14 @@
   --red: #a14438;
   --red-soft: #f7e4df;
   --shadow: 0 14px 36px rgba(37, 48, 43, .08);
+  --content-max-width: 1180px;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); }
-.topbar, main { width: min(1180px, calc(100% - 32px)); margin-inline: auto; }
+.dashboard-page { --content-max-width: 1840px; }
+.topbar, main { width: min(var(--content-max-width), calc(100% - 32px)); margin-inline: auto; }
 .topbar { display: flex; justify-content: space-between; align-items: end; padding: 38px 0 24px; gap: 24px; }
 .dashboard-topbar { align-items:center; flex-wrap:wrap; }
 .dashboard-heading { flex:1 0 100%; min-width:0; }
@@ -51,8 +53,8 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .service-test-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
 .service-test-card { padding:18px; border:1px solid var(--line); border-radius:14px; background:var(--card); }
 .service-test-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
-.device-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.device-card { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
+.device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.device-card { container-type:inline-size; min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
 .device-card.is-offline { border-color: #dec6c0; }
 .device-card.is-warning { border-color: #dfc66e; }
 .device-card.is-delayed { border-color: #dda05f; }
@@ -79,7 +81,7 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .device-problem { display:grid; gap:4px; margin-top:10px; padding:10px 12px; border-radius:10px; background:#fff0ed; color:#7a1812; font-size:.74rem; line-height:1.4; }
 .device-problem span { display:block; }
 .temperature { display: flex; align-items: start; margin: 25px 0 20px; font-variant-numeric: tabular-nums; }
-.temperature-value { font-size: clamp(3.1rem, 8vw, 4.6rem); font-weight: 700; line-height: .85; letter-spacing: -.075em; }
+.temperature-value { font-size: clamp(2.4rem, 15cqi, 4.6rem); font-weight: 700; line-height: .85; letter-spacing: -.075em; }
 .temperature-unit { padding: 2px 0 0 8px; color: var(--muted); font-size: 1rem; font-weight: 700; }
 .temperature .stale-measurement { color: #b42318; font-weight: 900; }
 .temperature .shelly-warning { color: #7a5a00; }
@@ -134,11 +136,16 @@ dd.power-on { color: #d05a16; }
 .power-switch-actions form { margin:0; }
 .power-switch-actions .secondary-link { color:#7a1812; font-size:.74rem; font-weight:800; }
 .klarstein-standby-warning { margin-top:14px; padding:11px 13px; border-radius:10px; background:#fff3bf; color:#5f4600; font-size:.76rem; line-height:1.45; }
-.device-schedule-note { margin-top:14px; padding:11px 13px; border-radius:10px; background:#e8f3ef; color:#174c3b; font-size:.76rem; line-height:1.45; }
+.device-schedule-note { display:grid; gap:3px; margin-top:14px; padding:11px 13px; border-radius:10px; background:#e8f3ef; color:#174c3b; font-size:.76rem; line-height:1.45; }
+.device-schedule-note.schedule-inactive { background:#f0eee7; color:#5f665f; }
+.schedule-toggle-control { margin-top:14px; }
+.schedule-toggle-control button { min-height:38px; padding:0 12px; border:0; border-radius:9px; background:var(--green); color:#fff; font:inherit; font-size:.74rem; font-weight:850; cursor:pointer; }
+.schedule-toggle-control .danger-button { background:#b42318; }
 .manual-state { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 25px 0 20px; padding: 19px; border-radius: 14px; background: #ece9df; }
 .manual-state.powered { background: var(--green-soft); }
 .manual-state-label { color: var(--muted); font-size: .78rem; }
 .manual-state strong { font-size: 1.35rem; }
+.manual-state .external-meter-note { font-size:.7rem; line-height:1.35; text-align:right; }
 .derived-target { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 12px; padding: 0 2px 15px; }
 .derived-target span { color: var(--muted); font-size: .72rem; }
 .derived-target strong { font-size: 1.2rem; }
@@ -179,7 +186,7 @@ dd.power-on { color: #d05a16; }
 .room-heading { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:11px; }
 .room-heading span { color:var(--muted); font-size:.72rem; }
 .room-empty { padding:18px; border-radius:12px; background:var(--paper); color:var(--muted); font-size:.8rem; }
-.outdoor-temperature-card { width:100%; max-width:calc((100% - 32px) / 3); min-width:0; padding:21px; border:1px solid var(--line); border-radius:20px; background:var(--card); box-shadow:var(--shadow); }
+.outdoor-temperature-card { container-type:inline-size; width:100%; max-width:calc((100% - 32px) / 3); min-width:0; padding:21px; border:1px solid var(--line); border-radius:20px; background:var(--card); box-shadow:var(--shadow); }
 .outdoor-summary-group .outdoor-temperature-card { max-width:none; }
 .outdoor-temperature-card h3 { overflow-wrap:anywhere; }
 .outdoor-temperature-card + .device-grid { margin-top:16px; }
@@ -440,12 +447,11 @@ tbody tr:last-child td { border-bottom: 0; }
 td small { display: block; margin-top: 2px; color: var(--muted); }
 
 @media (max-width: 900px) {
-  .device-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .outdoor-temperature-card { max-width:calc((100% - 16px) / 2); }
 }
 @media (max-width: 600px) {
   .temperature-mode-row { align-items:flex-start; justify-content:flex-start; flex-direction:column; }
-  .topbar, main { width: min(100% - 20px, 1180px); }
+  .topbar, main { width: min(100% - 20px, var(--content-max-width)); }
   .topbar { align-items: start; padding-top: 24px; }
   .topbar { flex-wrap: wrap; }
   .main-nav { gap:8px 13px; }
@@ -453,11 +459,10 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .manual-poll-form { width: 100%; }
   .manual-poll-form button { width: 100%; }
   .system-status { padding: 8px 11px; font-size: .75rem; }
-  .device-grid { grid-template-columns: 1fr; gap: 11px; }
+  .device-grid { gap: 11px; }
   .device-card { padding: 18px; border-radius: 17px; }
   .outdoor-temperature-card { max-width:none; padding:18px; border-radius:17px; }
   .temperature { margin-block: 23px 18px; }
-  .temperature-value { font-size: 4.3rem; }
   .date-fields { grid-template-columns: 1fr; }
   .history-controls { align-items: stretch; flex-direction: column; }
   .history-controls label, .history-controls button { width: 100%; flex-basis: auto; }
