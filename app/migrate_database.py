@@ -210,6 +210,10 @@ MIGRATIONS = (
         "v1_51_network_infrastructure_monitoring",
         ROOT / "SQL" / "migrations" / "051_home_automation_v1.50_to_v1.51.sql",
     ),
+    (
+        "v1_52_internal_openings",
+        ROOT / "SQL" / "migrations" / "052_home_automation_v1.51_to_v1.52.sql",
+    ),
 )
 
 

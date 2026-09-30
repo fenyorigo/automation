@@ -179,6 +179,8 @@ A nyitásérzékelők `contact` értéke nem periodikus pillanatképként, hanem
 az első ismert állapotnál és valódi állapotváltáskor kerül a `sensor_readings`
 táblába. Értéke `0 = nyitva`, `1 = csukva`; az `observed_at` a Zigbee2MQTT
 `last_seen` időpontja, ennek hiányában az MQTT-üzenet fogadási ideje.
+Az idősoros kontaktusmentés a külső és belső ajtóknál azonos; a különbséget a
+`devices.opening_role` nyilvántartási mező adja, nem az MQTT payload.
 
 A nyitásérzékelőknél a régi `last_seen` önmagában nem jelent kiesést, mert az
 elemes eszköz változatlan állapotban órákig vagy akár egy napnál tovább sem
@@ -298,7 +300,7 @@ aktív, friss külső források prioritása alapján automatikusan rögzíti a f
 és a külső hőmérsékletet; ezeket nem kell kézzel kiválasztani. Az időpontok az
 adatbázisban UTC-ben tárolódnak, az UI helyi időben jeleníti meg őket.
 
-A helyiséghez rendelt aktív Zigbee/Nous nyitásérzékelő nyitása automatikusan
+A helyiséghez rendelt aktív, `external` szerepű Zigbee/Nous nyitásérzékelő nyitása automatikusan
 elindítja ugyanezt a szellőztetési eseményt. Ha több érzékelő tartozik egy
 helyiséghez, az első nyitás indít, és csak az utolsó nyílászáró zárása zárhatja
 le. A csukott jelzést a collector alapból 30 másodpercig visszaellenőrzi. Ha
@@ -307,6 +309,8 @@ bukó állás közötti rövid, kényszerű becsukás nem darabolja fel a napló
 Ha a helyiségben már fut kézzel indított esemény, az megőrzi kézi eredetét és
 kezdőadatait, de a rendszer hozzárendeli az érzékelőt, így a tényleges zárás
 attól kezdve automatikusan lezárhatja.
+A `internal` szerepű ajtó egyik állapota sem indít vagy zár szellőztetést;
+az ilyen kontaktus két helyiség pillanatnyi hőtechnikai kapcsolatát írja le.
 
 A `VENTILATION_LONG_THRESHOLD_MINUTES` (alapból 5 perc) választja szét a rövid
 és hosszú szellőztetést. A határ eseményenként is eltárolódik. A

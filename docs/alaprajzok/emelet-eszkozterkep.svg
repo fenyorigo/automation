@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="1400" height="2024" viewBox="0 0 1400 2024">
+  <title>Emeleti eszköztérkép</title>
+  <desc>Az emelet hozzávetőleges alaprajza külön szerkeszthető eszközjelölésekkel.</desc>
+  <style>
+    .marker circle { stroke: #fff; stroke-width: 2.5; }
+    .marker text { fill: #fff; font-family: Arial, sans-serif; font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+    .sensor circle { fill: #18856b; }
+    .contact circle { fill: #d97706; }
+    .internal circle { fill: #f3b45b; }
+    .heating circle { fill: #c2413a; }
+    .router circle { fill: #7257b5; }
+    .network circle { fill: #2878b5; }
+    .equipment circle { fill: #485760; }
+    .legend-title { fill: #14251f; font-family: Arial, sans-serif; font-size: 20px; font-weight: 700; }
+    .legend-heading { fill: #14251f; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; }
+    .legend-text { fill: #273b35; font-family: Arial, sans-serif; font-size: 12px; }
+    .legend-note { fill: #60706a; font-family: Arial, sans-serif; font-size: 11px; }
+    .legend-swatch { stroke: #fff; stroke-width: 1.5; }
+  </style>
+
+  <rect width="1400" height="2024" fill="#f7f5ef"/>
+
+  <g id="alaprajz-hatter" inkscape:groupmode="layer" inkscape:label="Alaprajz háttér" inkscape:insensitive="true">
+    <image x="0" y="0" width="960" height="2024" xlink:href="emelet-forras.png" href="emelet-forras.png"/>
+  </g>
+
+  <g id="eszkozjelolesek" inkscape:groupmode="layer" inkscape:label="Eszközjelölések">
+    <!-- Hőmérők -->
+    <g id="device-zb-kristofek" class="marker sensor" transform="translate(216 205)" data-device-name="Zb Kristófék"><circle r="13"/><text>1</text></g>
+    <g id="device-zb-rita" class="marker sensor" transform="translate(728 387)" data-device-name="Zb Rita"><circle r="13"/><text>2</text></g>
+    <g id="device-zb-veronika" class="marker sensor" transform="translate(626 677)" data-device-name="Zb Veronika"><circle r="13"/><text>3</text></g>
+    <g id="device-zb-kisnappali" class="marker sensor" transform="translate(272 902)" data-device-name="Zb kisnappali"><circle r="13"/><text>4</text></g>
+    <g id="device-zb-halo" class="marker sensor" transform="translate(466 1378)" data-device-name="Zb háló"><circle r="13"/><text>5</text></g>
+    <g id="device-zb-dolgozo" class="marker sensor" transform="translate(454 1848)" data-device-name="Zb dolgozó"><circle r="13"/><text>6</text></g>
+
+    <!-- Külső nyílászárók -->
+    <g id="device-tuya-kristofek" class="marker contact" transform="translate(329 177)" data-device-name="Tuya Kristófék"><circle r="13"/><text>7</text></g>
+    <g id="device-tuya-rita" class="marker contact" transform="translate(604 178)" data-device-name="Tuya Rita"><circle r="13"/><text>8</text></g>
+    <g id="device-tuya-veronika" class="marker contact" transform="translate(756 664)" data-device-name="Tuya Veronika"><circle r="13"/><text>9</text></g>
+    <g id="device-tuya-halo" class="marker contact" transform="translate(487 1490)" data-device-name="Tuya háló"><circle r="13"/><text>10</text></g>
+    <g id="device-tuya-dolgozo-ablak" class="marker contact" transform="translate(474 1764)" data-device-name="Tuya dolgozó ablak"><circle r="13"/><text>11</text></g>
+    <g id="device-tuya-erkelyajto" class="marker contact" transform="translate(352 1952)" data-device-name="Tuya erkélyajtó"><circle r="13"/><text>12</text></g>
+
+    <!-- Belső, nem blokkoló ajtók -->
+    <g id="device-tuya-kristofek-belso" class="marker internal" transform="translate(433 535)" data-device-name="Tuya Kristófék belső"><circle r="14"/><text>13</text></g>
+    <g id="device-tuya-rita-belso" class="marker internal" transform="translate(553 538)" data-device-name="Tuya Rita belső"><circle r="14"/><text>14</text></g>
+    <g id="device-tuya-veronika-belso" class="marker internal" transform="translate(590 609)" data-device-name="Tuya Veronika belső"><circle r="14"/><text>15</text></g>
+
+    <!-- Klímák, termosztát és radiátorszelepek -->
+    <g id="device-trv-kristofek" class="marker heating" transform="translate(319 147)" data-device-name="TRV-G2 Kristófék"><circle r="13"/><text>16</text></g>
+    <g id="device-trv-rita" class="marker heating" transform="translate(591 147)" data-device-name="TRV-G2 Rita"><circle r="13"/><text>17</text></g>
+    <g id="device-trv-halo" class="marker heating" transform="translate(482 1460)" data-device-name="TRV-G2 háló"><circle r="13"/><text>18</text></g>
+    <g id="device-hs-kristofek" class="marker heating" transform="translate(323 515)" data-device-name="HS Kristófék"><circle r="13"/><text>19</text></g>
+    <g id="device-hs-rita" class="marker heating" transform="translate(645 548)" data-device-name="HS Rita"><circle r="13"/><text>20</text></g>
+    <g id="device-hs-veronika" class="marker heating" transform="translate(671 576)" data-device-name="HS Veronika"><circle r="13"/><text>21</text></g>
+    <g id="device-hs-halo" class="marker heating" transform="translate(290 1599)" data-device-name="HS háló"><circle r="13"/><text>22</text></g>
+    <g id="device-hs-dolgozo" class="marker heating" transform="translate(290 1680)" data-device-name="HS dolgozó"><circle r="13"/><text>23</text></g>
+    <g id="device-ct400-emelet" class="marker heating" transform="translate(494 1670)" data-device-name="CT400 emelet"><circle r="13"/><text>24</text></g>
+
+    <!-- Zigbee router és fogyasztásmérők -->
+    <g id="device-sp-emelet" class="marker router" transform="translate(420 982)" data-device-name="SP emelet"><circle r="13"/><text>25</text></g>
+    <g id="device-nous-main-it" class="marker equipment" transform="translate(269 630)" data-device-name="Nous main IT"><circle r="13"/><text>26</text></g>
+    <g id="device-nous-aux-it" class="marker equipment" transform="translate(488 1880)" data-device-name="Nous auxiliary IT"><circle r="13"/><text>27</text></g>
+
+    <!-- Hálózati és IT-eszközök -->
+    <g id="device-think260x" class="marker network" transform="translate(267 566)" data-device-name="think260x"><circle r="13"/><text>28</text></g>
+    <g id="device-t470" class="marker network" transform="translate(313 566)" data-device-name="t470"><circle r="13"/><text>29</text></g>
+    <g id="device-xerox-b235" class="marker network" transform="translate(268 598)" data-device-name="Xerox B235"><circle r="13"/><text>30</text></g>
+    <g id="device-zigbee-bridge" class="marker network" transform="translate(268 658)" data-device-name="Zigbee bridge"><circle r="13"/><text>31</text></g>
+    <g id="device-sagem" class="marker network" transform="translate(268 688)" data-device-name="SAGEM"><circle r="13"/><text>32</text></g>
+    <g id="device-zte" class="marker network" transform="translate(318 688)" data-device-name="ZTE"><circle r="13"/><text>33</text></g>
+    <g id="device-deco-main" class="marker network" transform="translate(268 718)" data-device-name="Deco main"><circle r="13"/><text>34</text></g>
+  </g>
+
+  <g id="jelmagyarazat" inkscape:groupmode="layer" inkscape:label="Jelmagyarázat">
+    <text x="995" y="48" class="legend-title">Emeleti eszközök</text>
+    <text x="995" y="72" class="legend-note">A jelölések külön mozgatható SVG-csoportok.</text>
+
+    <circle cx="1005" cy="110" r="7" fill="#18856b" class="legend-swatch"/><text x="1023" y="114" class="legend-heading">Hőmérők</text>
+    <text x="1005" y="138" class="legend-text">1 Zb Kristófék</text><text x="1005" y="158" class="legend-text">2 Zb Rita</text>
+    <text x="1005" y="178" class="legend-text">3 Zb Veronika</text><text x="1005" y="198" class="legend-text">4 Zb kisnappali</text>
+    <text x="1005" y="218" class="legend-text">5 Zb háló</text><text x="1005" y="238" class="legend-text">6 Zb dolgozó</text>
+
+    <circle cx="1005" cy="278" r="7" fill="#d97706" class="legend-swatch"/><text x="1023" y="282" class="legend-heading">Külső nyílászárók</text>
+    <text x="1005" y="306" class="legend-text">7 Tuya Kristófék</text><text x="1005" y="326" class="legend-text">8 Tuya Rita</text>
+    <text x="1005" y="346" class="legend-text">9 Tuya Veronika</text><text x="1005" y="366" class="legend-text">10 Tuya háló</text>
+    <text x="1005" y="386" class="legend-text">11 Tuya dolgozó ablak</text><text x="1005" y="406" class="legend-text">12 Tuya erkélyajtó</text>
+
+    <circle cx="1005" cy="446" r="8" fill="#f3b45b" class="legend-swatch"/><text x="1023" y="450" class="legend-heading">Belső ajtók · nem blokkolók</text>
+    <text x="1005" y="474" class="legend-text">13 Kisnappali ↔ Kristófék</text><text x="1005" y="494" class="legend-text">14 Kisnappali ↔ Rita</text>
+    <text x="1005" y="514" class="legend-text">15 Kisnappali ↔ Veronika</text>
+
+    <circle cx="1005" cy="554" r="7" fill="#c2413a" class="legend-swatch"/><text x="1023" y="558" class="legend-heading">Klíma és fűtés</text>
+    <text x="1005" y="582" class="legend-text">16 TRV-G2 Kristófék</text><text x="1005" y="602" class="legend-text">17 TRV-G2 Rita</text>
+    <text x="1005" y="622" class="legend-text">18 TRV-G2 háló</text><text x="1005" y="642" class="legend-text">19 HS Kristófék</text>
+    <text x="1005" y="662" class="legend-text">20 HS Rita</text><text x="1005" y="682" class="legend-text">21 HS Veronika</text>
+    <text x="1005" y="702" class="legend-text">22 HS háló</text><text x="1005" y="722" class="legend-text">23 HS dolgozó</text>
+    <text x="1005" y="742" class="legend-text">24 CT400 emelet</text>
+
+    <circle cx="1005" cy="782" r="7" fill="#7257b5" class="legend-swatch"/><text x="1023" y="786" class="legend-heading">Router és fogyasztásmérők</text>
+    <text x="1005" y="810" class="legend-text">25 SP emelet</text><text x="1005" y="830" class="legend-text">26 Nous main IT</text>
+    <text x="1005" y="850" class="legend-text">27 Nous auxiliary IT</text>
+
+    <circle cx="1005" cy="890" r="7" fill="#2878b5" class="legend-swatch"/><text x="1023" y="894" class="legend-heading">Hálózati és IT-eszközök</text>
+    <text x="1005" y="918" class="legend-text">28 think260x</text><text x="1005" y="938" class="legend-text">29 t470</text>
+    <text x="1005" y="958" class="legend-text">30 Xerox B235</text><text x="1005" y="978" class="legend-text">31 Zigbee bridge</text>
+    <text x="1005" y="998" class="legend-text">32 SAGEM</text><text x="1005" y="1018" class="legend-text">33 ZTE</text>
+    <text x="1005" y="1038" class="legend-text">34 Deco main</text>
+
+    <text x="995" y="1090" class="legend-note">Az alaprajz, a jelölések és a jelmagyarázat külön rétegen van.</text>
+    <text x="995" y="1110" class="legend-note">A világos narancssárga jelölések a belső, nem blokkoló ajtók.</text>
+  </g>
+</svg>

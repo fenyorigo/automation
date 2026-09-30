@@ -107,6 +107,29 @@ class HeatingObserverTest(unittest.TestCase):
         )
         self.assertEqual(result["status"], "blocked")
 
+    def test_open_internal_door_does_not_block_heating(self) -> None:
+        result = evaluate_room(
+            [
+                device(1, "Zb Rita", "zigbee2mqtt", 19.0),
+                device(2, "HS Rita", "connectlife", 19.0),
+                device(
+                    3,
+                    "Rita belső ajtó",
+                    "zigbee2mqtt",
+                    device_type="contact_sensor",
+                    opening_role="internal",
+                    connected_room_id=4,
+                    zigbee_contact_closed=False,
+                    zigbee_contact_observed_at=NOW,
+                ),
+            ],
+            {"temperature_c": 7.0},
+            now=NOW,
+            params=self.params,
+        )
+        self.assertEqual(result["status"], "climate_eligible")
+        self.assertEqual(result["blockers"], [])
+
     def test_heating_hysteresis_uses_off_threshold_while_active(self) -> None:
         result = evaluate_room(
             [

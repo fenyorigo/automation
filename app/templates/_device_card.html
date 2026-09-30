@@ -36,6 +36,7 @@
   <p class="temperature-provenance"><strong>2000 W-os villanyfűtő</strong><br>A tényleges fűtést az SP ebédlő méri.</p>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' %}
+  {% if device.opening_role == 'internal' %}<p class="temperature-provenance internal-opening-provenance"><strong>Belső ajtó · nem blokkol</strong><br>{{ device.room_name }} ↔ {{ device.connected_room_name or 'nincs kapcsolt helyiség' }}</p>{% endif %}
   <div class="contact-state {% if device.zigbee_contact_closed is none %}unknown{% elif device.zigbee_contact_closed %}closed{% else %}open{% endif %}">
     <span class="contact-state-label">Állapot</span>
     <strong>{% if device.zigbee_contact_closed is none %}Ismeretlen{% elif device.zigbee_contact_closed %}Csukva{% else %}Nyitva{% endif %}</strong>
@@ -114,6 +115,7 @@
   </dl>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' %}
   <dl class="state-grid contact-details">
+    <div><dt>Szerep</dt><dd>{{ 'Belső, nem blokkoló' if device.opening_role == 'internal' else 'Külső, blokkoló' }}</dd></div>
     <div><dt>Tamper</dt><dd>{% if device.zigbee_tamper is none %}—{% elif device.zigbee_tamper %}Riasztás{% else %}Rendben{% endif %}</dd></div>
   </dl>
   {% elif device.source_system == 'shelly_mqtt' %}

@@ -102,6 +102,12 @@ két havi alapdíjat tartalmaz; ezt az automatikusan létrehozott soron 2-re kel
 javítani. A használaton kívüli vezérelt mérő 39,50 Ft-os nettó alapdíja külön
 sor, kizárólag a régi számlákon.
 
+Az automatikusan létrehozott villany-alapdíj időszaka a teljes számla
+elszámolt időszaka. Ez eltér a gázos alapdíj és szolgáltatások szabályától,
+amelyek a számla zárónapjának naptári hónapját használják. Ha egy díjtétel
+tévesen vagy kétszer került a számlára, a sor melletti kukával, megerősítés
+után törölhető.
+
 ### Túlfizetés és egyéb egyszerű összegek
 
 A túlfizetés vagy támogatás előjeles, bruttó összeg. A

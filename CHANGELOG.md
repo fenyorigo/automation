@@ -5,6 +5,24 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A villanyszámlák számlafejének, fogyasztási részleteinek és díjtételeinek
+  szerkesztése most már az azonosítóból automatikusan visszaállítja a megfelelő
+  energiatípus-, ciklusállapot- és évszűrőt. A javító űrlap és a mentés utáni
+  visszatérés ezért nem ugrik többé a gázszámlák alapnézetére. A megtekintés,
+  szerkesztés, bezárás és megszakítás az aktuális számlaszűrőt őrzi. A
+  díjtételek a szem ikonnal módosítás nélkül áttekinthetők, a ceruza melletti
+  kukával pedig külön megerősítés után törölhetők. A villanyszámla
+  automatikus alapdíja a számla saját időszakát kapja; a gázos fix tételek
+  továbbra is a számla zárónapjának naptári hónapját használják.
+
+- Az 1.3.2 bevezeti a belső, nem blokkoló nyílászáró szerepet. A belső ajtó
+  két helyiséget kapcsol össze, nem indít szellőztetést, és nem blokkolja a
+  fűtési vagy hűtési observert. A Nyilvántartásban megadható a kapcsolt második
+  helyiség, a kártya pedig jelzi a szerepet és a két végpontot. Elkészült a
+  nyitott belső ajtók szerinti pillanatnyi hőtechnikai csoportképzés alapja is.
+  A három telepített gyerekszárnyi érzékelő elsődleges helyisége a Kis nappali,
+  kapcsolt helyisége pedig Kristófék, Rita, illetve Veronika szobája.
+
 - A Klarstein Norderney kártyáján a **Külső fogyasztásmérővel** kiegészítő
   felirat a Villanyfűtő típusjelöléssel arányos, kisebb betűméretet kapott.
 - A kezdőlap korábbi, rögzített háromoszlopos eszközrácsa reszponzív lett. A

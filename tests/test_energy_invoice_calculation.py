@@ -3,6 +3,7 @@
 import os
 import sys
 import unittest
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from dashboard import (
     complete_gas_consumption_values,
     complete_invoice_gross,
     complete_invoice_payable,
+    default_invoice_charge_period,
     installment_cumulative_assignments,
     mj_to_kwh,
     month_date_range,
@@ -116,10 +118,25 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
         )
 
     def test_invoice_defaults_use_calendar_month_of_invoice_end(self):
-        from datetime import date
         self.assertEqual(
             month_date_range(date(2026, 2, 6)),
             (date(2026, 2, 1), date(2026, 2, 28)),
+        )
+
+    def test_electricity_default_charge_uses_invoice_period(self):
+        self.assertEqual(
+            default_invoice_charge_period(
+                "electricity", date(2026, 8, 23), date(2026, 9, 22), date(2026, 9, 22)
+            ),
+            (date(2026, 8, 23), date(2026, 9, 22)),
+        )
+
+    def test_gas_default_charge_keeps_calendar_month(self):
+        self.assertEqual(
+            default_invoice_charge_period(
+                "gas", date(2026, 8, 7), date(2026, 9, 6), date(2026, 9, 6)
+            ),
+            (date(2026, 9, 1), date(2026, 9, 30)),
         )
 
     def test_support_and_late_interest_are_plain_gross_amounts(self):
@@ -208,6 +225,20 @@ class EnergyInvoiceCalculationTest(unittest.TestCase):
         )
         self.assertIn("settled_energy_offset", template)
         self.assertIn("create_energy_invoice_settled_installment", template)
+
+    def test_charge_rows_offer_confirmed_delete_action(self):
+        template = (ROOT / "app/templates/energy.html").read_text()
+        self.assertIn('class="view-icon"', template)
+        self.assertIn("view_charge=line.id", template)
+        self.assertIn("Számlatétel megtekintése", template)
+        self.assertIn("invoice_energy=invoice_energy_type", template)
+        self.assertIn("invoice_status=invoice_cycle_status", template)
+        self.assertIn("invoice_year=invoice_year or ''", template)
+        self.assertIn("const invoiceFilterValues", template)
+        self.assertIn("#invoices .energy-edit-form a.secondary-link", template)
+        self.assertIn("delete_energy_invoice_charge_line", template)
+        self.assertIn("Biztosan törlöd ezt a számlatételt?", template)
+        self.assertIn('class="delete-icon"', template)
         self.assertIn("invoice.sequence_no ~ '. részszámla'", template)
         self.assertIn("option.value = 'late_interest'", template)
         self.assertIn("category.value === 'support' || category.value === 'late_interest'", template)

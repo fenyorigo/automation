@@ -99,6 +99,7 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .temperature-provenance { min-height:34px; margin:-9px 0 16px; color:var(--muted); font-size:.72rem; line-height:1.45; }
 .temperature-provenance strong { color:var(--ink); }
 .temperature-provenance.unavailable strong { color:#9a5b00; }
+.internal-opening-provenance { margin:10px 0 16px; }
 .cooling-advice { display:grid; gap:5px; margin:0 0 16px; padding:12px 14px; border-radius:12px; background:#eef3f0; }
 .cooling-advice strong { color:var(--ink); }
 .cooling-advice small { color:var(--muted); line-height:1.35; }
@@ -372,10 +373,21 @@ dd.power-on { color: #d05a16; }
 .energy-reading-form label { color:var(--muted); font-size:.7rem; font-weight:700; }
 .energy-reading-form input,.energy-reading-form select { display:block; width:100%; min-height:42px; margin-top:5px; padding:7px; border:1px solid var(--line); border-radius:9px; background:white; font:inherit; }
 .energy-reading-form button { margin-top:0; }
-.row-action-heading,.row-action { width:1%; text-align:center; }
+.row-action-heading,.row-action { width:1%; text-align:center; white-space:nowrap; }
+.row-actions { display:inline-flex; align-items:center; gap:6px; }
+.inline-delete-form { display:inline; margin:0; }
+.view-icon { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #a9c2d3; border-radius:9px; color:#315f80; font-size:1rem; font-weight:900; text-decoration:none; }
+.view-icon:hover { background:#e4eef5; }
 .edit-icon { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid var(--line); border-radius:9px; color:var(--green); font-size:1.1rem; font-weight:900; text-decoration:none; }
 .edit-icon:hover { background:var(--green-soft); }
+.delete-icon { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:1px solid #d9aaa3; border-radius:9px; background:transparent; color:#a8372b; font-size:1rem; cursor:pointer; }
+.delete-icon:hover { background:#f8e3df; }
 .reading-edit-row td { padding:14px; background:var(--paper); white-space:normal; }
+.invoice-charge-details { padding:2px; }
+.invoice-charge-details dl { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px 18px; margin:0 0 14px; }
+.invoice-charge-details dl div { min-width:0; padding:8px 10px; border-radius:8px; background:white; }
+.invoice-charge-details dt { color:var(--muted); font-size:.68rem; font-weight:700; }
+.invoice-charge-details dd { margin:4px 0 0; overflow-wrap:anywhere; font-weight:700; }
 .energy-edit-form { margin-top:0; grid-template-columns:1fr 1.25fr 1fr 1.5fr auto auto; }
 .energy-edit-form .secondary-link { min-height:42px; }
 .backup-list { display:grid; gap:10px; margin-top:16px; }

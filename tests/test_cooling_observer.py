@@ -67,6 +67,25 @@ class CoolingObserverTest(unittest.TestCase):
         self.assertEqual(advice["status"], "blocked")
         self.assertIn("Tuya erkélyajtó", advice["blockers"][0])
 
+    def test_open_internal_door_does_not_block_cooling(self) -> None:
+        devices = [
+            device(1, "Zb Rita", "zigbee2mqtt", 28.0),
+            device(2, "HS Rita", "connectlife", 28.0),
+            device(
+                3,
+                "Rita belső ajtó",
+                "zigbee2mqtt",
+                device_type="contact_sensor",
+                opening_role="internal",
+                connected_room_id=4,
+                zigbee_contact_closed=False,
+                zigbee_contact_observed_at=NOW - timedelta(minutes=1),
+            ),
+        ]
+        advice = evaluate_room(devices, self.outdoor, now=NOW, params=self.params)
+        self.assertEqual(advice["status"], "would_start")
+        self.assertEqual(advice["blockers"], [])
+
     def test_recent_close_blocks_until_stabilized(self) -> None:
         devices = [
             device(1, "Zb dolgozó", "zigbee2mqtt", 28.0),

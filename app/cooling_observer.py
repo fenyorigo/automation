@@ -156,6 +156,7 @@ def evaluate_room(
         for item in devices
         if item.get("source_system") == "zigbee2mqtt"
         and item.get("device_type") == "contact_sensor"
+        and item.get("opening_role", "external") == "external"
     ]
     unavailable_contacts = [item for item in contacts if item.get("online") is False]
     open_contacts = [

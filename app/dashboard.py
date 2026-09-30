@@ -756,9 +756,11 @@ def load_registry() -> dict[str, list[dict[str, Any]]]:
         device_types=rows_as_dicts(cursor)
         cursor.execute("SELECT id,code,name,is_active FROM manufacturers ORDER BY name")
         manufacturers=rows_as_dicts(cursor)
-        cursor.execute("""SELECT d.*,r.name room_name,COALESCE(r.zone_id,d.zone_id) effective_zone_id,
+        cursor.execute("""SELECT d.*,r.name room_name,cr.name connected_room_name,
+            COALESCE(r.zone_id,d.zone_id) effective_zone_id,
             z.name zone_name,dt.name device_type_name,m.name manufacturer_name
           FROM devices d LEFT JOIN rooms r ON r.id=d.room_id
+          LEFT JOIN rooms cr ON cr.id=d.connected_room_id
           LEFT JOIN zones z ON z.id=COALESCE(r.zone_id,d.zone_id)
           LEFT JOIN device_types dt ON dt.id=d.device_type_id
           LEFT JOIN manufacturers m ON m.id=d.manufacturer_id
@@ -926,6 +928,7 @@ def load_dashboard(
               d.device_type,d.model,
               dt.name AS device_type_name,
               d.room_id, r.name AS room_name, z.name AS zone_name,
+              d.opening_role,d.connected_room_id,cr.name AS connected_room_name,
               d.managed_manually, d.manual_power_state,
               d.manual_hot_water_state,d.manual_heating_state,d.access_mode,
               d.capability_mode, d.polling_enabled, d.control_enabled,
@@ -1104,6 +1107,7 @@ def load_dashboard(
             FROM devices d
             LEFT JOIN device_types dt ON dt.id=d.device_type_id
             LEFT JOIN rooms r ON r.id = d.room_id
+            LEFT JOIN rooms cr ON cr.id = d.connected_room_id
             LEFT JOIN zones z ON z.id = COALESCE(r.zone_id,d.zone_id)
             LEFT JOIN zigbee2mqtt_devices zd ON zd.device_id=d.id
             LEFT JOIN sensors s
@@ -1989,6 +1993,67 @@ def load_energy_reading_edit_context(reading_id: int) -> tuple[str, int] | None:
         connection.close()
 
 
+def load_energy_invoice_context(invoice_id: int) -> tuple[str, str, int] | None:
+    """Return the filters which make an invoice visible in the invoice list."""
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT m.energy_type,c.status,YEAR(i.period_end_date)
+               FROM energy_invoices i
+               JOIN energy_meters m ON m.id=i.meter_id
+               LEFT JOIN energy_billing_cycles c ON c.id=i.billing_cycle_id
+               WHERE i.id=?""",
+            (invoice_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return str(row[0]), str(row[1]) if row[1] in {"open", "settled"} else "all", int(row[2])
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def load_energy_invoice_edit_context(edit_key: str, record_id: int) -> tuple[str, str, int] | None:
+    """Resolve an invoice or one of its child records to its list filters."""
+    lookups = {
+        "edit_invoice": ("energy_invoices", "id", "id"),
+        "edit_consumption": ("energy_invoice_consumption", "id", "invoice_id"),
+        "view_charge": ("energy_invoice_charge_lines", "id", "invoice_id"),
+        "edit_charge": ("energy_invoice_charge_lines", "id", "invoice_id"),
+        "edit_settled_installment": (
+            "energy_invoice_settled_installments", "id", "settlement_invoice_id"
+        ),
+    }
+    table, id_column, invoice_column = lookups[edit_key]
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            f"SELECT {invoice_column} FROM {table} WHERE {id_column}=?",
+            (record_id,),
+        )
+        row = cursor.fetchone()
+    finally:
+        cursor.close()
+        connection.close()
+    return load_energy_invoice_context(int(row[0])) if row is not None else None
+
+
+def energy_invoice_location(invoice_id: int, **extra_query: Any) -> str:
+    """Build a URL that keeps the selected invoice visible after an action."""
+    context = load_energy_invoice_context(invoice_id)
+    query = dict(extra_query)
+    if context is not None:
+        query.update(
+            invoice_energy=context[0],
+            invoice_status=context[1],
+            invoice_year=context[2],
+        )
+    return url_for("energy", **query) + f"#invoice-{invoice_id}"
+
+
 def load_energy_billing(
     invoice_energy_type: str = "gas",
     invoice_cycle_status: str = "open",
@@ -2529,13 +2594,25 @@ def energy() -> str:
         invoice_year = int(request.args["invoice_year"]) if request.args.get("invoice_year") else None
     except ValueError:
         invoice_year = None
-    meters, readings = load_energy_readings(reading_energy_type, reading_year)
     edit_ids = {}
-    for key in ("edit_invoice", "edit_consumption", "edit_charge", "edit_settled_installment"):
+    for key in (
+        "edit_invoice", "edit_consumption", "view_charge", "edit_charge",
+        "edit_settled_installment",
+    ):
         try:
             edit_ids[key] = int(request.args[key])
         except (KeyError, TypeError, ValueError):
             edit_ids[key] = None
+    selected_edits = [(key, record_id) for key, record_id in edit_ids.items() if record_id is not None]
+    invoice_filters_explicit = any(
+        key in request.args for key in ("invoice_energy", "invoice_status", "invoice_year")
+    )
+    if selected_edits and not invoice_filters_explicit:
+        edit_context = load_energy_invoice_edit_context(*selected_edits[0])
+        if edit_context is None:
+            abort(404)
+        invoice_energy_type, invoice_cycle_status, invoice_year = edit_context
+    meters, readings = load_energy_readings(reading_energy_type, reading_year)
     return render_template(
         "energy.html", meters=meters, readings=readings,
         now_local=local_now().strftime("%Y-%m-%dT%H:%M"),
@@ -3120,10 +3197,31 @@ def energy_type_for_invoice(invoice_id: int) -> str:
         connection.close()
 
 
+def default_invoice_charge_period(
+    energy_type: str, invoice_start: date, invoice_end: date, effective_at: date
+) -> tuple[date, date]:
+    """Use the billed period for electricity, calendar month for gas fixed fees."""
+    if energy_type == "electricity":
+        return invoice_start, invoice_end
+    return month_date_range(effective_at)
+
+
 def add_default_invoice_charge_lines(
     cursor: mariadb.Cursor, invoice_id: int, meter_id: int, effective_at: date
 ) -> int:
-    period_start, period_end = month_date_range(effective_at)
+    cursor.execute(
+        """SELECT m.energy_type,i.period_start_date,i.period_end_date
+           FROM energy_invoices i
+           JOIN energy_meters m ON m.id=i.meter_id
+           WHERE i.id=? AND i.meter_id=?""",
+        (invoice_id, meter_id),
+    )
+    invoice = cursor.fetchone()
+    if invoice is None:
+        raise ValueError("A számla vagy a hozzá tartozó mérő nem található.")
+    period_start, period_end = default_invoice_charge_period(
+        str(invoice[0]), invoice[1], invoice[2], effective_at
+    )
     cursor.execute(
         """SELECT id,line_category,description,quantity,quantity_unit,
                   net_unit_price_huf,tax_treatment,vat_rate_percent,gross_unit_price_huf
@@ -3479,6 +3577,7 @@ def create_energy_entitlement_period():
 @editor_required
 def create_energy_invoice():
     validate_csrf()
+    invoice_id: int | None = None
     try:
         start = required_form_date("period_start_date")
         end = required_form_date("period_end_date")
@@ -3539,7 +3638,9 @@ def create_energy_invoice():
     finally:
         cursor.close()
         connection.close()
-    return redirect(url_for("energy") + "#invoices")
+    return redirect(
+        energy_invoice_location(invoice_id) if invoice_id is not None else url_for("energy") + "#invoices"
+    )
 
 
 @app.post("/energy/invoices/<int:invoice_id>/edit")
@@ -3608,7 +3709,7 @@ def edit_energy_invoice(invoice_id: int):
     except mariadb.IntegrityError as error:
         connection.rollback()
         session["energy_notice"] = {"kind": "warning", "message": f"A számla nem javítható: {error}"}
-        return redirect(url_for("energy", edit_invoice=invoice_id) + f"#invoice-{invoice_id}")
+        return redirect(energy_invoice_location(invoice_id, edit_invoice=invoice_id))
     except Exception:
         connection.rollback()
         raise
@@ -3616,7 +3717,7 @@ def edit_energy_invoice(invoice_id: int):
         cursor.close()
         connection.close()
     session["energy_notice"] = {"kind": "success", "message": "A számla adatait javítottuk."}
-    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+    return redirect(energy_invoice_location(invoice_id))
 
 
 @app.post("/energy/invoices/<int:invoice_id>/consumption")
@@ -3693,7 +3794,7 @@ def create_energy_invoice_consumption(invoice_id: int):
     finally:
         cursor.close()
         connection.close()
-    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+    return redirect(energy_invoice_location(invoice_id))
 
 
 @app.post("/energy/invoices/<int:invoice_id>/consumption/<int:consumption_id>/edit")
@@ -3764,7 +3865,7 @@ def edit_energy_invoice_consumption(invoice_id: int, consumption_id: int):
         cursor.close()
         connection.close()
     session["energy_notice"] = {"kind": "success", "message": "A fogyasztási részletet javítottuk."}
-    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+    return redirect(energy_invoice_location(invoice_id))
 
 
 @app.post("/energy/invoices/<int:invoice_id>/charge-lines")
@@ -3807,7 +3908,7 @@ def create_energy_invoice_charge_line(invoice_id: int):
             vat_rate_percent,tax_treatment,gross_amount_huf,sort_order,note)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", parameters, "A számlatételt rögzítettük."
     )
-    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+    return redirect(energy_invoice_location(invoice_id))
 
 
 @app.post("/energy/invoices/<int:invoice_id>/charge-lines/<int:line_id>/edit")
@@ -3875,7 +3976,39 @@ def edit_energy_invoice_charge_line(invoice_id: int, line_id: int):
         cursor.close()
         connection.close()
     session["energy_notice"] = {"kind": "success", "message": "A számlatételt javítottuk."}
-    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+    return redirect(energy_invoice_location(invoice_id))
+
+
+@app.post("/energy/invoices/<int:invoice_id>/charge-lines/<int:line_id>/delete")
+@editor_required
+def delete_energy_invoice_charge_line(invoice_id: int, line_id: int):
+    validate_csrf()
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT description FROM energy_invoice_charge_lines
+               WHERE id=? AND invoice_id=? FOR UPDATE""",
+            (line_id, invoice_id),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            abort(404)
+        cursor.execute(
+            "DELETE FROM energy_invoice_charge_lines WHERE id=? AND invoice_id=?",
+            (line_id, invoice_id),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+    session["energy_notice"] = {
+        "kind": "success", "message": f"A(z) {row[0]} számlatételt töröltük."
+    }
+    return redirect(energy_invoice_location(invoice_id))
 
 
 def matching_installment_invoice_id(
@@ -3945,7 +4078,7 @@ def create_energy_invoice_settled_installment(invoice_id: int):
         session["energy_notice"] = {
             "kind": "warning", "message": f"Az elszámolt részszámla nem rögzíthető: {error}"
         }
-        return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+        return redirect(energy_invoice_location(invoice_id))
     except Exception:
         connection.rollback()
         raise
@@ -3955,7 +4088,7 @@ def create_energy_invoice_settled_installment(invoice_id: int):
     session["energy_notice"] = {
         "kind": "success", "message": "Az elszámolt részszámlát rögzítettük."
     }
-    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+    return redirect(energy_invoice_location(invoice_id))
 
 
 @app.post("/energy/invoices/<int:invoice_id>/settled-installments/<int:installment_id>/edit")
@@ -4000,9 +4133,9 @@ def edit_energy_invoice_settled_installment(invoice_id: int, installment_id: int
         session["energy_notice"] = {
             "kind": "warning", "message": f"Az elszámolt részszámla nem javítható: {error}"
         }
-        return redirect(
-            url_for("energy", edit_settled_installment=installment_id) + f"#invoice-{invoice_id}"
-        )
+        return redirect(energy_invoice_location(
+            invoice_id, edit_settled_installment=installment_id
+        ))
     except Exception:
         connection.rollback()
         raise
@@ -4012,7 +4145,7 @@ def edit_energy_invoice_settled_installment(invoice_id: int, installment_id: int
     session["energy_notice"] = {
         "kind": "success", "message": "Az elszámolt részszámlát javítottuk."
     }
-    return redirect(url_for("energy") + f"#invoice-{invoice_id}")
+    return redirect(energy_invoice_location(invoice_id))
 
 
 @app.post("/poll-now")
@@ -5358,14 +5491,20 @@ def create_registry_lookup(table: str, entity_type: str):
 
 def device_form_values() -> dict[str, Any]:
     room_id=optional_int(request.form.get("room_id")); zone_id=optional_int(request.form.get("zone_id"))
+    connected_room_id=optional_int(request.form.get("connected_room_id"))
+    opening_role=request.form.get("opening_role", "external")
+    if opening_role not in {"external", "internal"}: raise ValueError
+    if opening_role == "internal" and (room_id is None or connected_room_id is None or room_id == connected_room_id):
+        raise ValueError
+    if opening_role == "external": connected_room_id=None
     interval=int(request.form.get("poll_interval_minutes","10"))*60
     if not 60 <= interval <= 86400: raise ValueError
     return {
       "name":request.form["name"].strip(),"source_system":request.form["source_system"],
-      "source_device_id":request.form["source_device_id"].strip(),"room_id":room_id,"zone_id":zone_id,
+      "source_device_id":request.form["source_device_id"].strip(),"room_id":room_id,"connected_room_id":connected_room_id,"zone_id":zone_id,
       "device_type_id":int(request.form["device_type_id"]),"manufacturer_id":int(request.form["manufacturer_id"]),
       "access_mode":request.form["access_mode"],"capability_mode":request.form["capability_mode"],
-      "integration_role":request.form["integration_role"],
+      "integration_role":request.form["integration_role"],"opening_role":opening_role,
       "hostname":request.form.get("hostname","").strip() or None,"expected_ip":request.form.get("expected_ip","").strip() or None,
       "mac_address":request.form.get("mac_address","").strip().lower() or None,"ip_assignment":request.form["ip_assignment"],
       "polling_enabled":int(request.form.get("polling_enabled")=="1"),"control_enabled":int(request.form.get("control_enabled")=="1"),
@@ -5398,8 +5537,11 @@ def create_device():
             cursor.execute("SELECT zone_id FROM rooms WHERE id=? AND is_active=1",(values["room_id"],)); row=cursor.fetchone()
             if row is None: abort(400)
             values["zone_id"]=row[0]
-        cursor.execute("""INSERT INTO devices (room_id,zone_id,source_system,source_device_id,hostname,expected_ip,mac_address,name,device_type,device_type_id,manufacturer_id,access_mode,capability_mode,integration_role,ip_assignment,polling_enabled,control_enabled,poll_interval_seconds,min_target_temperature_c,max_target_temperature_c,is_active)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(values["room_id"],values["zone_id"],values["source_system"],values["source_device_id"],values["hostname"],values["expected_ip"],values["mac_address"],values["name"],"other",values["device_type_id"],values["manufacturer_id"],values["access_mode"],values["capability_mode"],values["integration_role"],values["ip_assignment"],values["polling_enabled"],values["control_enabled"],values["poll_interval_seconds"],values["min_target"],values["max_target"],values["is_active"])); device_id=cursor.lastrowid
+        if values["connected_room_id"]:
+            cursor.execute("SELECT zone_id FROM rooms WHERE id=? AND is_active=1",(values["connected_room_id"],)); connected=cursor.fetchone()
+            if connected is None or connected[0] != values["zone_id"]: abort(400)
+        cursor.execute("""INSERT INTO devices (room_id,connected_room_id,zone_id,source_system,source_device_id,hostname,expected_ip,mac_address,name,device_type,device_type_id,manufacturer_id,access_mode,capability_mode,integration_role,opening_role,ip_assignment,polling_enabled,control_enabled,poll_interval_seconds,min_target_temperature_c,max_target_temperature_c,is_active)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(values["room_id"],values["connected_room_id"],values["zone_id"],values["source_system"],values["source_device_id"],values["hostname"],values["expected_ip"],values["mac_address"],values["name"],"other",values["device_type_id"],values["manufacturer_id"],values["access_mode"],values["capability_mode"],values["integration_role"],values["opening_role"],values["ip_assignment"],values["polling_enabled"],values["control_enabled"],values["poll_interval_seconds"],values["min_target"],values["max_target"],values["is_active"])); device_id=cursor.lastrowid
         save_device_capabilities(cursor,device_id); audit_registry(cursor,"device",device_id,"created",values); connection.commit(); created=True
     except mariadb.IntegrityError as error: connection.rollback(); session["registry_notice"]={"kind":"error","message":f"Az eszköz nem vehető fel: {error}"}
     finally: cursor.close(); connection.close()
@@ -5424,11 +5566,14 @@ def save_device(device_id: int):
             cursor.execute("SELECT zone_id FROM rooms WHERE id=? AND is_active=1",(values["room_id"],)); room=cursor.fetchone()
             if room is None: abort(400)
             values["zone_id"]=room[0]
+        if values["connected_room_id"]:
+            cursor.execute("SELECT zone_id FROM rooms WHERE id=? AND is_active=1",(values["connected_room_id"],)); connected=cursor.fetchone()
+            if connected is None or connected[0] != values["zone_id"]: abort(400)
         if row[0] != values["room_id"]:
             cursor.execute("UPDATE device_room_history SET valid_to=CURRENT_TIMESTAMP(3) WHERE device_id=? AND valid_to IS NULL",(device_id,))
             cursor.execute("UPDATE sensors SET room_id=? WHERE device_id=?",(values["room_id"],device_id))
             if values["room_id"]: cursor.execute("INSERT INTO device_room_history (device_id,room_id,change_reason) VALUES (?,?,?)",(device_id,values["room_id"],request.form.get("reason") or 'Nyilvántartási módosítás'))
-        cursor.execute("""UPDATE devices SET room_id=?,zone_id=?,name=?,source_system=?,source_device_id=?,device_type_id=?,manufacturer_id=?,access_mode=?,capability_mode=?,integration_role=?,hostname=?,expected_ip=?,mac_address=?,ip_assignment=?,polling_enabled=?,control_enabled=?,poll_interval_seconds=?,min_target_temperature_c=?,max_target_temperature_c=?,is_active=? WHERE id=?""",(values["room_id"],values["zone_id"],values["name"],values["source_system"],values["source_device_id"],values["device_type_id"],values["manufacturer_id"],values["access_mode"],values["capability_mode"],values["integration_role"],values["hostname"],values["expected_ip"],values["mac_address"],values["ip_assignment"],values["polling_enabled"],values["control_enabled"],values["poll_interval_seconds"],values["min_target"],values["max_target"],values["is_active"],device_id))
+        cursor.execute("""UPDATE devices SET room_id=?,connected_room_id=?,zone_id=?,name=?,source_system=?,source_device_id=?,device_type_id=?,manufacturer_id=?,access_mode=?,capability_mode=?,integration_role=?,opening_role=?,hostname=?,expected_ip=?,mac_address=?,ip_assignment=?,polling_enabled=?,control_enabled=?,poll_interval_seconds=?,min_target_temperature_c=?,max_target_temperature_c=?,is_active=? WHERE id=?""",(values["room_id"],values["connected_room_id"],values["zone_id"],values["name"],values["source_system"],values["source_device_id"],values["device_type_id"],values["manufacturer_id"],values["access_mode"],values["capability_mode"],values["integration_role"],values["opening_role"],values["hostname"],values["expected_ip"],values["mac_address"],values["ip_assignment"],values["polling_enabled"],values["control_enabled"],values["poll_interval_seconds"],values["min_target"],values["max_target"],values["is_active"],device_id))
         save_device_capabilities(cursor,device_id); audit_registry(cursor,"device",device_id,"updated",values)
         connection.commit()
     except Exception: connection.rollback(); raise

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="1260" height="1680" viewBox="0 0 1260 1680">
+  <title>Földszinti eszköztérkép</title>
+  <desc>A földszint hozzávetőleges alaprajza külön szerkeszthető eszközjelölésekkel.</desc>
+  <style>
+    .marker circle { stroke: #ffffff; stroke-width: 2.5; }
+    .marker text { fill: #ffffff; font-family: Arial, sans-serif; font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+    .sensor circle { fill: #18856b; }
+    .contact circle { fill: #d97706; }
+    .heating circle { fill: #c2413a; }
+    .router circle { fill: #7257b5; }
+    .network circle { fill: #2878b5; }
+    .equipment circle { fill: #485760; }
+    .legend-title { fill: #14251f; font-family: Arial, sans-serif; font-size: 20px; font-weight: 700; }
+    .legend-heading { fill: #14251f; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; }
+    .legend-text { fill: #273b35; font-family: Arial, sans-serif; font-size: 12px; }
+    .legend-note { fill: #60706a; font-family: Arial, sans-serif; font-size: 11px; }
+    .legend-swatch { stroke: #ffffff; stroke-width: 1.5; }
+  </style>
+
+  <rect width="1260" height="1680" fill="#f7f5ef"/>
+
+  <g id="alaprajz-hatter" inkscape:groupmode="layer" inkscape:label="Alaprajz háttér" inkscape:insensitive="true">
+    <image x="0" y="0" width="782" height="1680" xlink:href="foldszint-forras.png" href="foldszint-forras.png"/>
+  </g>
+
+  <g id="eszkozjelolesek" inkscape:groupmode="layer" inkscape:label="Eszközjelölések">
+    <!-- Hőmérők -->
+    <g id="device-zb-nappali" class="marker sensor" transform="translate(475 176)" data-device-name="Zb nappali"><circle r="13"/><text>1</text></g>
+    <g id="device-sh-kozlekedo" class="marker sensor" transform="translate(330 611)" data-device-name="Sh közlekedő"><circle r="13"/><text>2</text></g>
+    <g id="device-zb-vendegszoba" class="marker sensor" transform="translate(505 562)" data-device-name="Zb vendégszoba"><circle r="13"/><text>3</text></g>
+    <g id="device-zb-ext" class="marker sensor" transform="translate(435 815)" data-device-name="Zb ext"><circle r="13"/><text>4</text></g>
+    <g id="device-sh-ebedlo" class="marker sensor" transform="translate(168 1045)" data-device-name="Sh ebédlő"><circle r="13"/><text>5</text></g>
+
+    <!-- Nyitásérzékelők -->
+    <g id="device-tuya-nappali-bal" class="marker contact" transform="translate(154 155)" data-device-name="Tuya nappali bal"><circle r="13"/><text>6</text></g>
+    <g id="device-tuya-nappali-jobb" class="marker contact" transform="translate(548 154)" data-device-name="Tuya nappali jobb"><circle r="13"/><text>7</text></g>
+    <g id="device-tuya-vendegszoba" class="marker contact" transform="translate(552 651)" data-device-name="Tuya vendégszoba"><circle r="13"/><text>8</text></g>
+    <g id="device-tuya-ebedlo" class="marker contact" transform="translate(349 952)" data-device-name="Tuya ebédlő"><circle r="13"/><text>9</text></g>
+    <g id="device-tuya-konyha" class="marker contact" transform="translate(346 1143)" data-device-name="Tuya konyha"><circle r="13"/><text>10</text></g>
+
+    <!-- Termosztátok és radiátorszelepek -->
+    <g id="device-ct-vendegszoba" class="marker heating" transform="translate(526 760)" data-device-name="CT vendégszoba"><circle r="13"/><text>11</text></g>
+    <g id="device-trv-nappali-bal" class="marker heating" transform="translate(313 105)" data-device-name="TRV-G2 nappali bal"><circle r="13"/><text>12</text></g>
+    <g id="device-trv-nappali-jobb" class="marker heating" transform="translate(414 105)" data-device-name="TRV-G2 nappali jobb"><circle r="13"/><text>13</text></g>
+    <g id="device-trv-ebedlo" class="marker heating" transform="translate(367 870)" data-device-name="TRV-G2 ebédlő"><circle r="13"/><text>14</text></g>
+
+    <!-- Zigbee-router dugaljak -->
+    <g id="device-sp-kozlekedo" class="marker router" transform="translate(388 436)" data-device-name="SP közlekedő"><circle r="13"/><text>15</text></g>
+    <g id="device-sp-lepcso" class="marker router" transform="translate(401 754)" data-device-name="SP lépcső"><circle r="13"/><text>16</text></g>
+    <g id="device-sp-ebedlo" class="marker router" transform="translate(275 868)" data-device-name="SP ebédlő"><circle r="13"/><text>17</text></g>
+
+    <!-- Wi-Fi mesh -->
+    <g id="device-deco-stair" class="marker network" transform="translate(387 733)" data-device-name="Deco stair"><circle r="13"/><text>18</text></g>
+    <g id="device-deco-konyha" class="marker network" transform="translate(176 1214)" data-device-name="Deco konyha"><circle r="13"/><text>19</text></g>
+    <g id="device-deco-telikert" class="marker network" transform="translate(366 1313)" data-device-name="Deco télikert"><circle r="13"/><text>20</text></g>
+
+    <!-- Berendezések és tápfelügyelet -->
+    <g id="device-nous-kazan" class="marker equipment" transform="translate(223 791)" data-device-name="Nous kazán"><circle r="13"/><text>21</text></g>
+    <g id="device-bosch" class="marker equipment" transform="translate(270 810)" data-device-name="Bosch 7000i"><circle r="13"/><text>22</text></g>
+    <g id="device-klarstein" class="marker equipment" transform="translate(276 888)" data-device-name="Klarstein Norderney"><circle r="13"/><text>23</text></g>
+    <g id="device-bojler" class="marker equipment" transform="translate(164 1245)" data-device-name="Villanybojler"><circle r="13"/><text>24</text></g>
+    <g id="device-nous-bojler" class="marker equipment" transform="translate(159 1287)" data-device-name="Nous bojler"><circle r="13"/><text>25</text></g>
+    <g id="device-deye" class="marker equipment" transform="translate(575 1548)" data-device-name="Deye inverter"><circle r="13"/><text>26</text></g>
+  </g>
+
+  <g id="jelmagyarazat" inkscape:groupmode="layer" inkscape:label="Jelmagyarázat">
+    <text x="810" y="48" class="legend-title">Földszinti eszközök</text>
+    <text x="810" y="72" class="legend-note">A számozott jelölések külön mozgatható SVG-csoportok.</text>
+
+    <circle cx="820" cy="110" r="7" fill="#18856b" class="legend-swatch"/><text x="838" y="114" class="legend-heading">Hőmérők</text>
+    <text x="820" y="138" class="legend-text">1  Zb nappali</text><text x="820" y="158" class="legend-text">2  Sh közlekedő</text>
+    <text x="820" y="178" class="legend-text">3  Zb vendégszoba</text><text x="820" y="198" class="legend-text">4  Zb ext</text>
+    <text x="820" y="218" class="legend-text">5  Sh ebédlő</text>
+
+    <circle cx="820" cy="258" r="7" fill="#d97706" class="legend-swatch"/><text x="838" y="262" class="legend-heading">Nyitásérzékelők</text>
+    <text x="820" y="286" class="legend-text">6  Tuya nappali bal</text><text x="820" y="306" class="legend-text">7  Tuya nappali jobb</text>
+    <text x="820" y="326" class="legend-text">8  Tuya vendégszoba</text><text x="820" y="346" class="legend-text">9  Tuya ebédlő</text>
+    <text x="820" y="366" class="legend-text">10 Tuya konyha</text>
+
+    <circle cx="820" cy="406" r="7" fill="#c2413a" class="legend-swatch"/><text x="838" y="410" class="legend-heading">Fűtési eszközök</text>
+    <text x="820" y="434" class="legend-text">11 CT vendégszoba</text><text x="820" y="454" class="legend-text">12 TRV-G2 nappali bal</text>
+    <text x="820" y="474" class="legend-text">13 TRV-G2 nappali jobb</text><text x="820" y="494" class="legend-text">14 TRV-G2 ebédlő</text>
+
+    <circle cx="820" cy="534" r="7" fill="#7257b5" class="legend-swatch"/><text x="838" y="538" class="legend-heading">Zigbee-routerek</text>
+    <text x="820" y="562" class="legend-text">15 SP közlekedő</text><text x="820" y="582" class="legend-text">16 SP lépcső</text>
+    <text x="820" y="602" class="legend-text">17 SP ebédlő</text>
+
+    <circle cx="820" cy="642" r="7" fill="#2878b5" class="legend-swatch"/><text x="838" y="646" class="legend-heading">Wi-Fi mesh</text>
+    <text x="820" y="670" class="legend-text">18 Deco stair</text><text x="820" y="690" class="legend-text">19 Deco konyha</text>
+    <text x="820" y="710" class="legend-text">20 Deco télikert</text>
+
+    <circle cx="820" cy="750" r="7" fill="#485760" class="legend-swatch"/><text x="838" y="754" class="legend-heading">Berendezések</text>
+    <text x="820" y="778" class="legend-text">21 Nous kazán</text><text x="820" y="798" class="legend-text">22 Bosch 7000i</text>
+    <text x="820" y="818" class="legend-text">23 Klarstein Norderney</text><text x="820" y="838" class="legend-text">24 Villanybojler</text>
+    <text x="820" y="858" class="legend-text">25 Nous bojler</text><text x="820" y="878" class="legend-text">26 Deye inverter</text>
+
+    <text x="810" y="930" class="legend-note">Szerkesztés: Inkscape, Affinity Designer vagy más SVG-szerkesztő.</text>
+    <text x="810" y="950" class="legend-note">Az alaprajz, a jelölések és a jelmagyarázat külön rétegen van.</text>
+  </g>
+</svg>

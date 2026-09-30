@@ -101,6 +101,15 @@
 
 ## Megfigyelő logikából automatikus vezérlés
 
+- [x] A belső ajtó külön, nem blokkoló nyílászáró-szerepet és kétoldalú
+  helyiségkapcsolatot kapott; nem hoz létre szellőztetési eseményt.
+- [x] A három belső érzékelőt párosítani és beállítani: Kisnappali ↔ Rita,
+  Kisnappali ↔ Veronika, Kisnappali ↔ Kristófék. Az elsődleges helyiség a
+  fizikai felszerelésnek megfelelően mindháromnál a Kis nappali.
+- [ ] A nyitott belső ajtók alapján számított pillanatnyi hőtechnikai
+  csoportokat az observer felületén megjeleníteni, majd üzemi tapasztalat után
+  bevonni a csoportszintű klímajavaslatba.
+
 - [ ] Az emeleti hűtési observer egyelőre ne küldjön automatikus parancsot.
   Következő lépésként a javaslatok és blokkolások üzemi megfigyelése, majd külön
   jóváhagyott fázisban a 25 °C-os célértékkorlát és a nyílászáró-kapuzás

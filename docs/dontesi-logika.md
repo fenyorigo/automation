@@ -151,9 +151,31 @@ hőmérséklettől függő COP-görbéjének. A tárolt elvárt minimum `COP 2,5
 nem pillanatnyi vezérlési érték. A későbbi tarifaalapú döntés a tényleges
 COP-görbével váltja majd fel az egyszerű kültéri küszöböt.
 
-Nyitott vagy ismeretlen állapotú nyílászáró, explicit offline kontaktus és a
-zárás utáni stabilizációs idő az adott helyiséget blokkolja; ezek önmagukban nem
-okoznak gázra váltást. A régi, de elérhető Tuya állapotjelzés továbbra sem hiba.
+Nyitott vagy ismeretlen állapotú **külső** nyílászáró, explicit offline külső
+kontaktus és a zárás utáni stabilizációs idő az adott helyiséget blokkolja;
+ezek önmagukban nem okoznak gázra váltást. A régi, de elérhető Tuya
+állapotjelzés továbbra sem hiba. A `Belső – helyiségeket kapcsol össze`
+szerepű ajtó nem szellőztetési esemény, és nyitott, csukott, ismeretlen vagy
+offline állapotában sem blokkolja közvetlenül a fűtést vagy hűtést.
+
+### Belső ajtók és pillanatnyi hőtechnikai felosztás
+
+A Rita, Veronika és Kristófék szobájába vezető három belső ajtó mind a
+Kisnappaliba nyílik. Az érzékelők két helyiséget kapcsolnak össze: az eszköz
+elsődleges helyisége a fizikai felszerelésnek megfelelően a Kisnappali, a
+`connected_room_id` pedig az adott hálószoba. Nyitott belső ajtónál a két
+helyiség azonos pillanatnyi
+hőtechnikai csoportba kerül; csukott, ismeretlen vagy kifejezetten offline
+érzékelőnél külön maradnak.
+
+- mindhárom ajtó nyitva: közös gyerekszárny;
+- Rita ajtaja csukva: Rita külön zóna, Veronika–Kristófék–Kisnappali közös;
+- csak egy ajtó nyitva: a Kisnappalit csak az adott szoba klímája temperálja;
+- mindhárom ajtó csukva: a Kisnappali klímával közvetlenül nem temperálható.
+
+Az 1.3.2 elkülöníti és tárolja ezt a topológiát, valamint előállítja a nyitott
+belső ajtók szerinti helyiségcsoportokat. Az automatikus, csoportszintű
+klímaparancsok továbbra sem aktívak; ez későbbi, külön jóváhagyott lépés.
 
 A Computherm kártyája a Bosch tényleges fűtési elérhetőségét mutatja. Ehhez
 egyszerre szükséges a Nous vagy kézi forrás szerint meglévő tápellátás, a kazán
@@ -287,9 +309,9 @@ A két szobahőmérsékleti és a két kültéri határ hiszterézist alkot: kik
 klímánál a magasabb indítási, működő hűtésnél az alacsonyabb fenntartási határ
 érvényes. A termikus „Hűtést kér” állapot külön fogalom attól, hogy a kérés
 végrehajtható-e. Nyitott, ismeretlen állapotú vagy a Zigbee mesh-ről leesett
-nyílászáró-érzékelő blokkol; bezárás után a stabilizációs idő végéig szintén
+külső nyílászáró-érzékelő blokkol; bezárás után a stabilizációs idő végéig szintén
 blokkolt maradna az indítás. Régi, de elérhető Tuya állapotjelzés önmagában nem
-hiba.
+hiba. A belső ajtók nem blokkolók, és nem indítanak szellőztetési eseményt.
 
 Az observer lehetséges eredményei: `Elindítaná`, `Folytatná`, `Leállítaná`,
 `Nem indítaná`, `Hűtést kér, de blokkolva`, illetve `Nincs elég friss adat`.

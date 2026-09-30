@@ -66,6 +66,22 @@ A Zigbee-eszközök stabil fizikai azonosítója az IEEE-cím, nem a szerkeszthe
 friendly name. A collector automatikusan regisztrálja őket; az új eszköz
 kezdetben helyiség nélkül és vezérlés nélkül jelenik meg.
 
+### Belső ajtók – telepítve
+
+Három kontaktusérzékelő került a gyerekszárny belső ajtóira, mindegyik az ajtó
+Kisnappali felőli oldalára. Ezek nem külső nyílászárók: nem indítanak
+szellőztetést és nem blokkolják a klímát.
+
+| Eszköz | Elsődleges helyiség | Kapcsolt helyiség | Szerep |
+|---|---|---|---|
+| `Tuya Rita belső` | Emelet / Kis nappali | Emelet / Rita | Belső, nem blokkoló ajtó |
+| `Tuya Veronika belső` | Emelet / Kis nappali | Emelet / Veronika | Belső, nem blokkoló ajtó |
+| `Tuya Kristófék belső` | Emelet / Kis nappali | Emelet / Kristófék | Belső, nem blokkoló ajtó |
+
+Mindhárom felszerelési hely 2–3 méterre van a Zigbee-koordinátortól. A
+nyilvántartásban az elsődleges helyiség a fizikai felszerelés szerinti Kis
+nappali; a kapcsolt második helyiség az ajtó túloldalán levő hálószoba.
+
 A `TRV-G2 nappali bal` fizikai azonosítója `0xa4c138222cb21929`, a
 `TRV-G2 Kristófék` azonosítója `0xa4c138972d1d2804`; mindkettő modellje
 `TRV-ZBT`. Mindkét szelep automatikusan felismert, helyiséghez rendelt és

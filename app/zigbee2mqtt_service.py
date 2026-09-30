@@ -448,7 +448,8 @@ class ZigbeeRepository:
                    JOIN zigbee2mqtt_property_cache c
                      ON c.device_id=d.id AND c.property_name='contact'
                   WHERE d.room_id=? AND d.is_active=1
-                    AND d.device_type='contact_sensor' AND c.numeric_value=0"""
+                    AND d.device_type='contact_sensor'
+                    AND d.opening_role='external' AND c.numeric_value=0"""
         params: list[Any] = [room_id]
         if excluded_device_id is not None:
             sql += " AND d.id<>?"
@@ -464,9 +465,12 @@ class ZigbeeRepository:
         contact_value: Decimal,
         observed_at: datetime,
     ) -> None:
-        cursor.execute("SELECT room_id FROM devices WHERE id=? AND is_active=1", (device_id,))
+        cursor.execute(
+            "SELECT room_id,opening_role FROM devices WHERE id=? AND is_active=1",
+            (device_id,),
+        )
         device = cursor.fetchone()
-        if device is None or device[0] is None:
+        if device is None or device[0] is None or device[1] != "external":
             return
         room_id = int(device[0])
         cursor.execute(
@@ -527,6 +531,7 @@ class ZigbeeRepository:
                    JOIN zigbee2mqtt_property_cache c
                      ON c.device_id=d.id AND c.property_name='contact'
                    WHERE d.is_active=1 AND d.device_type='contact_sensor'
+                     AND d.opening_role='external'
                      AND d.room_id IS NOT NULL AND c.numeric_value=0
                    ORDER BY observed_at,d.id"""
             )
@@ -586,7 +591,8 @@ class ZigbeeRepository:
                        JOIN zigbee2mqtt_property_cache c
                          ON c.device_id=d.id AND c.property_name='contact'
                        WHERE d.room_id=v.room_id AND d.is_active=1
-                         AND d.device_type='contact_sensor' AND c.numeric_value=0
+                         AND d.device_type='contact_sensor'
+                         AND d.opening_role='external' AND c.numeric_value=0
                      )"""
             )
             cursor.execute(

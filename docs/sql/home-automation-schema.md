@@ -35,6 +35,12 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `boiler_mode_state_events`: a Bosch kézzel rögzített melegvíz- és
   fűtésállapotának időbélyeges változásai
 - `sensor_readings`: mért értékek idősorokhoz
+
+A kontaktusérzékelők `devices.opening_role` mezője választja szét a külső,
+blokkoló/szellőztető (`external`) és a belső, nem blokkoló (`internal`)
+nyílászárókat. Belső ajtónál a `room_id` az egyik, a
+`connected_room_id` a másik helyiséget azonosítja; a két helyiség nem lehet
+azonos, és a nyilvántartási felület azonos zónát követel meg.
 - `energy_billing_cycles`: mérőnkénti, nem feltétlenül naptári elszámolási ciklusok
 - `gas_conversion_periods`: időben érvényes korrekciós tényező és fűtőérték
 - `energy_tariff_periods`: kedvezményes és versenypiaci energia-egységárak

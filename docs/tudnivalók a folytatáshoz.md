@@ -96,8 +96,8 @@ engedélyezett volt:
 - `zigbee2mqtt.service`;
 - `mosquitto.service`.
 
-Az alkalmazásverzió **1.3.1**, az adatbázis utolsó migrációja
-`v1_48_boiler_operating_states`. A migrációs lánc sorrendjének egyetlen
+Az alkalmazásverzió **1.3.2**, az adatbázis utolsó migrációja
+`v1_52_internal_openings`. A migrációs lánc sorrendjének egyetlen
 forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
 [`SQL/migrations`](../SQL/migrations/) könyvtárban vannak.
 
@@ -115,6 +115,11 @@ forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
   S60ZBTPF router-dugaljak teljesítmény-, áram-, feszültség- és összesenergia-
   adatai szintén idősorosan tárolódnak. A régi kontaktusállapot nem hiba; csak
   az explicit Zigbee2MQTT `offline` állapot jelent kiesést.
+- A kontaktusok nyilvántartási szerepe `external` vagy `internal`. A belső ajtó
+  két helyiséget kapcsol össze, de nem indít szellőztetést és nem blokkolja a
+  fűtési/hűtési observert. A gyerekszárny három telepített érzékelőjének
+  elsődleges helyisége a Kis nappali, kapcsolt helyisége pedig Rita, Veronika,
+  illetve Kristófék szobája.
 - A Shelly collector két deep-sleep H&T Gen3 eszközt kezel közvetlen MQTT-ről.
   A temperature, humidity, battery és `battery_voltage` külön idősor; az
   `/online=false` normális. A frissességi színek határa 1, 2 és 4 óra.
@@ -283,7 +288,7 @@ A részletes, karbantartandó lista a [`teendok.md`](teendok.md). A következő
    git diff --check
    ```
 
-   A dokumentum legutóbbi frissítése előtti teljes futás 163 tesztből 163 sikeres
+   A dokumentum legutóbbi frissítése előtti teljes futás 171 tesztből 171 sikeres
    volt.
 5. Sémaváltozásnál új, következő sorszámú migráció készüljön, és az kerüljön be
    az `app/migrate_database.py` listájába. A régi migrációt ne írd át.

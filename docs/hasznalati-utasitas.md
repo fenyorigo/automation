@@ -339,6 +339,11 @@ eszközök műszaki adatait.
   rendelhető. Helyiség választásakor a zóna automatikusan követi a helyiséget.
 - Nyilvántartható az elérési mód, a képesség, a hálózati címzés, az integrációs
   szerep, a támogatott üzemmódok, ventilátorfokozatok és kiegészítő programok.
+- Kontaktusérzékelőnél a **Nyílászáró szerepe** legyen külső vagy belső. A
+  külső nyílászáró blokkol és szellőztetési eseményt vezet. A belső ajtó nem
+  blokkol; két helyiséget kapcsol össze, ezért ugyanabban a zónában ki kell
+  választani a **Kapcsolt másik helyiséget** is. Az elsődleges helyiség az a
+  szoba, amelynek ajtaján az érzékelő van.
 - A **Lekérdezési körben** kapcsoló ideiglenesen kiveszi az eszközt az
   automatikus és kézi pollkörökből, de az eszköz és korábbi adatai megmaradnak.
   Az **Aktív nyilvántartási elem** ezzel szemben archiválásra szolgál.
@@ -609,7 +614,15 @@ A számla rögzítése három lépésből áll:
 
 A számlafej, minden fogyasztási részlet és minden számlatétel mellett külön
 ceruza jelenik meg szerkesztői jogosultsággal. A ceruzával az adott rekord
-helyben javítható; a mentés nem érinti a számla többi részét.
+helyben javítható; a mentés nem érinti a számla többi részét. A számlatétel
+szem ikonjával ugyanazok az adatok módosítás nélkül tekinthetők meg.
+Szerkesztéskor vagy megtekintéskor az alkalmazás megőrzi a számlalista aktuális
+energiatípus-, ciklusállapot- és évszűrőjét; a mentés, a **Mégse** és a
+**Bezárás** után is ugyanennél a szűrt listánál marad. Közvetlen, szűrő nélküli
+hivatkozás esetén a rekordból állítja vissza a megfelelő számlakörnyezetet.
+A számlatételek a ceruza melletti kis kukával, külön megerősítés után
+törölhetők. A művelet csak a kiválasztott díjtételt távolítja el; a számlafejet
+és a fogyasztási részleteket nem módosítja.
 
 A számlafejnél a nettó összeg és az ÁFA összege automatikusan kitölti a bruttó
 összeget. A számlatételeknél a mennyiség és a nettó egységár alapján egész
@@ -733,10 +746,11 @@ A szellőztetés két külön műveletből áll.
 A rendszer automatikusan eltárolja az akkor aktív külső hőmérsékleti forrást és
 annak értékét. Egy helyiséghez egyszerre csak egy aktív szellőztetés tartozhat.
 
-Aktív, helyiséghez rendelt Nous/Tuya nyitásérzékelőnél nincs szükség kézi
+Aktív, helyiséghez rendelt, **külső** Nous/Tuya nyitásérzékelőnél nincs szükség kézi
 indításra: az első nyitott jel automatikusan indítja az eseményt. Egy helyiség
 több nyílászárója közös eseményt alkot; amíg bármelyik nyitva van, a
-szellőztetés aktív marad.
+szellőztetés aktív marad. A belső ajtó állapotváltozása nem jelenik meg a
+szellőztetési naplóban.
 Egy már futó kézi esemény nem vész el és nem alakul át automatikussá: megtartja
 a kezdőadatait, de a hozzárendelt érzékelő a továbbiakban lezárhatja.
 
