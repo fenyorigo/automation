@@ -119,8 +119,8 @@
         <div class="sensor-reset-list">
           {% for sensor in resettable_sensors %}
           <label>
-            <input type="checkbox" name="sensor_id" value="{{ sensor.id }}" {{ 'disabled' if not sensor.reading_count }}>
-            <span><strong>{{ sensor.device_name }}</strong><small>{{ sensor.hostname }} · {{ sensor.reading_count }} mérés{% if sensor.last_reading_at %} · utolsó: {{ sensor.last_reading_at|local_time }}{% endif %}</small></span>
+            <input type="checkbox" name="sensor_id" value="{{ sensor.id }}" {{ 'disabled' if not sensor.last_reading_at }}>
+            <span><strong>{{ sensor.device_name }}</strong><small>{{ sensor.hostname }} · {% if sensor.last_reading_at %}van mérés · utolsó: {{ sensor.last_reading_at|local_time }}{% else %}nincs mérés{% endif %}</small></span>
           </label>
           {% endfor %}
         </div>

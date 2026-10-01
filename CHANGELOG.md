@@ -5,6 +5,12 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Mérési előzmények és a mentett kedvencek betöltése már nem számolja végig
+  minden oldalnyitáskor a teljes, közel hárommillió soros hőmérsékleti idősor
+  mérésdarabszámait. A nullázási lista az indexelt utolsó mérési időpontból
+  állapítja meg, van-e törölhető előzmény; az érintett lekérdezés ideje így
+  körülbelül 25 másodpercről néhány ezredmásodpercre csökkent.
+
 - A villanyszámlák számlafejének, fogyasztási részleteinek és díjtételeinek
   szerkesztése most már az azonosítóból automatikusan visszaállítja a megfelelő
   energiatípus-, ciklusállapot- és évszűrőt. A javító űrlap és a mentés utáni

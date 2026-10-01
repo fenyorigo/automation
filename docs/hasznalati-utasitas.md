@@ -266,7 +266,9 @@ nem kötelező kedvencnevet kitölteni.
 ### Szenzormérések nullázása
 
 Szerkesztőként a lap alján jelölőnégyzetekkel kiválaszthatók a törlendő
-szenzorok. A művelet:
+szenzorok. A lista azt jelzi, hogy van-e megőrzött mérés, és megmutatja az
+utolsó mérés időpontját; a teljes idősor pontos darabszámát a lap betöltésekor
+nem számolja végig. A művelet:
 
 - végleg törli a kijelölt szenzorok összes `sensor_readings` adatát;
 - nem törli az eszközt, szenzort, állapotokat vagy pollnaplót;

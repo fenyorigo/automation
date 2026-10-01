@@ -416,15 +416,17 @@ def load_resettable_sensors() -> list[dict[str, Any]]:
         cursor.execute(
             """
             SELECT s.id, s.name, d.name AS device_name, d.hostname,
-                   COUNT(sr.id) AS reading_count,
-                   MIN(sr.observed_at) AS first_reading_at,
-                   MAX(sr.observed_at) AS last_reading_at
+                   (
+                     SELECT sr.observed_at
+                     FROM sensor_readings sr
+                     WHERE sr.sensor_id = s.id
+                     ORDER BY sr.observed_at DESC
+                     LIMIT 1
+                   ) AS last_reading_at
             FROM sensors s
             JOIN devices d ON d.id = s.device_id
-            LEFT JOIN sensor_readings sr ON sr.sensor_id = s.id
             WHERE s.is_active = 1 AND d.is_active = 1
               AND s.sensor_type = 'temperature'
-            GROUP BY s.id, s.name, d.name, d.hostname
             ORDER BY FIELD(d.source_system, 'esp32', 'computherm', 'connectlife'), d.name, s.name
             """
         )
