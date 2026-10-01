@@ -63,6 +63,7 @@
 
     <!-- Zigbee router és fogyasztásmérők -->
     <g id="device-sp-emelet" class="marker router" transform="translate(420 982)" data-device-name="SP emelet"><circle r="13"/><text>25</text></g>
+    <g id="device-sp-halo" class="marker router" transform="translate(549 1526)" data-device-name="SP háló"><circle r="13"/><text>35</text></g>
     <g id="device-nous-main-it" class="marker equipment" transform="translate(269 630)" data-device-name="Nous main IT"><circle r="13"/><text>26</text></g>
     <g id="device-nous-aux-it" class="marker equipment" transform="translate(488 1880)" data-device-name="Nous auxiliary IT"><circle r="13"/><text>27</text></g>
 
@@ -104,6 +105,7 @@
     <circle cx="1005" cy="782" r="7" fill="#7257b5" class="legend-swatch"/><text x="1023" y="786" class="legend-heading">Router és fogyasztásmérők</text>
     <text x="1005" y="810" class="legend-text">25 SP emelet</text><text x="1005" y="830" class="legend-text">26 Nous main IT</text>
     <text x="1005" y="850" class="legend-text">27 Nous auxiliary IT</text>
+    <text x="1005" y="870" class="legend-text">35 SP háló</text>
 
     <circle cx="1005" cy="890" r="7" fill="#2878b5" class="legend-swatch"/><text x="1023" y="894" class="legend-heading">Hálózati és IT-eszközök</text>
     <text x="1005" y="918" class="legend-text">28 think260x</text><text x="1005" y="938" class="legend-text">29 t470</text>

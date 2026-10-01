@@ -52,6 +52,7 @@
     <g id="device-sp-kozlekedo" class="marker router" transform="translate(388 436)" data-device-name="SP közlekedő"><circle r="13"/><text>15</text></g>
     <g id="device-sp-lepcso" class="marker router" transform="translate(401 754)" data-device-name="SP lépcső"><circle r="13"/><text>16</text></g>
     <g id="device-sp-ebedlo" class="marker router" transform="translate(275 868)" data-device-name="SP ebédlő"><circle r="13"/><text>17</text></g>
+    <g id="device-sp-nappali" class="marker router" transform="translate(172 264)" data-device-name="SP nappali"><circle r="13"/><text>27</text></g>
 
     <!-- Wi-Fi mesh -->
     <g id="device-deco-stair" class="marker network" transform="translate(387 733)" data-device-name="Deco stair"><circle r="13"/><text>18</text></g>
@@ -88,6 +89,7 @@
     <circle cx="820" cy="534" r="7" fill="#7257b5" class="legend-swatch"/><text x="838" y="538" class="legend-heading">Zigbee-routerek</text>
     <text x="820" y="562" class="legend-text">15 SP közlekedő</text><text x="820" y="582" class="legend-text">16 SP lépcső</text>
     <text x="820" y="602" class="legend-text">17 SP ebédlő</text>
+    <text x="820" y="622" class="legend-text">27 SP nappali</text>
 
     <circle cx="820" cy="642" r="7" fill="#2878b5" class="legend-swatch"/><text x="838" y="646" class="legend-heading">Wi-Fi mesh</text>
     <text x="820" y="670" class="legend-text">18 Deco stair</text><text x="820" y="690" class="legend-text">19 Deco konyha</text>
