@@ -6,6 +6,8 @@
     </span>
   </div>
   {% if device.source_system in ['zigbee2mqtt', 'shelly_mqtt'] or device.device_type == 'electric_heater' %}<span class="badge mqtt-sensor-type">{{ device.device_type_name or device.device_type }}</span>{% endif %}
+  {% if device.cooling_advice is defined and device.cooling_advice.cooling_active and device.cooling_advice.climate_available %}<span class="badge climate-running">Hűtés folyamatban</span>{% endif %}
+  {% if device.heating_advice is defined and device.heating_advice.climate_heating_active and device.heating_advice.climate_available %}<span class="badge climate-running">Fűtés folyamatban</span>{% endif %}
   {% if device.cooling_advice is defined and device.cooling_advice.cooling_demand %}<span class="badge cooling-demand">Hűtést kér</span>{% endif %}
   {% if device.heating_advice is defined and device.heating_advice.heating_demand %}<span class="badge heating-demand">Fűtést kér</span>{% endif %}
   {% if device.boiler_status is defined %}<span class="badge {{ 'boiler-on' if device.boiler_status.is_on else 'boiler-off' }}">{{ device.boiler_status.name }}: {{ 'bekapcsolva' if device.boiler_status.is_on else 'kikapcsolva' }}</span>{% endif %}
@@ -42,7 +44,7 @@
     <strong>{% if device.zigbee_contact_closed is none %}Ismeretlen{% elif device.zigbee_contact_closed %}Csukva{% else %}Nyitva{% endif %}</strong>
   </div>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'radiator_thermostat' %}
-  <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.display_temperature_is_stale }}">{{ device.display_temperature_c|temperature }}</span><span class="temperature-unit {{ 'stale-measurement' if device.display_temperature_is_stale }}">°C</span></div>
+  <div class="temperature"><span class="temperature-value {{ device.display_temperature_class }}">{{ device.display_temperature_c|temperature }}</span><span class="temperature-unit {{ device.display_temperature_class }}">°C</span></div>
   <p class="temperature-provenance"><strong>Radiátorközeli mérés</strong> · aktív gázfűtés alatt nem vezérlési alap<br><time>{{ device.measurement_at|local_time }}</time></p>
   {% elif device.source_system == 'network_device' %}
   <div class="manual-state {{ 'powered' if device.online else 'stopped' }}">
@@ -152,6 +154,7 @@
     <div><dt>Célhőmérséklet</dt><dd>{{ device.target_temperature_c|temperature }} °C</dd></div>
     <div><dt>Állapot</dt><dd class="{{ 'power-on' if device.source_system == 'connectlife' and device.power else '' }}">{% if device.power is none %}—{% elif device.power %}Bekapcsolva{% else %}Kikapcsolva{% endif %}</dd></div>
     <div><dt>Üzemmód</dt><dd>{{ device.mode or '—' }}</dd></div>
+    {% if device.source_system == 'connectlife' %}<div><dt>Ventilátor-beállítás</dt><dd>{% if device.fan_speed == 'auto' %}Auto{% elif device.fan_speed == 'quiet' %}Csendes{% elif device.fan_speed == 'low' %}Alacsony{% elif device.fan_speed in ['medium_low', 'mid_low'] %}Közepesen alacsony{% elif device.fan_speed in ['medium', 'mid'] %}Közepes{% elif device.fan_speed in ['medium_high', 'mid_high'] %}Közepesen magas{% elif device.fan_speed == 'high' %}Magas{% else %}{{ device.fan_speed or '—' }}{% endif %}</dd></div>{% endif %}
     <div><dt>Aktív</dt><dd>{% if device.active is none %}—{% elif device.active %}Igen{% else %}Nem{% endif %}</dd></div>
   </dl>
   {% endif %}

@@ -291,6 +291,52 @@ fut. A mérés időpontja és a lekérés időpontja külön mezőben tárolódi
 Weather Underground integráció csak API-kulcs és PWS-jogosultság birtokában
 aktiválandó.
 
+### Háromnapos Open-Meteo-előrejelzés
+
+Az aktív Open-Meteo-forráshoz a rendszer óránként külön 72 órás előrejelzési
+futást ment. A pillanatnyi kültéri lekérdezés továbbra is minden szokásos
+pollkörben megtörténik; a nagyobb előrejelzési payload csak akkor kérődik le,
+ha az utolsó sikeres futás legalább egyórás. Sikertelen előrejelzés esetén a
+következő pollkör újrapróbálja, miközben a pillanatnyi kültéri mérés ettől még
+sikeres maradhat.
+
+Az előrejelzés minden órás pontjához tároljuk:
+
+- az érvényességi időpontot és a lekéréstől számított órás horizontot;
+- a hőmérsékletet és hőérzetet;
+- a felhőzetet és rövidhullámú napsugárzást;
+- a 10 méteres szélsebességet, csapadékot és időjárási kódot.
+
+Az `outdoor_weather_forecast_runs` a lekérési futásokat és az eredeti JSON-t,
+az `outdoor_weather_forecast_points` az órás pontokat, az
+`outdoor_weather_forecast_poll_attempts` a sikeres és sikertelen próbálkozások
+auditját őrzi. A futások azért maradnak külön, hogy ugyanarra az időpontra a
+72, 48, 24 vagy 6 órával korábban készült prognózis pontossága külön is
+vizsgálható legyen.
+
+Az eltelt előrejelzések és az elsődleges saját kültéri forrás összevetése:
+
+```sh
+cd /var/www/automation
+.venv/bin/python app/analyze_weather_forecasts.py --days 30
+```
+
+Az elemzés 90 perces alapértelmezett illesztési tűréssel keresi a változásra
+jelentő Zigbee kültéri hőmérő legközelebbi tényleges adatát. Eredménye a
+mintaszám, az átlagos abszolút hiba (MAE), az előjeles átlaghiba (bias) és az
+RMSE a 0–6, 6–12, 12–24, 24–48 és 48–72 órás horizontokra. Az első értékelhető
+eredményekhez legalább három nap, a fűtési stratégia megítéléséhez inkább több
+hét adat szükséges.
+
+A főmenü **Időjárás-előrejelzés** oldalán a legutóbbi 72 órás futás közvetlenül
+is megtekinthető. Az oldal mutatja a helyi Zigbee kültéri mérést és az aktuális
+Open-Meteo-pont eltérését, a helyi naptári napokra bontott minimumot,
+maximumot, átlagos felhőzetet, besugárzási csúcsot és csapadékösszeget, továbbá
+külön diagramon az órás hőmérséklet/hőérzet és besugárzás/felhőzet menetét. A
+lejárt pontok pontossági mutatói ugyanitt jelennek meg; 24 összehasonlítható
+minta alatt az UI előzetes adatként jelöli őket. Ez az oldal megfigyelési nézet,
+az adatok nem adnak vezérlési parancsot.
+
 ## Szellőztetési napló
 
 A `/ventilation` oldalon az indítás helyiségenként aktív eseményt hoz létre,

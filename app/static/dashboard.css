@@ -73,6 +73,7 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .badge.manual { background: #ece6d5; color: #765c20; }
 .badge.mqtt-sensor-type { margin-top: 8px; background: #e9e4f5; color: #59438a; }
 .badge.outdoor-source { background: #e4eef5; color: #315f78; }
+.badge.climate-running { margin-top: 8px; background: var(--green-soft); color: var(--green); }
 .badge.cooling-demand { margin-top: 8px; background: #b42318; color: #fff; }
 .badge.heating-demand { margin-top: 8px; background: #c94f16; color: #fff; }
 .badge.boiler-on { margin-top: 8px; background: var(--green-soft); color: var(--green); }
@@ -84,6 +85,7 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .temperature-value { font-size: clamp(2.4rem, 15cqi, 4.6rem); font-weight: 700; line-height: .85; letter-spacing: -.075em; }
 .temperature-unit { padding: 2px 0 0 8px; color: var(--muted); font-size: 1rem; font-weight: 700; }
 .temperature .stale-measurement { color: #b42318; font-weight: 900; }
+.temperature .aging-measurement { color: #9a6a00; font-weight: 800; }
 .temperature .shelly-warning { color: #7a5a00; }
 .temperature .shelly-delayed { color: #b45a00; }
 .temperature .shelly-offline { color: var(--red); font-weight: 900; }
@@ -343,6 +345,21 @@ dd.power-on { color: #d05a16; }
 .experiment-list { display:grid; gap:14px; margin-top:15px; }.experiment-list article { padding:16px; border:1px solid var(--line); border-radius:14px; }.experiment-list article>header { display:flex; justify-content:space-between; gap:12px; }.experiment-list header strong,.experiment-list header small { display:block; }.experiment-list header small,.experiment-list li small { margin-top:4px; color:var(--muted); font-size:.7rem; }.experiment-list h3 { margin-top:14px; font-size:.95rem; }.experiment-list ul { margin:7px 0 0 18px; }.experiment-list li { margin-top:7px; line-height:1.4; }.experiment-list li small { display:block; }.experiment-list details { margin-top:14px; }.experiment-list pre { max-height:440px; overflow:auto; padding:12px; border-radius:9px; background:#f3f0e8; font-size:.68rem; white-space:pre-wrap; }
 .report-text { margin-top:14px; }.report-text p { margin:5px 0; line-height:1.5; }.report-evidence { display:grid; gap:10px; margin-top:10px; }.report-evidence article { padding:12px; background:var(--paper); }.report-evidence article p { margin:8px 0; }.analysis-filter { flex-wrap:wrap; }.analysis-filter label { flex:1 1 180px; }
 .outdoor-source-list { display:grid; gap:10px; margin-top:16px; }
+.weather-status-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+.weather-status-grid article,.weather-day-grid article,.weather-accuracy-grid article { padding:15px; border:1px solid var(--line); border-radius:13px; background:var(--card); box-shadow:var(--shadow); }
+.weather-status-grid span,.weather-status-grid strong,.weather-status-grid small { display:block; }
+.weather-status-grid span,.weather-status-grid small { color:var(--muted); font-size:.7rem; }
+.weather-status-grid strong { margin:6px 0; font-size:1.2rem; overflow-wrap:anywhere; }
+.weather-day-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:11px; margin-top:16px; }
+.weather-day-grid article>div { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:11px; padding-bottom:9px; border-bottom:1px solid var(--line); }
+.weather-day-grid article>div strong { font-size:1.08rem; }
+.weather-day-grid article>div small { color:var(--muted); }
+.weather-day-grid p { display:flex; justify-content:space-between; gap:12px; margin:8px 0 0; }
+.weather-day-grid p span { color:var(--muted); font-size:.72rem; }
+.weather-day-grid p strong { font-size:.78rem; text-align:right; }
+.weather-accuracy-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:15px; }
+.weather-accuracy-grid strong,.weather-accuracy-grid span,.weather-accuracy-grid small { display:block; }
+.weather-accuracy-grid span,.weather-accuracy-grid small { margin-top:5px; color:var(--muted); font-size:.7rem; line-height:1.4; }
 .energy-meter-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-top:16px; }
 .energy-meter-grid article { padding:16px; border-radius:12px; background:var(--paper); }
 .energy-meter-grid span,.energy-meter-grid strong,.energy-meter-grid small { display:block; }
@@ -499,6 +516,7 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   .user-create-form,.user-list form { grid-template-columns:1fr; }
   .energy-edit-form { grid-template-columns:1fr; }
   .analysis-status { grid-template-columns:1fr; }
+  .weather-status-grid { grid-template-columns:1fr; }
   .analysis-experiment-form { grid-template-columns:1fr; }.analysis-experiment-form .wide,.analysis-actions { grid-column:auto; }.analysis-actions { flex-direction:column; }
   .climate-start-form,.climate-control-form,.climate-schedule-form,.manual-climate-form,.climate-program-header,.program-step-fields { grid-template-columns:1fr; }
   .outdoor-source-list article { grid-template-columns:1fr; }

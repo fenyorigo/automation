@@ -123,6 +123,18 @@ Az additív ofszet után az EMA minden sikeres mintával frissül. A cselekedeti
 érték azonban csak az `action_interval_seconds` idő leteltekor jelenik meg; az
 alapértelmezett időállandó és publikálási időköz egyaránt 240 másodperc.
 
+## Időjárás-előrejelzések
+
+A háromnapos Open-Meteo-előrejelzés nem keveredik a tényleges kültéri
+mérésekkel. Az `outdoor_weather_forecast_runs` egy lekérés metaadatait és
+eredeti payloadját, az `outdoor_weather_forecast_points` annak 72 órás pontjait
+tárolja. Egy ponthoz az érvényességi idő mellett a lekéréskori előrejelzési
+horizont is megmarad, ezért később külön mérhető a rövid és hosszabb távú
+prognózis hibája. Az `outdoor_weather_forecast_poll_attempts` a gyűjtés
+sikerességét auditálja. A tényleges összehasonlítás alapja továbbra is az
+`outdoor_temperature_observations`, elsődlegesen a saját Zigbee kültéri
+hőmérővel.
+
 ## Seed fájlok
 
 - [SQL/home_automation_schema_v1.0_20260807.sql](../../SQL/home_automation_schema_v1.0_20260807.sql)

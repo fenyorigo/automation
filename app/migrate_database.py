@@ -214,6 +214,10 @@ MIGRATIONS = (
         "v1_52_internal_openings",
         ROOT / "SQL" / "migrations" / "052_home_automation_v1.51_to_v1.52.sql",
     ),
+    (
+        "v1_53_weather_forecasts",
+        ROOT / "SQL" / "migrations" / "053_home_automation_v1.52_to_v1.53.sql",
+    ),
 )
 
 

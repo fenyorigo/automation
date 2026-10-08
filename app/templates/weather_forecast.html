@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>Időjárás-előrejelzés – Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body class="{{ 'read-only' if not can_write }}">
+  <header class="topbar history-topbar">
+    <div>
+      <p class="eyebrow">Megfigyelési mód</p>
+      <h1>Időjárás-előrejelzés</h1>
+      <p class="header-updated">Az előrejelzés egyelőre nem vesz részt a vezérlésben.</p>
+    </div>
+    <a class="back-link" href="{{ url_for('dashboard') }}">Vissza az áttekintőhöz</a>
+    {% include '_account_menu.html' %}
+  </header>
+  <main>
+    {% if run %}
+    <section class="weather-status-grid" aria-label="Előrejelzés állapota">
+      <article>
+        <span>Legutóbbi gyűjtés</span>
+        <strong>{{ run.fetched_at|local_time }}</strong>
+        <small>{{ run.point_count }} órás pont · {{ run.display_name }}</small>
+      </article>
+      <article>
+        <span>Helyi külső mérés</span>
+        {% if selected %}
+        <strong>{{ selected.temperature_c|temperature }} °C</strong>
+        <small>{{ selected.display_name }} · {{ selected.observed_at|local_time }}</small>
+        {% else %}
+        <strong>—</strong><small>Nincs friss helyi mérés</small>
+        {% endif %}
+      </article>
+      <article>
+        <span>Aktuális eltérés</span>
+        {% if current_comparison %}
+        <strong>{{ '+' if current_comparison.difference_c > 0 }}{{ current_comparison.difference_c|temperature }} °C</strong>
+        <small>Open-Meteo mínusz helyi mérés · {{ current_comparison.forecast_valid_at|local_time }}</small>
+        {% else %}
+        <strong>—</strong><small>Még nem hasonlítható össze</small>
+        {% endif %}
+      </article>
+      <article>
+        <span>Gyűjtés állapota</span>
+        {% if attempt and attempt.success %}
+        <strong class="status-ok">Rendben</strong>
+        <small>{{ attempt.duration_ms }} ms</small>
+        {% elif attempt %}
+        <strong class="status-error">Sikertelen</strong>
+        <small>{{ attempt.error_message or attempt.error_code }}</small>
+        {% else %}
+        <strong>—</strong><small>Még nincs próbálkozás</small>
+        {% endif %}
+      </article>
+    </section>
+
+    <section class="history-panel">
+      <p class="eyebrow">72 órás kitekintés</p>
+      <h2>Napi összefoglaló</h2>
+      <div class="weather-day-grid">
+        {% for day in daily %}
+        <article>
+          <div><strong>{{ day.label }}</strong><small>{{ day.date.strftime('%m. %d.') }} · {{ day.hour_count }} óra</small></div>
+          <p><span>Minimum</span><strong>{{ day.minimum_c|temperature }} °C</strong></p>
+          <p><span>Maximum</span><strong>{{ day.maximum_c|temperature }} °C</strong></p>
+          <p><span>Átlagos felhőzet</span><strong>{% if day.mean_cloud_percent is not none %}{{ day.mean_cloud_percent }}%{% else %}—{% endif %}</strong></p>
+          <p><span>Besugárzási csúcs</span><strong>{% if day.peak_radiation_wm2 is not none %}{{ day.peak_radiation_wm2 }} W/m²{% else %}—{% endif %}</strong></p>
+          <p><span>Csapadék</span><strong>{% if day.precipitation_mm is not none %}{{ day.precipitation_mm }} mm{% else %}—{% endif %}</strong></p>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="history-panel">
+      <p class="eyebrow">Órás előrejelzés</p>
+      <h2>Hőmérséklet és hőérzet</h2>
+      {% if gnuplot_error is defined and gnuplot_error %}
+      <p class="chart-empty">{{ gnuplot_error }}</p>
+      {% else %}
+      <div class="chart-frame"><img src="{{ url_for('weather_forecast_temperature_chart') }}" alt="A következő 72 óra külső hőmérséklet- és hőérzet-előrejelzése"></div>
+      {% endif %}
+    </section>
+
+    <section class="history-panel">
+      <p class="eyebrow">Napenergia és égkép</p>
+      <h2>Besugárzás és felhőzet</h2>
+      {% if gnuplot_error %}
+      <p class="chart-empty">{{ gnuplot_error }}</p>
+      {% else %}
+      <div class="chart-frame"><img src="{{ url_for('weather_forecast_conditions_chart') }}" alt="A következő 72 óra besugárzás- és felhőzet-előrejelzése"></div>
+      {% endif %}
+    </section>
+
+    <section class="history-panel">
+      <p class="eyebrow">Visszamérés</p>
+      <h2>Open-Meteo és a helyi hőmérő eltérése</h2>
+      {% if accuracy.paired_points %}
+      <p class="reset-explanation">
+        Az elmúlt 30 napból {{ accuracy.paired_points }} összehasonlítható órás pont áll rendelkezésre.
+        {% if accuracy.paired_points < 24 %}<strong>Ez még előzetes adat, következtetésre nem elég.</strong>{% endif %}
+      </p>
+      <div class="weather-accuracy-grid">
+        {% for label, metric in accuracy.by_horizon.items() %}
+        <article>
+          <strong>{{ label }}</strong>
+          <span>{{ metric.count }} minta</span>
+          <small>{% if metric.mae_c is not none %}átlagos abszolút eltérés: {{ metric.mae_c|temperature }} °C · torzítás: {{ metric.bias_c|temperature }} °C{% else %}még nincs lejárt előrejelzés{% endif %}</small>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="chart-empty">Még nincs elegendő lejárt előrejelzési pont a pontosság értékeléséhez.</p>
+      {% endif %}
+    </section>
+    {% else %}
+    <section class="history-panel">
+      <p class="chart-empty">Még nincs eltárolt időjárás-előrejelzés. A következő sikeres Open-Meteo lekérdezés után jelenik meg.</p>
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>

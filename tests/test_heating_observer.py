@@ -141,6 +141,8 @@ class HeatingObserverTest(unittest.TestCase):
             params=self.params,
         )
         self.assertTrue(result["heating_demand"])
+        self.assertTrue(result["climate_heating_active"])
+        self.assertTrue(result["climate_available"])
         self.assertEqual(result["room_threshold_c"], 20.5)
 
     def test_one_ineligible_demanded_room_selects_gas_for_whole_zone(self) -> None:

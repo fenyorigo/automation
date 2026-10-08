@@ -318,7 +318,17 @@ Az observer lehetséges eredményei: `Elindítaná`, `Folytatná`, `Leállítan�
 A `25 °C` alatti kézi Hisense-célértéket külön korrekciós igényként jelzi, de
 ebben a verzióban azt sem írja vissza.
 
+A mérvadó Zigbee-hőmérő bélyegén a termikus igénytől elkülönül a kapcsolódó
+Hisense tényleges, frissen visszaolvasott üzemállapota. A `Hűtés folyamatban`
+és `Fűtés folyamatban` jelzés bekapcsolt klímát és megfelelő üzemmódot jelent;
+nem kompresszor-telemetria, ezért a pillanatnyi hőtermelést vagy hűtést nem
+bizonyítja.
+
 ## Kültéri hőmérséklet és fűtési mód választása
+
+Az első kontrollált dolgozószobai klímafűtési próba mérési jegyzőkönyve és
+előzetes ventilátorstratégiája:
+[`2026-10-07-dolgozo-klimafutes-teszt.md`](2026-10-07-dolgozo-klimafutes-teszt.md).
 
 Klímás fűtésnél konfigurálható alsó kültéri hőmérsékleti határ szükséges. A
 határ alatt a klímát nem kell erőltetni; ilyenkor a fűtési igényt a kazános

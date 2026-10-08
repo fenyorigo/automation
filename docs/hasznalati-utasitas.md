@@ -74,6 +74,14 @@ előzmények** oldalon, az inaktivált eszközök közül választható ki.
 - **Zónák és helyiségek:** emelet, földszint és zónán kívüli terület szerint
   csoportosít; az eszköz nélküli helyiségeket is megmutatja. A helyiségszűrő
   egyetlen kiválasztott szobára szűkítheti a nézetet.
+- **Aktív hőigény:** csak azokat a mérvadó helyiségi hőmérőket mutatja,
+  amelyeknél az observer pillanatnyilag fűtési vagy hűtési igényt állapít meg,
+  de az igényt még nem szolgálja ki működő fűtés vagy hűtés. A blokkolt igények
+  is ebben a nézetben maradnak.
+- **Fűtés/hűtés folyamatban:** azokat a mérvadó helyiségi hőmérőket mutatja,
+  amelyek helyiségében a visszaolvasott állapot alapján ténylegesen működik a
+  fűtés vagy hűtés. Mindkét áttekintés zóna és helyiség szerint csoportosít,
+  üres állapotát pedig külön üzenettel jelzi.
 
 ### Eszközkártyák értelmezése
 
@@ -192,6 +200,12 @@ nyitva/csukva érték az utolsó ismert állapot. Az elemes eszközöknél ez az
 offline döntés 48 óra üzenetcsend után születik meg; addig a régi állapot
 sárga marad. Ez késleltetett kiesésészlelés, mert az alvó érzékelő nem
 pingelhető megbízhatóan.
+
+A Zigbee radiátorszelepek radiátorközeli hőmérséklete változatlan állapotban
+szintén ritkábban frissülhet. A kijelzett érték az első órában normál színű,
+1–2 óra között sárga, 2 óra felett piros. Ez az adat korát jelzi; a
+Zigbee2MQTT által közölt explicit elérhetetlenség ettől függetlenül azonnal
+piros állapot.
 
 ## 3. Mérési előzmények
 
@@ -532,6 +546,25 @@ választja. Tervezett/használható források:
 
 Ha egy magasabb prioritású forrás inaktív vagy elavult, a rendszer a következő
 használható forrásra vált.
+
+### Időjárás-előrejelzés
+
+A főmenü külön **Időjárás-előrejelzés** oldalán látható az Open-Meteo legutóbbi
+72 órás előrejelzése. A felső összesítő megmutatja a gyűjtés idejét és
+állapotát, a jelenlegi saját kültéri mérést, valamint a hozzá legközelebbi
+előrejelzési pont eltérését. A napi kártyák helyi naptári nap szerint mutatják
+a minimum- és maximum-hőmérsékletet, az átlagos felhőzetet, a rövidhullámú
+besugárzás napi csúcsát és a csapadékösszeget.
+Mivel a 72 órás időablak nem éjfélkor kezdődik, az első és utolsó naptári nap
+részleges lehet; a kártyán ezért az adott naphoz tartozó órás pontok száma is
+látható.
+
+Az első diagram a hőmérséklet és a hőérzet órás menetét mutatja; ezen a saját
+kültéri hőmérő legutóbbi mérése is külön pont. A második diagram a besugárzást
+és a felhőzetet ábrázolja. A visszamérési blokk az eltelt prognózispontokat a
+saját kültéri hőmérővel hasonlítja össze előrejelzési horizontonként. Kevés
+minta esetén az eredmény csak előzetes. Az oldal jelenleg kizárólag
+adatgyűjtésre és elemzésre szolgál, a fűtési vagy hűtési döntést nem módosítja.
 
 ## 9. Energia
 
@@ -909,6 +942,14 @@ szerkesztői hozzáférés véletlen megszüntetését.
   Computherm. A nyers értékeket megőrizzük; a vezérlési szűrés külön feladat.
 - A Hisense beltéri hőmérséklet információs adat, nem elsődleges helyiségi
   vezérlési mérés, mert a beltéri egység magasan és saját légáramában van.
+- A Hisense-bélyeg **Ventilátor-beállítás** mezője a ConnectLife által
+  visszaolvasott beállított fokozatot mutatja. Auto esetén az API nem közli az
+  automatikán belül választott pillanatnyi fordulatszámot vagy légszállítást.
+- A helyiség mérvadó Zigbee-hőmérőjének bélyege külön jelzi a hőigényt és a
+  kapcsolódó, frissen visszaolvasott Hisense üzemét. A **Fűtést/Hűtést kér**
+  döntési állapot; a **Fűtés/Hűtés folyamatban** azt jelenti, hogy a klíma
+  bekapcsolt, megfelelő üzemmódú állapotot közölt. Ez utóbbi nem bizonyítja,
+  hogy a kompresszor az adott másodpercben is működik.
 - A Kért beállítások és Időprofilok jelenleg nem vezérlik a fizikai eszközt.
 - A Klíma közvetlen és időzített vezérlése viszont valódi eszközparancsot küld.
 - Az automatikus jelentéskészítő nem kaphat eszközvezérlési jogosultságot.

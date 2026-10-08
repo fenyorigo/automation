@@ -17,6 +17,7 @@ def device(device_id, name, source, temperature=None, **values):
         "device_type": values.pop("device_type", "temperature_sensor"),
         "temperature_c": temperature,
         "measurement_at": NOW - timedelta(minutes=5),
+        "poll_success": True,
         "power": False,
         "mode": "cool",
         "target_temperature_c": 25,
@@ -127,8 +128,22 @@ class CoolingObserverTest(unittest.TestCase):
         ]
         advice = evaluate_room(devices, self.outdoor, now=NOW, params=self.params)
         self.assertTrue(advice["cooling_demand"])
+        self.assertTrue(advice["cooling_active"])
+        self.assertTrue(advice["climate_available"])
         self.assertEqual(advice["room_threshold_c"], 27.0)
         self.assertEqual(advice["status"], "would_keep_on")
+
+    def test_failed_climate_poll_does_not_report_available_running_state(self) -> None:
+        devices = [
+            device(1, "Zb háló", "zigbee2mqtt", 27.2),
+            device(
+                2, "HS háló", "connectlife", 27.2,
+                power=True, poll_success=False,
+            ),
+        ]
+        advice = evaluate_room(devices, self.outdoor, now=NOW, params=self.params)
+        self.assertTrue(advice["cooling_active"])
+        self.assertFalse(advice["climate_available"])
 
     def test_stale_primary_returns_insufficient_data(self) -> None:
         primary = device(1, "Zb háló", "zigbee2mqtt", 28.0)

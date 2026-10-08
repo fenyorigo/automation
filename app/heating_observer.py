@@ -492,6 +492,8 @@ def annotate_ground_floor_heating(
                 else "Automation szerint nem kér fűtést"
             ),
             "heating_demand": automation_heating_demand,
+            "heating_active": heating_active,
+            "climate_heating_active": False,
             "action_temperature_c": action_temperature,
             "room_threshold_c": room_threshold,
             "sources": sources,

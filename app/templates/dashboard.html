@@ -22,6 +22,7 @@
         <a class="history-link" href="{{ url_for('polling_settings') }}">Lekérdezési idők</a>
         <a class="history-link" href="{{ url_for('analysis') }}">Elemzések</a>
         <a class="history-link" href="{{ url_for('outdoor_sources') }}">Külső hőmérséklet</a>
+        <a class="history-link" href="{{ url_for('weather_forecast') }}">Időjárás-előrejelzés</a>
         <a class="history-link" href="{{ url_for('energy') }}">Energia</a>
         <a class="history-link" href="{{ url_for('manual_measurements') }}">Kézi mérések</a>
         {% if can_write %}<a class="history-link" href="{{ url_for('backups') }}">Adatmentés</a>{% endif %}
@@ -61,6 +62,8 @@
         <nav class="view-switch" aria-label="Áttekintő csoportosítása">
           <a class="{{ 'selected' if view_mode == 'device' }}" href="{{ url_for('dashboard', view='device') }}">Eszközök</a>
           <a class="{{ 'selected' if view_mode == 'room' }}" href="{{ url_for('dashboard', view='room') }}">Zónák és helyiségek</a>
+          <a class="{{ 'selected' if view_mode == 'demand' }}" href="{{ url_for('dashboard', view='demand') }}">Aktív hőigény</a>
+          <a class="{{ 'selected' if view_mode == 'active_climate' }}" href="{{ url_for('dashboard', view='active_climate') }}">Fűtés/hűtés folyamatban</a>
         </nav>
       </div>
 
@@ -110,7 +113,7 @@
         </section>
         {% endfor %}
       </div>
-      {% else %}
+      {% elif view_mode == 'room' %}
       <div class="dashboard-filter">
         <label for="room-filter">Helyiség
           <select id="room-filter" data-dashboard-filter="room">
@@ -137,6 +140,42 @@
           {% endfor %}
         </section>
         {% endfor %}
+      </div>
+      {% elif view_mode == 'demand' %}
+      <div class="climate-demand-overview">
+        {% if demand_room_groups %}
+        <div class="zone-groups">
+          {% for zone in demand_room_groups %}
+          <section class="zone-block"><div class="zone-heading"><p class="eyebrow">Zóna</p><h2>{{ zone.name }}</h2></div>
+            {% for room in zone.rooms %}
+            <section class="room-block"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{{ room.devices|length }} ki nem szolgált hőigény</span></div>
+              <div class="device-grid">{% for device in room.devices %}{% include '_device_card.html' %}{% endfor %}</div>
+            </section>
+            {% endfor %}
+          </section>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="room-empty climate-demand-empty">Jelenleg nincs ki nem szolgált fűtési vagy hűtési igény.</p>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="active-climate-overview">
+        {% if active_climate_room_groups %}
+        <div class="zone-groups">
+          {% for zone in active_climate_room_groups %}
+          <section class="zone-block"><div class="zone-heading"><p class="eyebrow">Zóna</p><h2>{{ zone.name }}</h2></div>
+            {% for room in zone.rooms %}
+            <section class="room-block"><div class="room-heading"><h3>{{ room.room_name }}</h3><span>{{ room.devices|length }} aktív folyamat</span></div>
+              <div class="device-grid">{% for device in room.devices %}{% include '_device_card.html' %}{% endfor %}</div>
+            </section>
+            {% endfor %}
+          </section>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="room-empty climate-demand-empty">Jelenleg nincs folyamatban fűtés vagy hűtés.</p>
+        {% endif %}
       </div>
       {% endif %}
     </section>

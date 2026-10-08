@@ -5,6 +5,47 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Zigbee TRV-k radiátorközeli hőmérséklete 1–2 órás adatkor között már nem
+  vált tévesen azonnal pirosra: előbb sárga figyelmeztetést kap, és csak két
+  óra után lesz piros. Az explicit Zigbee-kiesés továbbra is azonnal piros.
+
+- Elindult a háromnapos időjárás-előrejelzési adatgyűjtés. Az Open-Meteo
+  óránkénti futásokban 72 órára előre tárolja a hőmérsékletet, hőérzetet,
+  felhőzetet, napsugárzást, szelet és csapadékot, a lekérési próbák külön
+  auditjával. Új elemző parancs hasonlítja az eltelt prognózispontokat a saját
+  kültéri méréshez, és előrejelzési horizontonként MAE-, bias- és RMSE-mutatót
+  készít. Az adat egyelőre csak megfigyelési és elemzési célú, vezérlési
+  döntést nem módosít.
+
+- A főmenü új **Időjárás-előrejelzés** oldalán elérhető a következő 72 óra
+  hőmérséklet- és hőérzetgörbéje, a besugárzás és felhőzet diagramja, valamint
+  a helyi napokra bontott minimum, maximum, felhőzet, besugárzási csúcs és
+  csapadék. A nézet összeveti az aktuális prognózist a saját kültéri Zigbee
+  méréssel, és mintaszámhoz kötött pontossági statisztikát is mutat; továbbra
+  sem avatkozik be a vezérlésbe.
+
+- A kezdőlap két új, zóna és helyiség szerint csoportosított áttekintést kapott.
+  Az **Aktív hőigény** csak a még ki nem szolgált — ideértve a blokkolt —
+  fűtési és hűtési igényeket mutatja, míg a **Fűtés/hűtés folyamatban** nézet a
+  ténylegesen működő helyiségeket. A kártyákon a meglévő igény-, blokkolási és
+  aktív klímajelzések változatlanul láthatók; üres állapotban külön
+  tájékoztatás jelenik meg.
+
+- A Hisense-klímák bélyege megjeleníti a ConnectLife-ból visszaolvasott
+  ventilátor-beállítást magyar megnevezéssel. Az Auto jelzés a beállított módot,
+  nem az automatikán belüli pillanatnyi ventilátor-fordulatot jelenti.
+
+- Dokumentáltuk az első kontrollált dolgozószobai klímafűtési próbát. A
+  jegyzőkönyv összeveti a dolgozói Zigbee- és Computherm-mérést, a háló
+  temperálását, a kültéri változást, az egyórás lecsengést és a szubjektív
+  komfortot; előzetes következtetése szerint a rögzített célhőmérséklet mellett
+  a közepes ventilátoros felfűtést korábban automatikus fokozatra kell váltani.
+
+- A mérvadó helyiségi Zigbee-hőmérő bélyege most a fűtési/hűtési igénytől
+  külön, zöld jelzéssel mutatja, ha a kapcsolódó Hisense klíma frissen
+  visszaolvasott állapota szerint ténylegesen fűtési vagy hűtési üzemben van.
+  A jelzés sikertelen vagy elöregedett klímaállapotból nem készül.
+
 - A Mérési előzmények és a mentett kedvencek betöltése már nem számolja végig
   minden oldalnyitáskor a teljes, közel hárommillió soros hőmérsékleti idősor
   mérésdarabszámait. A nullázási lista az indexelt utolsó mérési időpontból

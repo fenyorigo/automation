@@ -50,6 +50,7 @@ from global_settings import (
 )
 from analysis_experiment import build_evidence
 from deterministic_report import GENERATOR_VERSION, generate_report
+from analyze_weather_forecasts import analyze as analyze_weather_forecasts
 from version import APP_VERSION
 
 
@@ -218,6 +219,25 @@ def zigbee_freshness_status(
     if fresh:
         return "online", "Zigbee", True
     return "offline", "Nincs friss Zigbee-adat", False
+
+
+def temperature_measurement_class(
+    device_type: str,
+    measured_at: datetime | None,
+    now_utc: datetime | None = None,
+) -> str:
+    """Return a display-age class, with a warning stage for sleeping TRVs."""
+    if measured_at is None:
+        return ""
+    now = now_utc or datetime.now(UTC).replace(tzinfo=None)
+    age = max(now - measured_at, timedelta(0))
+    if device_type == "radiator_thermostat":
+        if age > timedelta(hours=2):
+            return "stale-measurement"
+        if age > timedelta(hours=1):
+            return "aging-measurement"
+        return ""
+    return "stale-measurement" if age > timedelta(hours=1) else ""
 
 HISTORY_RANGES = {
     "1h": 1,
@@ -917,6 +937,64 @@ def render_temperature_svg(
         return output_path.read_bytes()
 
 
+def render_weather_conditions_svg(
+    points: list[dict[str, Any]], started_at: datetime, ended_at: datetime
+) -> bytes:
+    if GNUPLOT_BIN is None:
+        raise RuntimeError(GNUPLOT_ERROR or "A gnuplot nem érhető el.")
+    with tempfile.TemporaryDirectory(prefix="automation-weather-chart-") as temporary:
+        directory = Path(temporary)
+        output_path = directory / "conditions.svg"
+        data_path = directory / "conditions.dat"
+        script_path = directory / "conditions.gnuplot"
+        data_path.write_text(
+            "".join(
+                f"{point['valid_at'].replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M:%S')} "
+                f"{float(point['shortwave_radiation_wm2'] or 0):.3f} "
+                f"{float(point['cloud_cover_percent'] or 0):.2f}\n"
+                for point in points
+            ),
+            encoding="utf-8",
+        )
+        local_started_at = started_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
+        local_ended_at = ended_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
+        script_path.write_text(
+            "\n".join(
+                [
+                    'set terminal svg size 1100,440 dynamic enhanced font "Arial,12"',
+                    f'set output "{gnuplot_quote(str(output_path))}"',
+                    "set encoding utf8",
+                    'set title "Besugárzás és felhőzet – következő 72 óra" offset 0,1.2 textcolor rgb "#14251f"',
+                    "set xdata time",
+                    'set timefmt "%Y-%m-%dT%H:%M:%S"',
+                    f'set xrange ["{local_started_at.strftime("%Y-%m-%dT%H:%M:%S")}":"{local_ended_at.strftime("%Y-%m-%dT%H:%M:%S")}"]',
+                    'set format x "%m.%d\\n%H:%M" timedate',
+                    'set ylabel "Besugárzás (W/m²)"',
+                    'set y2label "Felhőzet (%)"',
+                    "set yrange [0:*]",
+                    "set y2range [0:100]",
+                    "set y2tics",
+                    'set grid xtics ytics lc rgb "#dcd9ce"',
+                    'set border lc rgb "#60706a"',
+                    'set tics textcolor rgb "#60706a"',
+                    "set key outside top center horizontal box opaque offset 0,-0.5",
+                    "set margins 11,11,5,8",
+                    (
+                        f'plot "{gnuplot_quote(str(data_path))}" using 1:2 with filledcurves x1 '
+                        'lc rgb "#f2c94c" fs transparent solid 0.38 title "Besugárzás", \\\n'
+                        f'     "{gnuplot_quote(str(data_path))}" using 1:3 axes x1y2 with lines '
+                        'lw 2.5 lc rgb "#607d9a" title "Felhőzet"'
+                    ),
+                ]
+            ),
+            encoding="utf-8",
+        )
+        subprocess.run(
+            [GNUPLOT_BIN, str(script_path)], capture_output=True, timeout=10, check=True
+        )
+        return output_path.read_bytes()
+
+
 def load_dashboard(
     attempt_origin: str = "all",
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -1435,6 +1513,51 @@ def load_room_groups(
     return groups
 
 
+def load_climate_demand_room_groups(
+    devices: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Group room thermometers with a demand not currently being served."""
+    demand_devices = [
+        item
+        for item in devices
+        if (
+            (
+                item.get("heating_advice", {}).get("heating_demand")
+                and not item.get("heating_advice", {}).get("heating_active")
+            )
+            or (
+                item.get("cooling_advice", {}).get("cooling_demand")
+                and not item.get("cooling_advice", {}).get("cooling_active")
+            )
+        )
+    ]
+    return _nonempty_room_groups(demand_devices)
+
+
+def load_active_climate_room_groups(
+    devices: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Group room thermometers whose room is actively heated or cooled."""
+    active_devices = [
+        item
+        for item in devices
+        if (
+            item.get("heating_advice", {}).get("heating_active")
+            or item.get("cooling_advice", {}).get("cooling_active")
+        )
+    ]
+    return _nonempty_room_groups(active_devices)
+
+
+def _nonempty_room_groups(
+    devices: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    groups = load_room_groups(devices)
+    for group in groups:
+        group["rooms"] = [room for room in group["rooms"] if room.get("devices")]
+    return [group for group in groups if group["rooms"]]
+
+
 def load_device_groups(devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
     groups = [
         {
@@ -1647,6 +1770,123 @@ def outdoor_summary_source(
     if selected is None or selected.get("source_type") in {"zigbee2mqtt", "esp32"}:
         return None
     return selected
+
+
+def summarize_weather_forecast_days(
+    points: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Create local-calendar summaries from UTC hourly forecast points."""
+    grouped: dict[date, list[dict[str, Any]]] = {}
+    for point in points:
+        valid_at = point.get("valid_at")
+        if valid_at is None:
+            continue
+        local_date = valid_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE).date()
+        grouped.setdefault(local_date, []).append(point)
+    summaries: list[dict[str, Any]] = []
+    weekday_names = ("hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat", "vasárnap")
+    today = local_now().date()
+    for forecast_date, day_points in grouped.items():
+        temperatures = [float(item["temperature_c"]) for item in day_points]
+        clouds = [
+            float(item["cloud_cover_percent"])
+            for item in day_points
+            if item.get("cloud_cover_percent") is not None
+        ]
+        radiation = [
+            float(item["shortwave_radiation_wm2"])
+            for item in day_points
+            if item.get("shortwave_radiation_wm2") is not None
+        ]
+        precipitation = [
+            float(item["precipitation_mm"])
+            for item in day_points
+            if item.get("precipitation_mm") is not None
+        ]
+        summaries.append(
+            {
+                "date": forecast_date,
+                "label": (
+                    "Ma" if forecast_date == today
+                    else "Holnap" if forecast_date == today + timedelta(days=1)
+                    else weekday_names[forecast_date.weekday()].capitalize()
+                ),
+                "minimum_c": min(temperatures),
+                "maximum_c": max(temperatures),
+                "mean_cloud_percent": round(sum(clouds) / len(clouds)) if clouds else None,
+                "peak_radiation_wm2": round(max(radiation)) if radiation else None,
+                "precipitation_mm": round(sum(precipitation), 1) if precipitation else None,
+                "hour_count": len(day_points),
+            }
+        )
+    return summaries
+
+
+def load_weather_forecast(include_accuracy: bool = True) -> dict[str, Any]:
+    sources, selected = load_outdoor_sources()
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT r.id,r.fetched_at,r.forecast_from,r.forecast_until,r.point_count,
+                      s.display_name,s.source_code
+                 FROM outdoor_weather_forecast_runs r
+                 JOIN outdoor_temperature_sources s ON s.id=r.source_id
+                ORDER BY r.fetched_at DESC,r.id DESC LIMIT 1"""
+        )
+        run_rows = rows_as_dicts(cursor)
+        run = run_rows[0] if run_rows else None
+        points: list[dict[str, Any]] = []
+        if run is not None:
+            cursor.execute(
+                """SELECT valid_at,lead_hours,temperature_c,apparent_temperature_c,
+                          cloud_cover_percent,shortwave_radiation_wm2,
+                          wind_speed_10m_kmh,precipitation_mm,weather_code
+                     FROM outdoor_weather_forecast_points
+                    WHERE run_id=? ORDER BY valid_at""",
+                (run["id"],),
+            )
+            points = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT attempted_at,completed_at,success,error_code,error_message,duration_ms
+                 FROM outdoor_weather_forecast_poll_attempts
+                ORDER BY attempted_at DESC,id DESC LIMIT 1"""
+        )
+        attempt_rows = rows_as_dicts(cursor)
+        attempt = attempt_rows[0] if attempt_rows else None
+    finally:
+        cursor.close()
+        connection.close()
+
+    current_comparison = None
+    if selected is not None and points:
+        observed_at = selected.get("observed_at")
+        if observed_at is not None:
+            closest = min(points, key=lambda item: abs(item["valid_at"] - observed_at))
+            current_comparison = {
+                "forecast_temperature_c": float(closest["temperature_c"]),
+                "forecast_valid_at": closest["valid_at"],
+                "local_temperature_c": float(selected["temperature_c"]),
+                "difference_c": round(
+                    float(closest["temperature_c"]) - float(selected["temperature_c"]), 1
+                ),
+            }
+    accuracy: dict[str, Any] = {"paired_points": 0, "by_horizon": {}}
+    if include_accuracy:
+        try:
+            accuracy = analyze_weather_forecasts(days=30, tolerance_minutes=90)
+        except (mariadb.Error, RuntimeError):
+            pass
+    return {
+        "sources": sources,
+        "selected": selected,
+        "run": run,
+        "points": points,
+        "attempt": attempt,
+        "daily": summarize_weather_forecast_days(points),
+        "current_comparison": current_comparison,
+        "accuracy": accuracy,
+    }
 
 
 def load_ventilation_log(
@@ -2451,7 +2691,7 @@ def dashboard() -> str:
     mark_problematic_devices(devices)
     outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")
-    if requested_view in {"device", "room"}:
+    if requested_view in {"device", "room", "demand", "active_climate"}:
         session["dashboard_view"] = requested_view
     view_mode = session.get("dashboard_view", "device")
     temperature_mode = "raw"
@@ -2461,9 +2701,13 @@ def dashboard() -> str:
         device["display_temperature_at"] = device["measurement_at"]
         device["display_temperature_kind"] = "Nyers mérés"
         device["display_temperature_available"] = device["temperature_c"] is not None
-        device["display_temperature_is_stale"] = bool(
-            device["display_temperature_at"]
-            and now_utc - device["display_temperature_at"] > timedelta(hours=1)
+        device["display_temperature_class"] = temperature_measurement_class(
+            str(device.get("device_type") or ""),
+            device["display_temperature_at"],
+            now_utc,
+        )
+        device["display_temperature_is_stale"] = (
+            device["display_temperature_class"] == "stale-measurement"
         )
     successful, monitored_count, manual_count, offline_count = dashboard_device_counts(
         devices
@@ -2494,6 +2738,8 @@ def dashboard() -> str:
         outdoor_temperature=outdoor_summary,
         device_groups=load_device_groups(devices),
         room_groups=load_room_groups(devices, outdoor_summary),
+        demand_room_groups=load_climate_demand_room_groups(devices),
+        active_climate_room_groups=load_active_climate_room_groups(devices),
     )
 
 
@@ -5348,6 +5594,73 @@ def outdoor_sources() -> str:
         "outdoor_sources.html", sources=sources, selected=selected,
         notice=session.pop("outdoor_source_notice", None),
     )
+
+
+@app.get("/weather-forecast")
+def weather_forecast() -> str:
+    forecast = load_weather_forecast()
+    return render_template(
+        "weather_forecast.html", gnuplot_error=GNUPLOT_ERROR, **forecast
+    )
+
+
+@app.get("/weather-forecast/temperature.svg")
+def weather_forecast_temperature_chart() -> Response:
+    forecast = load_weather_forecast(include_accuracy=False)
+    points = forecast["points"]
+    if not points:
+        abort(404)
+    series = [
+        (
+            "Open-Meteo előrejelzés",
+            [(point["valid_at"], float(point["temperature_c"])) for point in points],
+        )
+    ]
+    apparent = [
+        (point["valid_at"], float(point["apparent_temperature_c"]))
+        for point in points
+        if point.get("apparent_temperature_c") is not None
+    ]
+    if apparent:
+        series.append(("Hőérzet", apparent))
+    selected = forecast["selected"]
+    if selected is not None and selected.get("observed_at") is not None:
+        series.append(
+            (
+                selected["display_name"],
+                [(selected["observed_at"], float(selected["temperature_c"]))],
+            )
+        )
+    started_at = min(
+        [points[0]["valid_at"]]
+        + ([selected["observed_at"]] if selected and selected.get("observed_at") else [])
+    )
+    ended_at = points[-1]["valid_at"]
+    try:
+        svg = render_temperature_svg(
+            series, "Külső hőmérséklet – következő 72 óra", started_at, ended_at
+        )
+    except (RuntimeError, OSError, subprocess.SubprocessError):
+        abort(503)
+    response = Response(svg, mimetype="image/svg+xml")
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/weather-forecast/conditions.svg")
+def weather_forecast_conditions_chart() -> Response:
+    points = load_weather_forecast(include_accuracy=False)["points"]
+    if not points:
+        abort(404)
+    try:
+        svg = render_weather_conditions_svg(
+            points, points[0]["valid_at"], points[-1]["valid_at"]
+        )
+    except (RuntimeError, OSError, subprocess.SubprocessError):
+        abort(503)
+    response = Response(svg, mimetype="image/svg+xml")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.post("/outdoor-sources")

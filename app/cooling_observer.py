@@ -118,6 +118,9 @@ def evaluate_room(
         primary, hisense, computherm, params, now
     )
     cooling_active = bool(hisense.get("power")) and hisense.get("mode") == "cool"
+    climate_available = bool(hisense.get("poll_success")) and _fresh(
+        hisense, now, maximum_age
+    )
     room_threshold = params.room_off_c if cooling_active else params.room_on_c
     cooling_demand = (
         action_temperature >= room_threshold
@@ -127,6 +130,7 @@ def evaluate_room(
         action_temperature_c=action_temperature,
         sources=sources,
         cooling_active=cooling_active,
+        climate_available=climate_available,
         cooling_demand=cooling_demand,
         room_threshold_c=room_threshold,
         target_correction_needed=(
