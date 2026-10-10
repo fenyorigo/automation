@@ -24,6 +24,7 @@
         <a class="history-link" href="{{ url_for('outdoor_sources') }}">Külső hőmérséklet</a>
         <a class="history-link" href="{{ url_for('weather_forecast') }}">Időjárás-előrejelzés</a>
         <a class="history-link" href="{{ url_for('energy') }}">Energia</a>
+        <a class="history-link" href="{{ url_for('day_ahead_prices') }}">HUPX másnapi árak</a>
         <a class="history-link" href="{{ url_for('manual_measurements') }}">Kézi mérések</a>
         {% if can_write %}<a class="history-link" href="{{ url_for('backups') }}">Adatmentés</a>{% endif %}
         {% if can_write %}<a class="history-link" href="{{ url_for('global_settings') }}">Globális beállítások</a>{% endif %}

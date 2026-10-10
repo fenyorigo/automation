@@ -218,6 +218,14 @@ MIGRATIONS = (
         "v1_53_weather_forecasts",
         ROOT / "SQL" / "migrations" / "053_home_automation_v1.52_to_v1.53.sql",
     ),
+    (
+        "v1_54_entsoe_day_ahead_prices",
+        ROOT / "SQL" / "migrations" / "054_home_automation_v1.53_to_v1.54.sql",
+    ),
+    (
+        "v1_55_dynamic_electricity_prices",
+        ROOT / "SQL" / "migrations" / "055_home_automation_v1.54_to_v1.55.sql",
+    ),
 )
 
 

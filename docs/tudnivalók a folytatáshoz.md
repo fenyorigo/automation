@@ -1,6 +1,6 @@
 # Tudnivalók a folytatáshoz
 
-Frissítve: **2026-09-16** (Europe/Budapest)
+Frissítve: **2026-10-09** (Europe/Budapest)
 
 Ez a fájl az `automation` projekt folytatásának belépési pontja. Nem helyettesíti
 és nem másolja a részletes dokumentációt: rögzíti, hogy mi az igazság forrása,
@@ -77,6 +77,7 @@ Shelly H&T Gen3 ─────────────────────�
                                                              │       ├─> automation-zigbee2mqtt
                                                              │       └─> automation-shelly-mqtt
 HTTP/UDP/ConnectLife/Tasmota eszközök ─> automation-poller ───┴─> MariaDB ─> dashboard
+Open-Meteo + ENTSO-E/HUPX + MNB EUR/HUF ─> automation-poller ───> MariaDB ─> dashboard
 ```
 
 Fontos helyi végpontok:
@@ -97,7 +98,7 @@ engedélyezett volt:
 - `mosquitto.service`.
 
 Az alkalmazásverzió **1.3.2**, az adatbázis utolsó migrációja
-`v1_52_internal_openings`. A migrációs lánc sorrendjének egyetlen
+`v1_55_dynamic_electricity_prices`. A migrációs lánc sorrendjének egyetlen
 forrása az [`app/migrate_database.py`](../app/migrate_database.py); az SQL-ek a
 [`SQL/migrations`](../SQL/migrations/) könyvtárban vannak.
 

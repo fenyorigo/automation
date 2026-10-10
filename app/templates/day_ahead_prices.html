@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>HUPX másnapi nagykereskedelmi ár – Otthonklíma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body class="{{ 'read-only' if not can_write }}">
+  <header class="topbar history-topbar">
+    <div>
+      <p class="eyebrow">ENTSO-E / HUPX · Magyarország</p>
+      <h1>HUPX másnapi nagykereskedelmi ár</h1>
+      <p class="header-updated">D tarifa referencia · a jelenlegi A1-számlázást és a vezérlést nem befolyásolja.</p>
+    </div>
+    <a class="back-link" href="{{ url_for('dashboard') }}">Vissza az áttekintőhöz</a>
+    {% include '_account_menu.html' %}
+  </header>
+  <main>
+    {% if run %}
+    <section class="weather-status-grid" aria-label="Árgyűjtés állapota">
+      <article><span>Szállítási nap</span><strong>{{ run.delivery_date.strftime('%Y. %m. %d.') }}</strong><small>{{ run.point_count }} időegység · {{ run.currency }}/{{ run.price_unit }}</small></article>
+      <article><span>Legutóbbi gyűjtés</span><strong>{{ run.fetched_at|local_time }}</strong><small>Forrás: {{ 'HUPX' if run.source_code == 'hupx' else 'ENTSO-E' }} · {{ revision_count }} eltárolt változat · revízió: {{ run.revision_number if run.revision_number is not none else '—' }}</small></article>
+      <article><span>{{ price_view.label }}</span><strong>{{ '%.2f'|format(summary.minimum) }}–{{ '%.2f'|format(summary.maximum) }} {{ price_view.unit }}</strong><small>Átlag: {{ '%.2f'|format(summary.average) }} {{ price_view.unit }}</small></article>
+      <article><span>Gyűjtés állapota</span>{% if attempt and attempt.success %}<strong class="status-ok">Rendben</strong><small>{{ attempt.duration_ms }} ms</small>{% elif attempt %}<strong class="status-error">{{ 'Még nem publikált' if attempt.error_code=='no_data_yet' else 'Sikertelen' }}</strong><small>{{ attempt.error_message or attempt.error_code }}</small>{% else %}<strong>—</strong><small>Még nincs próbálkozás</small>{% endif %}</article>
+    </section>
+
+    <section class="history-panel">
+      <p class="eyebrow">Negyedórás piaci idősor (Forrás: {{ 'HUPX' if run.source_code == 'hupx' else 'ENTSO-E' }})</p>
+      <h2>{{ run.delivery_date.strftime('%Y. %m. %d.') }}</h2>
+      <p class="reset-explanation"><strong>D tarifa referencia, megfigyelési célra.</strong> A számított D ár csak a kedvezményes éves sávhatár feletti energiadíj; a rendszerhasználati és egyéb számlatételeket nem tartalmazza. A jelenlegi A1-számlázást és az automation vezérlési döntéseit nem befolyásolja.</p>
+      {% if dynamic_price_available %}
+      <div class="dynamic-price-basis">
+        <span>MNB EUR/HUF: <strong>{{ '%.2f'|format(exchange_rate.rate_huf|float) }}</strong> · {{ exchange_rate.rate_date }}{% if exchange_rate.rate_date < run.delivery_date %} · a szállítási naphoz legutóbbi elérhető árfolyam{% endif %}</span>
+        <span>Kereskedői díj: <strong>{{ '%.4f'|format(tariff.merchant_fee_net_huf_kwh|float) }} Ft/kWh nettó</strong> · hatályos {{ tariff.valid_from }} óta</span>
+        <span>ÁFA: <strong>{{ '%.0f'|format(tariff.vat_rate_percent|float) }}%</strong></span>
+      </div>
+      {% else %}
+      <p class="poll-notice warning">A D tarifás átszámításhoz még nincs eltárolt MNB EUR/HUF árfolyam vagy hatályos kereskedői díj. A HUPX nézet marad aktív.</p>
+      {% endif %}
+      <nav class="price-view-switch" aria-label="Árnézet">
+        {% for code, option in price_views.items() %}
+          {% if code == 'hupx' or dynamic_price_available %}<a href="{{ url_for('day_ahead_prices',view=code) }}" class="{{ 'active' if price_view.code==code }}">{{ option.short_label }}<small>{{ option.unit }}</small></a>{% endif %}
+        {% endfor %}
+      </nav>
+      <div class="price-tier-legend" aria-label="Árkategóriák jelmagyarázata">
+        <span class="primary"><i></i><strong>Elsődleges</strong> · legalább 60 percig átlag alatt</span>
+        <span class="secondary"><i></i><strong>Másodlagos</strong> · legalább 60 percig legfeljebb az átlag +10%-a</span>
+        <span class="other"><i></i><strong>Egyéb</strong></span>
+      </div>
+      <div class="price-window-grid">
+        <article class="primary">
+          <span>Preferált hálózati időszakok</span>
+          <strong>{% set primary_windows = price_windows|selectattr('tier', 'equalto', 'primary')|list %}{% if primary_windows %}{% for window in primary_windows %}{{ window.label }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Nincs legalább 60 perces időablak{% endif %}</strong>
+          <small>Minden negyedórás ár a kiválasztott nézet napi {{ '%.2f'|format(summary.average) }} {{ price_view.unit }} átlaga alatt van.</small>
+        </article>
+        <article class="secondary">
+          <span>Másodlagos hálózati időszakok</span>
+          <strong>{% set secondary_windows = price_windows|selectattr('tier', 'equalto', 'secondary')|list %}{% if secondary_windows %}{% for window in secondary_windows %}{{ window.label }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Nincs legalább 60 perces időablak{% endif %}</strong>
+          <small>Felső határ: {{ '%.2f'|format(summary.secondary_limit) }} {{ price_view.unit }}.</small>
+        </article>
+      </div>
+      {% if gnuplot_error %}
+      <p class="chart-empty">{{ gnuplot_error }}</p>
+      {% else %}
+      <div class="chart-frame"><img src="{{ url_for('day_ahead_prices_chart',view=price_view.code) }}" alt="Negyedórás másnapi villamosenergia-árak és a napi átlagár"></div>
+      {% endif %}
+      <div class="table-wrap day-ahead-table"><table><thead><tr><th>Helyi idő</th><th>Időtartam</th><th>HUPX EUR/MWh</th><th>HUPX eurocent/kWh</th>{% if dynamic_price_available %}<th>D nettó Ft/kWh</th><th>D bruttó Ft/kWh</th>{% endif %}</tr></thead><tbody>
+      {% for point in points %}<tr class="price-tier-{{ point.price_tier }}"><td>{{ point.interval_start|local_time }}</td><td>{{ point.resolution_minutes }} perc</td><td><strong>{{ '%.4f'|format(point.price_eur_mwh|float) }}</strong></td><td>{{ '%.4f'|format((point.price_eur_mwh|float) / 10) }}</td>{% if dynamic_price_available %}<td>{{ '%.2f'|format(point.dynamic_net_huf_kwh|float) }}</td><td><strong>{{ '%.2f'|format(point.dynamic_gross_huf_kwh|float) }}</strong></td>{% endif %}</tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    {% else %}
+    <section class="history-panel">
+      <p class="chart-empty">Még nincs eltárolt másnapi ár. A gyűjtő az ENTSO-E után a HUPX hivatalos nyilvános adatait is ellenőrzi, majd automatikusan újrapróbálkozik.</p>
+      {% if attempt %}<p class="reset-explanation">Legutóbbi próbálkozás: {{ attempt.attempted_at|local_time }} · {{ attempt.error_message or attempt.error_code or 'rendben' }}</p>{% endif %}
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>

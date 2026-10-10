@@ -5,6 +5,27 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- Elindult a hivatalos ENTSO-E magyar másnapi villamosenergiaár-adatok
+  gyűjtése. A collector kezeli a 15 perces piacot, az óraátállítás 23/25 órás
+  napjait, a publikálás előtti üres válaszok újrapróbálását, a revíziókat és az
+  azonos válaszok duplikációvédelmét. Minden próbálkozás auditált, a hozzáférési
+  token nem kerül naplóba vagy adatbázisba. A főmenü új **Másnapi áramárak**
+  oldala a legutóbbi idősor összesítését és pontjait mutatja; az adat egyelőre
+  csak megfigyelési célú. Az első lekérés a piaci publikáláshoz igazodva 13:05
+  CET-kor indul, ami nyári időszámításkor 14:05 budapesti idő.
+  A negyedórás táblázat fölött árdiagram is megjelent, óránkénti tengelyfelirattal,
+  15 perces segédosztásokkal és a napi átlagár vízszintes jelölésével.
+  Az oldal zölddel kiemeli a legalább egyórás, végig átlag alatti elsődleges
+  időablakokat, sárgával a legalább egyórás, legfeljebb átlag +10%-os másodlagos
+  időablakokat, a többi időszakot pedig halványpirossal. A lehetséges
+  terhelés-átrendezési ablakok szövegesen is megjelennek; vezérlési hatásuk még
+  nincs.
+  Az MNB hivatalos napi EUR/HUF árfolyamának auditált gyűjtése is elindult. A
+  HUPX-oldal már a 2026. szeptember 10-től hatályos, nettó 13,70 Ft/kWh
+  kereskedői díjjal számított nettó és 27% ÁFÁ-val számított bruttó D tarifás
+  energiadíjra is átváltható. A zöld/sárga időablakok a kiválasztott nézetből
+  újraszámítódnak; a rendszerhasználati díjak továbbra sem részei a becslésnek.
+
 - A Zigbee TRV-k radiátorközeli hőmérséklete 1–2 órás adatkor között már nem
   vált tévesen azonnal pirosra: előbb sárga figyelmeztetést kap, és csak két
   óra után lesz piros. Az explicit Zigbee-kiesés továbbra is azonnal piros.
@@ -16,6 +37,11 @@ helyi dátumok.
   kültéri méréshez, és előrejelzési horizontonként MAE-, bias- és RMSE-mutatót
   készít. Az adat egyelőre csak megfigyelési és elemzési célú, vezérlési
   döntést nem módosít.
+
+- Az Időjárás-előrejelzés oldal új történeti diagramon mutatja az elmúlt 72 óra
+  saját kültéri méréseit és az egyes órák előtt már ismert legfrissebb
+  Open-Meteo-előrejelzést. Az órás párokhoz külön MAE- és torzításérték tartozik,
+  így az eltérés már nem csak az aktuális pillanatban követhető.
 
 - A főmenü új **Időjárás-előrejelzés** oldalán elérhető a következő 72 óra
   hőmérséklet- és hőérzetgörbéje, a besugárzás és felhőzet diagramja, valamint

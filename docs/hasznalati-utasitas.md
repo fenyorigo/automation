@@ -566,7 +566,42 @@ saját kültéri hőmérővel hasonlítja össze előrejelzési horizontonként.
 minta esetén az eredmény csak előzetes. Az oldal jelenleg kizárólag
 adatgyűjtésre és elemzésre szolgál, a fűtési vagy hűtési döntést nem módosítja.
 
+Az oldal külön történeti görbén az elmúlt 72 órára is összeveti a saját
+kültéri hőmérőt az Open-Meteo gördülő előrejelzésével. Minden lejárt órához az
+akkor már elérhető legfrissebb prognózis és a legközelebbi, legfeljebb 90 percre
+levő helyi mérés kerül. A grafikon mellett az átlagos abszolút eltérés és a
+torzítás is látható; pozitív torzításnál az Open-Meteo átlagosan melegebbet
+jelzett a saját, védett elhelyezésű hőmérőnél.
+
 ## 9. Energia
+
+A főmenü **HUPX másnapi árak** pontja az ENTSO-E/HUPX magyar másnapi piacának
+legutóbbi eltárolt idősorát mutatja. A fejlécben a szállítási nap, a gyűjtés
+ideje, a revíziók száma, valamint a minimum, maximum és átlag látható. A táblázat
+az egyes intervallumokat EUR/MWh és azzal azonos tartalmú eurocent/kWh alakban
+közli. A táblázat fölötti grafikon negyedórás osztásokkal ábrázolja az árfolyamot,
+óránkénti feliratokkal és a napi átlagárat jelölő vízszintes vonallal. Ezek D
+tarifa referenciaadatként gyűjtött nagykereskedelmi energiaárak,
+nem a lakossági számla teljes egységárai. A jelenlegi A1-számlázást, a
+számlaalapú energiaköltséget és az automation vezérlését nem befolyásolják.
+
+A grafikon és a táblázat három színnel mutatja a megfigyelési szabályt. Zöld az
+elsődleges időszak, amelyben legalább 60 percen keresztül minden negyedórás ár a
+napi átlag alatt marad. Sárga a másodlagos időszak, amely nem elsődleges, de
+legalább 60 percen át legfeljebb a napi átlag 110%-áig emelkedik. A többi
+időszak halványpiros. A grafikon fölötti összesítés felsorolja az elsődleges és
+másodlagos időablakokat, így látható, mely terhelések átütemezése lehet majd
+érdemes. Ez továbbra sem indít automatikusan fogyasztót.
+
+Az árdiagram fölötti választóval három nézet érhető el: HUPX EUR/MWh, D tarifás
+nettó Ft/kWh és D tarifás bruttó Ft/kWh. A D tarifás nézet az adott
+negyedórás HUPX-árat a szállítási naphoz elérhető legutóbbi hivatalos MNB
+EUR/HUF árfolyammal váltja át, hozzáadja az időben hatályos nettó kereskedői
+díjat, majd a bruttó nézetben az ÁFÁ-t. A felhasznált árfolyam dátuma,
+kereskedői díj és ÁFA-kulcs az oldalon látható. A zöld és sárga időablakok
+mindig a kiválasztott árnézet átlagából számítódnak újra. A D ár csak a
+kedvezményes sávhatár feletti energiadíj becslése; rendszerhasználati és más
+számlatételeket nem tartalmaz.
 
 Az oldal a villany- és gázóra kumulatív állását kezeli.
 

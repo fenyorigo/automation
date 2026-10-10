@@ -14,6 +14,8 @@ from database_backup import create_scheduled_database_backup, scheduled_backup_d
 from poll_devices import DEFAULT_CONFIG, load_devices, poll_all
 from polling_lock import PollCycleBusy, polling_cycle_lock
 from outdoor_weather import poll_active_outdoor_sources
+from entsoe_day_ahead import poll_day_ahead_prices
+from mnb_exchange_rate import poll_mnb_exchange_rate
 from scheduled_climate import process_due_climate_schedules
 from scheduled_power import reconcile_water_heater_schedule
 
@@ -69,6 +71,43 @@ async def run_cycle(
                 f"outdoor weather: {outdoor_successful}/{outdoor_attempted} successful",
                 flush=True,
             )
+        if poll_outdoor:
+            try:
+                exchange_rate = await asyncio.to_thread(
+                    poll_mnb_exchange_rate, max(30.0, timeout)
+                )
+            except Exception as error:
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} "
+                    f"MNB exchange-rate collector failed: {type(error).__name__}",
+                    flush=True,
+                )
+            else:
+                if exchange_rate["status"] != "not_due":
+                    print(
+                        f"{datetime.now().isoformat(timespec='seconds')} "
+                        f"MNB EUR/HUF: {exchange_rate['status']} "
+                        f"for {exchange_rate.get('rate_date', 'unknown')}",
+                        flush=True,
+                    )
+            try:
+                day_ahead = await asyncio.to_thread(
+                    poll_day_ahead_prices, max(30.0, timeout)
+                )
+            except Exception as error:
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} "
+                    f"day-ahead price collector failed: {type(error).__name__}",
+                    flush=True,
+                )
+            else:
+                if day_ahead["status"] not in {"not_due", "disabled"}:
+                    print(
+                        f"{datetime.now().isoformat(timespec='seconds')} "
+                        f"day-ahead price: {day_ahead['status']} "
+                        f"for {day_ahead.get('delivery_date', 'unknown')}",
+                        flush=True,
+                    )
         successful = sum(1 for item in results if item.success)
         return successful, stored, len(devices)
 

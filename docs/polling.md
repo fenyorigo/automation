@@ -65,6 +65,47 @@ vagy a periodikus poller indította. Ha már fut egy kör, a kézi kérés errő
 visszajelzést ad, az esedékes automatikus kör pedig kimarad. A következő
 automatikus futás az eredeti 10 perces ütemezés szerint történik.
 
+## ENTSO-E / HUPX másnapi árgyűjtés
+
+Ugyanez a folyamat gyűjti a hivatalos magyar másnapi villamosenergia-árakat.
+Elsődleges forrása az ENTSO-E Transparency Platform. Ha az ENTSO-E még nem ad
+adatot vagy átmenetileg hibás, a gyűjtő a HUPX Labs nyilvános, hivatalos
+negyedórás eredményét használja tartalékforrásként. A sikeres futás forrása a
+futás rekordjában és a webes felületen is látható. Az ENTSO-E hozzáférési token
+kizárólag a szerver `.env`
+fájljában, `ENTSOE_API_TOKEN` néven szerepel; az alkalmazás nem írja naplóba és
+nem tárolja adatbázisban. A gyűjtő 13:05 CET után kezdi kérni a következő
+szállítási napot; ez nyári időszámításkor 14:05, télen 13:05 budapesti idő. Ha
+az eredmény még nem jelent meg, 15 perc múlva
+újrapróbálkozik; siker után 18:30-ig óránként ellenőrzi a revíziókat. Azonos
+válasz nem készít új idősoros másolatot, de minden lekérési kísérlet auditált.
+A napi 15 perces piac normál napon 96 pontot ad; a nyári/téli időszámítás
+váltásánál a nap tényleges UTC-hossza alapján 92 vagy 100 pont is helyes.
+A tárolt idősor D tarifa referencia és piaci megfigyelési adat. Az A1 tarifa
+aktuális számlaköltségét nem helyettesíti, és nem bemenete az automatikus
+energia- vagy klímavezérlésnek.
+
+## MNB EUR/HUF árfolyam és D tarifás átszámítás
+
+A poller minden helyi napon 11:35 után egyszer lekéri az MNB hivatalos napi
+EUR/HUF középárfolyamát. Hétvégén és munkaszüneti napon az MNB válasza az utolsó
+munkanap árfolyamát tartalmazhatja; ezt a forrás saját `rate_date` dátumával
+tároljuk. A lekérés az MNB hivatalos SOAP-szolgáltatását használja, és az
+eredeti válasz is megmarad auditálásra.
+
+A D árszabás kedvezményes sáv feletti negyedórás energiadíja:
+
+```text
+HUPX-komponens nettó = kerekítés(HUPX EUR/MWh × MNB Ft/EUR ÷ 1000; 2 tizedes)
+D nettó energiadíj   = HUPX-komponens nettó + hatályos kereskedői díj
+D bruttó energiadíj  = D nettó energiadíj × (1 + ÁFA/100)
+```
+
+A számítás nem tartalmaz rendszerhasználati vagy más számlatételeket. A
+következő munkanapi szállítás előnézete a még meg nem jelent aznapi árfolyam
+helyett a legutóbbi elérhető MNB-árfolyamot használja, majd az új árfolyam
+eltárolásakor automatikusan frissül.
+
 ## Automatikus indítás macOS-en
 
 A két felhasználói `launchd` szolgáltatás:

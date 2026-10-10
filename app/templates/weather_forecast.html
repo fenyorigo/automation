@@ -96,6 +96,26 @@
 
     <section class="history-panel">
       <p class="eyebrow">Visszamérés</p>
+      <h2>Saját kültéri hőmérő és a gördülő előrejelzés</h2>
+      {% if comparison.paired_points %}
+      <p class="reset-explanation">
+        Az elmúlt 72 órában {{ comparison.paired_points }} órás pont hasonlítható össze.
+        Minden időponthoz az akkor már ismert legfrissebb Open-Meteo-előrejelzés és
+        a legfeljebb {{ comparison.tolerance_minutes }} percre levő saját mérés tartozik.
+        Átlagos abszolút eltérés: <strong>{{ comparison.overall.mae_c|temperature }} °C</strong>,
+        torzítás: <strong>{{ comparison.overall.bias_c|temperature }} °C</strong>
+        (Open-Meteo mínusz saját mérés).
+      </p>
+      {% if gnuplot_error %}<p class="chart-empty">{{ gnuplot_error }}</p>{% else %}
+      <div class="chart-frame"><img src="{{ url_for('weather_forecast_comparison_chart') }}" alt="A saját kültéri hőmérő és az Open-Meteo gördülő előrejelzésének elmúlt 72 órás összehasonlítása"></div>
+      {% endif %}
+      {% else %}
+      <p class="chart-empty">Még nincs elegendő lejárt előrejelzési pont a történeti görbék összevetéséhez.</p>
+      {% endif %}
+    </section>
+
+    <section class="history-panel">
+      <p class="eyebrow">Pontosság előrejelzési horizontonként</p>
       <h2>Open-Meteo és a helyi hőmérő eltérése</h2>
       {% if accuracy.paired_points %}
       <p class="reset-explanation">

@@ -7,12 +7,26 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "app"))
 
-from analyze_weather_forecasts import summarize_errors
+from analyze_weather_forecasts import pair_forecasts_with_observations, summarize_errors
 from dashboard import summarize_weather_forecast_days
 from outdoor_weather import forecast_points
 
 
 class WeatherForecastTest(unittest.TestCase):
+    def test_rolling_comparison_pairs_nearest_local_observations(self) -> None:
+        forecasts = [
+            (datetime(2026, 10, 8, 10, 0), 1.0, 15.0),
+            (datetime(2026, 10, 8, 11, 0), 1.0, 16.0),
+        ]
+        observations = [
+            (datetime(2026, 10, 8, 9, 55), 14.5),
+            (datetime(2026, 10, 8, 11, 8), 15.2),
+        ]
+        points = pair_forecasts_with_observations(forecasts, observations, 15)
+        self.assertEqual(len(points), 2)
+        self.assertEqual(points[0]["actual_temperature_c"], 14.5)
+        self.assertAlmostEqual(points[1]["difference_c"], 0.8)
+
     def test_open_meteo_parallel_arrays_are_normalized(self) -> None:
         payload = {
             "hourly": {

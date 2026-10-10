@@ -50,7 +50,11 @@ from global_settings import (
 )
 from analysis_experiment import build_evidence
 from deterministic_report import GENERATOR_VERSION, generate_report
-from analyze_weather_forecasts import analyze as analyze_weather_forecasts
+from electricity_prices import calculate_dynamic_electricity_price
+from analyze_weather_forecasts import (
+    analyze as analyze_weather_forecasts,
+    comparison_series as weather_forecast_comparison_series,
+)
 from version import APP_VERSION
 
 
@@ -995,6 +999,175 @@ def render_weather_conditions_svg(
         return output_path.read_bytes()
 
 
+def classify_day_ahead_price_windows(
+    points: list[dict[str, Any]],
+    average: float,
+    *,
+    price_key: str = "price_eur_mwh",
+    minimum_minutes: int = 60,
+    secondary_margin: float = 0.10,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], float]:
+    """Classify sustained cheap/acceptable price windows for observation."""
+    classified = [dict(point, price_tier="other") for point in points]
+    secondary_limit = average + abs(average) * secondary_margin
+
+    def mark_qualifying_runs(predicate: Any, tier: str) -> None:
+        index = 0
+        while index < len(classified):
+            if not predicate(index):
+                index += 1
+                continue
+            run_start = index
+            run_end = index + 1
+            while (
+                run_end < len(classified)
+                and classified[run_end]["interval_start"]
+                == classified[run_end - 1]["interval_end"]
+                and predicate(run_end)
+            ):
+                run_end += 1
+            duration = (
+                classified[run_end - 1]["interval_end"]
+                - classified[run_start]["interval_start"]
+            ).total_seconds() / 60
+            if duration >= minimum_minutes:
+                for run_index in range(run_start, run_end):
+                    classified[run_index]["price_tier"] = tier
+            index = run_end
+
+    mark_qualifying_runs(
+        lambda index: float(classified[index][price_key]) < average,
+        "primary",
+    )
+    mark_qualifying_runs(
+        lambda index: (
+            classified[index]["price_tier"] != "primary"
+            and float(classified[index][price_key]) <= secondary_limit
+        ),
+        "secondary",
+    )
+
+    windows: list[dict[str, Any]] = []
+    index = 0
+    while index < len(classified):
+        tier = classified[index]["price_tier"]
+        run_end = index + 1
+        while (
+            run_end < len(classified)
+            and classified[run_end]["price_tier"] == tier
+            and classified[run_end]["interval_start"]
+            == classified[run_end - 1]["interval_end"]
+        ):
+            run_end += 1
+        started_at = classified[index]["interval_start"]
+        ended_at = classified[run_end - 1]["interval_end"]
+        local_start = started_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
+        local_end = ended_at.replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE)
+        windows.append(
+            {
+                "tier": tier,
+                "started_at": started_at,
+                "ended_at": ended_at,
+                "duration_minutes": round((ended_at - started_at).total_seconds() / 60),
+                "label": f"{local_start.strftime('%H:%M')}–{local_end.strftime('%H:%M')}",
+            }
+        )
+        index = run_end
+    return classified, windows, secondary_limit
+
+
+def render_day_ahead_prices_svg(
+    points: list[dict[str, Any]],
+    windows: list[dict[str, Any]],
+    average: float,
+    delivery_date: date,
+    *,
+    price_key: str = "price_eur_mwh",
+    unit: str = "EUR/MWh",
+    series_title: str = "Negyedórás ár",
+) -> bytes:
+    if GNUPLOT_BIN is None:
+        raise RuntimeError(GNUPLOT_ERROR or "A gnuplot nem érhető el.")
+    if not points:
+        raise ValueError("A grafikonhoz nincs áradat.")
+    with tempfile.TemporaryDirectory(prefix="automation-price-chart-") as temporary:
+        directory = Path(temporary)
+        output_path = directory / "day-ahead-prices.svg"
+        data_path = directory / "day-ahead-prices.dat"
+        script_path = directory / "day-ahead-prices.gnuplot"
+        data_path.write_text(
+            "".join(
+                f"{point['interval_start'].replace(tzinfo=UTC).astimezone(LOCAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M:%S')} "
+                f"{float(point[price_key]):.4f}\n"
+                for point in points
+            ),
+            encoding="utf-8",
+        )
+        local_started_at = points[0]["interval_start"].replace(
+            tzinfo=UTC
+        ).astimezone(LOCAL_TIMEZONE)
+        local_ended_at = points[-1]["interval_end"].replace(
+            tzinfo=UTC
+        ).astimezone(LOCAL_TIMEZONE)
+        chart_title = f"Másnapi villamosenergia-ár – {delivery_date.strftime('%Y. %m. %d.')}"
+        tier_colors = {
+            "primary": ("#8fd3ad", 0.30),
+            "secondary": ("#f3cd62", 0.26),
+            "other": ("#e8a49a", 0.13),
+        }
+        background_objects = []
+        for index, window in enumerate(windows, start=1):
+            color, opacity = tier_colors[window["tier"]]
+            local_start = window["started_at"].replace(
+                tzinfo=UTC
+            ).astimezone(LOCAL_TIMEZONE)
+            local_end = window["ended_at"].replace(
+                tzinfo=UTC
+            ).astimezone(LOCAL_TIMEZONE)
+            background_objects.append(
+                f'set object {index} rect from "{local_start.strftime("%Y-%m-%dT%H:%M:%S")}", graph 0 '
+                f'to "{local_end.strftime("%Y-%m-%dT%H:%M:%S")}", graph 1 behind '
+                f'fc rgb "{color}" fs transparent solid {opacity:.2f} noborder'
+            )
+        script_path.write_text(
+            "\n".join(
+                [
+                    'set terminal svg size 1100,440 dynamic enhanced font "Arial,12"',
+                    f'set output "{gnuplot_quote(str(output_path))}"',
+                    "set encoding utf8",
+                    f'set title "{gnuplot_quote(chart_title)}" offset 0,1.2 textcolor rgb "#14251f"',
+                    "set xdata time",
+                    'set timefmt "%Y-%m-%dT%H:%M:%S"',
+                    f'set xrange ["{local_started_at.strftime("%Y-%m-%dT%H:%M:%S")}":"{local_ended_at.strftime("%Y-%m-%dT%H:%M:%S")}"]',
+                    *background_objects,
+                    'set format x "%H" timedate',
+                    "set xtics 3600",
+                    "set mxtics 4",
+                    "set tics scale 1,0.45",
+                    'set xlabel "Helyi idő (óra; kis osztások: 15 perc)"',
+                    f'set ylabel "{gnuplot_quote(unit)}"',
+                    'set grid xtics mxtics ytics lc rgb "#dcd9ce"',
+                    'set border lc rgb "#60706a"',
+                    'set tics textcolor rgb "#60706a"',
+                    "set key outside top center horizontal box opaque offset 0,-0.5",
+                    "set margins 11,3,6,8",
+                    f"average={average:.8f}",
+                    (
+                        f'plot "{gnuplot_quote(str(data_path))}" using 1:2 with steps '
+                        f'lw 2.5 lc rgb "#17765b" title "{gnuplot_quote(series_title)}", \\\n'
+                        '     average with lines lw 2 dt 2 lc rgb "#c62828" '
+                        f'title "Átlag ({average:.2f} {gnuplot_quote(unit)})"'
+                    ),
+                ]
+            ),
+            encoding="utf-8",
+        )
+        subprocess.run(
+            [GNUPLOT_BIN, str(script_path)], capture_output=True, timeout=10, check=True
+        )
+        return output_path.read_bytes()
+
+
 def load_dashboard(
     attempt_origin: str = "all",
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -1872,9 +2045,16 @@ def load_weather_forecast(include_accuracy: bool = True) -> dict[str, Any]:
                 ),
             }
     accuracy: dict[str, Any] = {"paired_points": 0, "by_horizon": {}}
+    comparison: dict[str, Any] = {"paired_points": 0, "points": []}
     if include_accuracy:
         try:
             accuracy = analyze_weather_forecasts(days=30, tolerance_minutes=90)
+        except (mariadb.Error, RuntimeError):
+            pass
+        try:
+            comparison = weather_forecast_comparison_series(
+                days=3, tolerance_minutes=90
+            )
         except (mariadb.Error, RuntimeError):
             pass
     return {
@@ -1886,6 +2066,141 @@ def load_weather_forecast(include_accuracy: bool = True) -> dict[str, Any]:
         "daily": summarize_weather_forecast_days(points),
         "current_comparison": current_comparison,
         "accuracy": accuracy,
+        "comparison": comparison,
+    }
+
+
+DAY_AHEAD_PRICE_VIEWS = {
+    "hupx": {
+        "key": "price_eur_mwh",
+        "unit": "EUR/MWh",
+        "label": "HUPX nagykereskedelmi ár",
+        "short_label": "HUPX",
+    },
+    "d_net": {
+        "key": "dynamic_net_huf_kwh",
+        "unit": "Ft/kWh nettó",
+        "label": "D tarifás nettó energiadíj",
+        "short_label": "D nettó",
+    },
+    "d_gross": {
+        "key": "dynamic_gross_huf_kwh",
+        "unit": "Ft/kWh bruttó",
+        "label": "D tarifás bruttó energiadíj",
+        "short_label": "D bruttó",
+    },
+}
+
+
+def load_day_ahead_prices(price_view: str = "d_gross") -> dict[str, Any]:
+    requested_price_view = (
+        price_view if price_view in DAY_AHEAD_PRICE_VIEWS else "d_gross"
+    )
+    connection = connect_database()
+    cursor = connection.cursor()
+    exchange_rate = None
+    tariff = None
+    try:
+        cursor.execute(
+            """SELECT id,source_code,fetched_at,delivery_date,document_mrid,revision_number,
+                      period_start,period_end,currency,price_unit,point_count
+                 FROM electricity_day_ahead_price_runs
+                ORDER BY delivery_date DESC,fetched_at DESC,id DESC LIMIT 1"""
+        )
+        run_rows = rows_as_dicts(cursor)
+        run = run_rows[0] if run_rows else None
+        points: list[dict[str, Any]] = []
+        revision_count = 0
+        if run is not None:
+            cursor.execute(
+                """SELECT interval_start,interval_end,resolution_minutes,price_eur_mwh
+                     FROM electricity_day_ahead_price_points
+                    WHERE run_id=? ORDER BY interval_start""",
+                (run["id"],),
+            )
+            points = rows_as_dicts(cursor)
+            cursor.execute(
+                "SELECT COUNT(*) FROM electricity_day_ahead_price_runs WHERE delivery_date=?",
+                (run["delivery_date"],),
+            )
+            revision_count = int(cursor.fetchone()[0])
+            cursor.execute(
+                """SELECT source_code,fetched_at,rate_date,currency,unit,rate_huf
+                     FROM currency_exchange_rate_observations
+                    WHERE currency='EUR' AND rate_date<=?
+                    ORDER BY rate_date DESC,fetched_at DESC,id DESC LIMIT 1""",
+                (run["delivery_date"],),
+            )
+            exchange_rows = rows_as_dicts(cursor)
+            exchange_rate = exchange_rows[0] if exchange_rows else None
+            cursor.execute(
+                """SELECT tariff_code,valid_from,valid_to,merchant_fee_net_huf_kwh,
+                          vat_rate_percent,source_url,note
+                     FROM electricity_dynamic_tariff_parameters
+                    WHERE tariff_code='D' AND valid_from<=?
+                      AND (valid_to IS NULL OR valid_to>=?)
+                    ORDER BY valid_from DESC,id DESC LIMIT 1""",
+                (run["delivery_date"], run["delivery_date"]),
+            )
+            tariff_rows = rows_as_dicts(cursor)
+            tariff = tariff_rows[0] if tariff_rows else None
+        cursor.execute(
+            """SELECT attempted_at,completed_at,delivery_date,success,http_status,
+                      error_code,error_message,duration_ms
+                 FROM electricity_day_ahead_price_poll_attempts
+                ORDER BY attempted_at DESC,id DESC LIMIT 1"""
+        )
+        attempt_rows = rows_as_dicts(cursor)
+        attempt = attempt_rows[0] if attempt_rows else None
+    finally:
+        cursor.close()
+        connection.close()
+
+    dynamic_price_available = exchange_rate is not None and tariff is not None
+    if dynamic_price_available:
+        for point in points:
+            calculated = calculate_dynamic_electricity_price(
+                Decimal(str(point["price_eur_mwh"])),
+                Decimal(str(exchange_rate["rate_huf"])),
+                Decimal(str(tariff["merchant_fee_net_huf_kwh"])),
+                Decimal(str(tariff["vat_rate_percent"])),
+            )
+            point["market_net_huf_kwh"] = calculated.market_net_huf_kwh
+            point["dynamic_net_huf_kwh"] = calculated.dynamic_net_huf_kwh
+            point["dynamic_gross_huf_kwh"] = calculated.dynamic_gross_huf_kwh
+
+    selected_price_view = requested_price_view
+    if requested_price_view != "hupx" and not dynamic_price_available:
+        selected_price_view = "hupx"
+    view = dict(DAY_AHEAD_PRICE_VIEWS[selected_price_view])
+    view["code"] = selected_price_view
+    price_key = view["key"]
+    prices = [float(point[price_key]) for point in points]
+    summary = None
+    price_windows: list[dict[str, Any]] = []
+    if prices:
+        summary = {
+            "minimum": min(prices),
+            "maximum": max(prices),
+            "average": sum(prices) / len(prices),
+        }
+        points, price_windows, secondary_limit = classify_day_ahead_price_windows(
+            points, summary["average"], price_key=price_key
+        )
+        summary["secondary_limit"] = secondary_limit
+    return {
+        "run": run,
+        "points": points,
+        "attempt": attempt,
+        "revision_count": revision_count,
+        "summary": summary,
+        "price_windows": price_windows,
+        "price_view": view,
+        "price_views": DAY_AHEAD_PRICE_VIEWS,
+        "requested_price_view": requested_price_view,
+        "dynamic_price_available": dynamic_price_available,
+        "exchange_rate": exchange_rate,
+        "tariff": tariff,
     }
 
 
@@ -5604,6 +5919,35 @@ def weather_forecast() -> str:
     )
 
 
+@app.get("/energy/day-ahead-prices")
+def day_ahead_prices() -> str:
+    price_view = request.args.get("view", "d_gross")
+    return render_template(
+        "day_ahead_prices.html", gnuplot_error=GNUPLOT_ERROR,
+        **load_day_ahead_prices(price_view)
+    )
+
+
+@app.get("/energy/day-ahead-prices/chart.svg")
+def day_ahead_prices_chart() -> Response:
+    prices = load_day_ahead_prices(request.args.get("view", "d_gross"))
+    run, points, summary = prices["run"], prices["points"], prices["summary"]
+    if run is None or not points or summary is None:
+        abort(404)
+    try:
+        svg = render_day_ahead_prices_svg(
+            points, prices["price_windows"], float(summary["average"]),
+            run["delivery_date"], price_key=prices["price_view"]["key"],
+            unit=prices["price_view"]["unit"],
+            series_title=prices["price_view"]["label"],
+        )
+    except (RuntimeError, ValueError, OSError, subprocess.SubprocessError):
+        abort(503)
+    response = Response(svg, mimetype="image/svg+xml")
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.get("/weather-forecast/temperature.svg")
 def weather_forecast_temperature_chart() -> Response:
     forecast = load_weather_forecast(include_accuracy=False)
@@ -5655,6 +5999,42 @@ def weather_forecast_conditions_chart() -> Response:
     try:
         svg = render_weather_conditions_svg(
             points, points[0]["valid_at"], points[-1]["valid_at"]
+        )
+    except (RuntimeError, OSError, subprocess.SubprocessError):
+        abort(503)
+    response = Response(svg, mimetype="image/svg+xml")
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/weather-forecast/comparison.svg")
+def weather_forecast_comparison_chart() -> Response:
+    comparison = weather_forecast_comparison_series(days=3, tolerance_minutes=90)
+    points = comparison["points"]
+    if not points:
+        abort(404)
+    series = [
+        (
+            "Open-Meteo – kiadáskor legfrissebb",
+            [
+                (point["valid_at"], point["forecast_temperature_c"])
+                for point in points
+            ],
+        ),
+        (
+            comparison["actual_source_name"],
+            [
+                (point["valid_at"], point["actual_temperature_c"])
+                for point in points
+            ],
+        ),
+    ]
+    try:
+        svg = render_temperature_svg(
+            series,
+            "Open-Meteo és saját kültéri mérés – elmúlt 72 óra",
+            points[0]["valid_at"],
+            points[-1]["valid_at"],
         )
     except (RuntimeError, OSError, subprocess.SubprocessError):
         abort(503)

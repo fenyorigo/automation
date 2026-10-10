@@ -135,6 +135,36 @@ sikerességét auditálja. A tényleges összehasonlítás alapja továbbra is a
 `outdoor_temperature_observations`, elsődlegesen a saját Zigbee kültéri
 hőmérővel.
 
+## ENTSO-E / HUPX másnapi villamosenergia-árak
+
+Az `electricity_day_ahead_price_runs` a magyar ajánlattételi zóna egy-egy
+ENTSO-E A44 dokumentumának vagy HUPX-tartaléklekérésének metaadatait,
+normalizált tartalmi SHA-256 lenyomatát és eredeti XML/JSON válaszát őrzi. A
+`source_code` megkülönbözteti az `entsoe` és `hupx` forrást. Azonos forrásból az
+azonos publikált görbe csak egyszer tárolható,
+míg egy valódi
+revízió külön futás marad. Az `electricity_day_ahead_price_points` a dokumentum
+15 perces — az API régebbi vagy eltérő felbontása esetén általánosan kezelt —
+intervallumait és EUR/MWh árait tárolja UTC idővel. A
+`electricity_day_ahead_price_poll_attempts` minden sikeres, még nem publikált
+és hibás próbálkozást külön auditál. A szállítási nap budapesti helyi nap,
+ezért az óraátállítás 23 és 25 órás napjai nem kényszerülnek 24 órára.
+
+Az MNB hivatalos napi EUR/HUF középárfolyamát a
+`currency_exchange_rate_observations` őrzi a forrás dátumával, lekérési idővel,
+eredeti SOAP-válasszal és SHA-256 lenyomattal. A
+`currency_exchange_rate_poll_attempts` a napi próbálkozások auditnaplója. A
+következő szállítási nap előnézete mindig az addig elérhető legutóbbi, a
+szállítási napnál nem későbbi árfolyamot használja; új MNB-adat beérkezésekor a
+számított ár automatikusan pontosodik.
+
+Az `electricity_dynamic_tariff_parameters` a D árszabás időben hatályos
+kereskedői díját és ÁFA-kulcsát tárolja. A kezdeti rekord 2026. szeptember
+10-től `13,7000 Ft/kWh` nettó kereskedői díjat és 27% ÁFÁ-t rögzít. A
+negyedórás nettó és bruttó D energiadíj származtatott adat, ezért nem
+duplikáljuk az adatbázisban: a nyers HUPX-ár, az adott napi MNB-árfolyam és az
+adott napon hatályos paraméter alapján újraszámítható.
+
 ## Seed fájlok
 
 - [SQL/home_automation_schema_v1.0_20260807.sql](../../SQL/home_automation_schema_v1.0_20260807.sql)
