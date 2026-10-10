@@ -17,6 +17,8 @@ import mariadb
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 
+from measurement_retention import zigbee_property_has_time_series
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SYSTEM = "zigbee2mqtt"
@@ -363,11 +365,15 @@ class ZigbeeRepository:
                     f"{friendly_name} {sensor['label']}", sensor["sensor_type"], sensor["unit"],
                 ),
             )
-        self._bootstrap_time_series(cursor, device_id, ieee)
+        self._bootstrap_time_series(cursor, device_id, ieee, device_type)
         return device_id
 
     def _bootstrap_time_series(
-        self, cursor: mariadb.Cursor, device_id: int, ieee_address: str
+        self,
+        cursor: mariadb.Cursor,
+        device_id: int,
+        ieee_address: str,
+        device_type: str,
     ) -> None:
         placeholders = ",".join("?" for _ in STORED_SENSOR_PROPERTIES)
         cursor.execute(
@@ -378,7 +384,9 @@ class ZigbeeRepository:
             (device_id, *sorted(STORED_SENSOR_PROPERTIES)),
         )
         for property_name, value, source_at, received_at, raw_payload in cursor.fetchall():
-            if value is None:
+            if value is None or not zigbee_property_has_time_series(
+                device_type, str(property_name)
+            ):
                 continue
             raw = raw_payload if isinstance(raw_payload, str) else json_value(raw_payload)
             self._insert_sensor_reading(
@@ -641,8 +649,10 @@ class ZigbeeRepository:
         source_observed_at = parse_last_seen(payload.get("last_seen"))
         try:
             cursor.execute(
-                """SELECT device_id,ieee_address,model_id
-                   FROM zigbee2mqtt_devices WHERE friendly_name=?""",
+                """SELECT z.device_id,z.ieee_address,z.model_id,d.device_type
+                   FROM zigbee2mqtt_devices z
+                   JOIN devices d ON d.id=z.device_id
+                   WHERE z.friendly_name=?""",
                 (friendly_name,),
             )
             row = cursor.fetchone()
@@ -652,6 +662,7 @@ class ZigbeeRepository:
             device_id = int(row[0])
             ieee_address = str(row[1])
             model_id = row[2]
+            device_type = str(row[3])
             raw = json_value(payload)
             previous_contact: Decimal | None = None
             if "contact" in payload:
@@ -680,7 +691,11 @@ class ZigbeeRepository:
                         text_value, source_observed_at, received_at, topic, retained, raw,
                     ),
                 )
-                if property_name in TIME_SERIES_PROPERTIES and numeric_value is not None:
+                if (
+                    property_name in TIME_SERIES_PROPERTIES
+                    and numeric_value is not None
+                    and zigbee_property_has_time_series(device_type, property_name)
+                ):
                     self._insert_sensor_reading(
                         cursor, device_id, ieee_address, property_name, numeric_value,
                         source_observed_at or received_at, raw,

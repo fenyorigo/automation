@@ -9,6 +9,10 @@ from typing import Any
 import mariadb
 
 from poll_devices import DeviceConfig, PollResult
+from measurement_retention import (
+    previous_calendar_month_start_utc,
+    tasmota_keeps_monthly_history,
+)
 from temperature_derivation import derive_temperature
 
 
@@ -118,8 +122,12 @@ class Database:
                     self._insert_derived_temperature(
                         cursor, sensor_id, raw_reading_id, result, measurement
                     )
+                    self._apply_tasmota_reading_retention(
+                        cursor, config, sensor_id, raw_reading_id
+                    )
                 if result.state is not None:
                     self._insert_state(cursor, device_id, config, result)
+                    self._apply_tasmota_state_retention(cursor, config, device_id)
             self._insert_attempt(cursor, device_id, result, duration_ms, poll_origin)
             self.connection.commit()
         except Exception:
@@ -283,6 +291,51 @@ class Database:
             ),
         )
         return int(cursor.lastrowid)
+
+    @staticmethod
+    def _apply_tasmota_reading_retention(
+        cursor: mariadb.Cursor,
+        config: DeviceConfig,
+        sensor_id: int,
+        latest_reading_id: int,
+    ) -> None:
+        if config.source_system != "tasmota":
+            return
+        if tasmota_keeps_monthly_history(config.device_id):
+            cursor.execute(
+                "DELETE FROM sensor_readings WHERE sensor_id=? AND observed_at<?",
+                (sensor_id, previous_calendar_month_start_utc()),
+            )
+            return
+        cursor.execute(
+            "DELETE FROM sensor_readings WHERE sensor_id=? AND id<>?",
+            (sensor_id, latest_reading_id),
+        )
+
+    @staticmethod
+    def _apply_tasmota_state_retention(
+        cursor: mariadb.Cursor,
+        config: DeviceConfig,
+        device_id: int,
+    ) -> None:
+        if config.source_system != "tasmota":
+            return
+        if tasmota_keeps_monthly_history(config.device_id):
+            cursor.execute(
+                "DELETE FROM device_states WHERE device_id=? AND observed_at<?",
+                (device_id, previous_calendar_month_start_utc()),
+            )
+            return
+        cursor.execute(
+            """DELETE FROM device_states
+               WHERE device_id=? AND id<>(
+                 SELECT latest.id FROM (
+                   SELECT id FROM device_states WHERE device_id=?
+                   ORDER BY observed_at DESC,id DESC LIMIT 1
+                 ) latest
+               )""",
+            (device_id, device_id),
+        )
 
     @staticmethod
     def _insert_derived_temperature(

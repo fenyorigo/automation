@@ -1,6 +1,6 @@
 # Tudnivalók a folytatáshoz
 
-Frissítve: **2026-10-09** (Europe/Budapest)
+Frissítve: **2026-10-10** (Europe/Budapest)
 
 Ez a fájl az `automation` projekt folytatásának belépési pontja. Nem helyettesíti
 és nem másolja a részletes dokumentációt: rögzíti, hogy mi az igazság forrása,
@@ -228,6 +228,10 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
   fűtése külön állapot. Táp nélkül a másik három nem lehet aktív.
 - A `Nous main IT`, `Nous auxiliary IT` és a Zigbee router-dugaljak nem
   kapcsolhatók az UI-ból.
+- A Zigbee router-dugaljak villamos értékei csak a legfrissebb állapotcache-ben
+  maradnak meg, idősoruk nincs. A két IT Nous az aktuális és az előző naptári
+  hónap részletes adatait őrzi; a többi Tasmota dugalj csak a legfrissebb
+  mérési és állapotrekordját tartja meg.
 - Adatbázis-migráció vagy tömeges adatmódosítás előtt mentés szükséges.
   Eszközparancs csak a felhasználó által kért körben, előellenőrzéssel,
   utóellenőrzéssel és audittal mehet.

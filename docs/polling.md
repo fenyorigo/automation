@@ -209,9 +209,11 @@ A Zigbee2MQTT adapter nem küld rendszeres `/get` parancsokat az elemes
 eszközöknek. Az MQTT-üzenetek legutó ismert tulajdonságait a
 `zigbee2mqtt_property_cache` táblában tartja, a Zigbee2MQTT `last_seen`
 időpontját pedig a fogadás idejétől külön tárolja. A temperature, humidity és
-battery jelentések, valamint az energiamérős Zigbee dugaljak `power`,
-`current`, `voltage` és `energy` értékei külön, időbélyeges `sensor_readings`
-sorokként is megmaradnak. A relé `state` értéke csak az állapotcache része.
+battery jelentések külön, időbélyeges `sensor_readings` sorokként is
+megmaradnak. Az energiamérős Zigbee router-dugaljak `power`, `current`,
+`voltage` és `energy` értékei csak az állapotcache legfrissebb értékeként
+maradnak meg; ezekből nem készül hosszú távú idősor. A relé `state` értéke
+szintén csak az állapotcache része.
 Az eseményazonosító a fizikai IEEE-címből, tulajdonságból és forrásoldali
 `last_seen` időből készül, ezért retained vagy ismételt üzenet nem duplázza
 ugyanazt a mintát.
@@ -231,6 +233,20 @@ feltétlenül küld üzenetet. Két óránál régebbi állapotjelzés ezért s�
 Zigbee2MQTT explicit `availability=offline` jelzése okoz. Ez a kivétel csak a
 nyitásérzékelőkre vonatkozik; a periodikusan jelentő Zigbee hőmérők meglévő
 frissességi ellenőrzése változatlan.
+
+### Dugaljak mérési adatainak megőrzése
+
+- A `Nous main IT` és `Nous auxiliary IT` Tasmota dugaljak részletes
+  `sensor_readings` és `device_states` adatai az aktuális és az előző budapesti
+  naptári hónapra maradnak meg.
+- A többi Tasmota dugaljnál minden szenzortípusból és eszközállapotból csak a
+  legfrissebb rekord marad. Ez elegendő a bélyeghez, a kapcsoláshoz, valamint a
+  kazán, a bojler és a Klarstein pillanatnyi működésének felismeréséhez.
+- A Zigbee energiamérős dugaljak legfrissebb értékeit a
+  `zigbee2mqtt_property_cache` őrzi; `sensor_readings` előzményt nem gyűjtünk.
+- A korábban felhalmozott adatok egyszeri, kötegelt rendezését az
+  `app/prune_power_meter_history.py` végzi. Futtatás előtt külön adatbázismentés
+  szükséges.
 
 A Zigbee2MQTT availability-figyelése engedélyezett. Az aktív, hálózati
 táplálású eszközök határa 10 perc, a passzív, elemes eszközöké 2880 perc

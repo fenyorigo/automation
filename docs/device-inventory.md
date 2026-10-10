@@ -109,9 +109,12 @@ teljes Tasmota-reset és újrakonfigurálás után ismét működik. 2026. szept
 régi rekordot és annak 180 mérését a felhasználó kérésére töröltük.
 
 A SONOFF S60ZBTPF Zigbee router-dugaljak `power`, `current`, `voltage` és
-`energy` értékei idősorosan is bekerülnek a `sensor_readings` táblába. A
-reléállapot a Zigbee állapotcache része, nem mérési idősor. Közülük csak az
-`SP ebédlő` kapcsolható az UI-ról; a többi router védetten megfigyelési célú.
+`energy` értékei csak a `zigbee2mqtt_property_cache` legfrissebb állapotaként
+maradnak meg, ezekből nem készül mérési idősor. A reléállapot szintén a Zigbee
+állapotcache része. Közülük csak az `SP ebédlő` kapcsolható az UI-ról; a többi
+router védetten megfigyelési célú. A `Nous main IT` és `Nous auxiliary IT`
+részletes Tasmota-méréseiből az aktuális és az előző naptári hónap marad meg;
+a többi Tasmota dugalj csak a legfrissebb mérési és állapotrekordját őrzi.
 
 A Shelly stabil azonosítója a topic-prefix 12 hexadecimális karaktere. A két
 MQTT-eszköz a korábbi kézi Shelly-rekord fizikai utódja; a régi device- és
