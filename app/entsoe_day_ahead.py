@@ -160,7 +160,22 @@ def parse_price_document(payload: bytes) -> PriceDocument:
             resolution = _resolution_minutes(resolution_text)
             period_starts.append(start)
             period_ends.append(end)
-            for point in _children(period, "Point"):
+            period_points = _children(period, "Point")
+            expected_points = round(
+                (end - start).total_seconds() / (resolution * 60)
+            )
+            positions = {
+                int(position_text)
+                for point in period_points
+                if (position_text := _text(point, "position")) is not None
+            }
+            if positions != set(range(1, expected_points + 1)):
+                raise EntsoeResponseError(
+                    "incomplete_data",
+                    f"ENTSO-E period contains {len(positions)} of "
+                    f"{expected_points} expected price points",
+                )
+            for point in period_points:
                 position_text = _text(point, "position")
                 price_text = _text(point, "price.amount")
                 if not position_text or price_text is None:

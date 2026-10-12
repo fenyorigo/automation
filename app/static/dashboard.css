@@ -350,6 +350,9 @@ dd.power-on { color: #d05a16; }
 .weather-status-grid span,.weather-status-grid strong,.weather-status-grid small { display:block; }
 .weather-status-grid span,.weather-status-grid small { color:var(--muted); font-size:.7rem; }
 .weather-status-grid strong { margin:6px 0; font-size:1.2rem; overflow-wrap:anywhere; }
+.delivery-date-form { display:flex; align-items:center; gap:7px; margin:6px 0; }
+.delivery-date-form input[type="date"] { min-width:0; width:100%; padding:7px 8px; border:1px solid var(--line); border-radius:9px; background:white; color:var(--ink); font:inherit; font-weight:800; }
+.delivery-date-form button { padding:8px 10px; border:0; border-radius:9px; background:var(--green); color:white; font:inherit; font-size:.7rem; font-weight:800; cursor:pointer; }
 .weather-day-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:11px; margin-top:16px; }
 .weather-day-grid article>div { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:11px; padding-bottom:9px; border-bottom:1px solid var(--line); }
 .weather-day-grid article>div strong { font-size:1.08rem; }

@@ -20,7 +20,7 @@
   <main>
     {% if run %}
     <section class="weather-status-grid" aria-label="Árgyűjtés állapota">
-      <article><span>Szállítási nap</span><strong>{{ run.delivery_date.strftime('%Y. %m. %d.') }}</strong><small>{{ run.point_count }} időegység · {{ run.currency }}/{{ run.price_unit }}</small></article>
+      <article class="delivery-date-card"><span>Szállítási nap</span><form class="delivery-date-form" method="get" action="{{ url_for('day_ahead_prices') }}"><input type="hidden" name="view" value="{{ price_view.code }}"><input type="date" name="delivery_date" value="{{ run.delivery_date.isoformat() }}" aria-label="Szállítási nap" onchange="this.form.requestSubmit()"><button type="submit">Lekérés</button></form><small>{{ run.point_count }} időegység · {{ run.currency }}/{{ run.price_unit }}</small></article>
       <article><span>Legutóbbi gyűjtés</span><strong>{{ run.fetched_at|local_time }}</strong><small>Forrás: {{ 'HUPX' if run.source_code == 'hupx' else 'ENTSO-E' }} · {{ revision_count }} eltárolt változat · revízió: {{ run.revision_number if run.revision_number is not none else '—' }}</small></article>
       <article><span>{{ price_view.label }}</span><strong>{{ '%.2f'|format(summary.minimum) }}–{{ '%.2f'|format(summary.maximum) }} {{ price_view.unit }}</strong><small>Átlag: {{ '%.2f'|format(summary.average) }} {{ price_view.unit }}</small></article>
       <article><span>Gyűjtés állapota</span>{% if attempt and attempt.success %}<strong class="status-ok">Rendben</strong><small>{{ attempt.duration_ms }} ms</small>{% elif attempt %}<strong class="status-error">{{ 'Még nem publikált' if attempt.error_code=='no_data_yet' else 'Sikertelen' }}</strong><small>{{ attempt.error_message or attempt.error_code }}</small>{% else %}<strong>—</strong><small>Még nincs próbálkozás</small>{% endif %}</article>
@@ -41,7 +41,7 @@
       {% endif %}
       <nav class="price-view-switch" aria-label="Árnézet">
         {% for code, option in price_views.items() %}
-          {% if code == 'hupx' or dynamic_price_available %}<a href="{{ url_for('day_ahead_prices',view=code) }}" class="{{ 'active' if price_view.code==code }}">{{ option.short_label }}<small>{{ option.unit }}</small></a>{% endif %}
+          {% if code == 'hupx' or dynamic_price_available %}<a href="{{ url_for('day_ahead_prices',view=code,delivery_date=run.delivery_date.isoformat()) }}" class="{{ 'active' if price_view.code==code }}">{{ option.short_label }}<small>{{ option.unit }}</small></a>{% endif %}
         {% endfor %}
       </nav>
       <div class="price-tier-legend" aria-label="Árkategóriák jelmagyarázata">
@@ -53,7 +53,7 @@
         <article class="primary">
           <span>Preferált hálózati időszakok</span>
           <strong>{% set primary_windows = price_windows|selectattr('tier', 'equalto', 'primary')|list %}{% if primary_windows %}{% for window in primary_windows %}{{ window.label }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Nincs legalább 60 perces időablak{% endif %}</strong>
-          <small>Minden negyedórás ár a kiválasztott nézet napi {{ '%.2f'|format(summary.average) }} {{ price_view.unit }} átlaga alatt van.</small>
+          {% if summary.primary_average is not none %}<small>A preferált időszak átlagára: <strong>{{ '%.2f'|format(summary.primary_average) }} {{ price_view.unit }}</strong>.</small>{% endif %}
         </article>
         <article class="secondary">
           <span>Másodlagos hálózati időszakok</span>
@@ -64,7 +64,7 @@
       {% if gnuplot_error %}
       <p class="chart-empty">{{ gnuplot_error }}</p>
       {% else %}
-      <div class="chart-frame"><img src="{{ url_for('day_ahead_prices_chart',view=price_view.code) }}" alt="Negyedórás másnapi villamosenergia-árak és a napi átlagár"></div>
+      <div class="chart-frame"><img src="{{ url_for('day_ahead_prices_chart',view=price_view.code,delivery_date=run.delivery_date.isoformat()) }}" alt="Negyedórás másnapi villamosenergia-árak és a napi átlagár"></div>
       {% endif %}
       <div class="table-wrap day-ahead-table"><table><thead><tr><th>Helyi idő</th><th>Időtartam</th><th>HUPX EUR/MWh</th><th>HUPX eurocent/kWh</th>{% if dynamic_price_available %}<th>D nettó Ft/kWh</th><th>D bruttó Ft/kWh</th>{% endif %}</tr></thead><tbody>
       {% for point in points %}<tr class="price-tier-{{ point.price_tier }}"><td>{{ point.interval_start|local_time }}</td><td>{{ point.resolution_minutes }} perc</td><td><strong>{{ '%.4f'|format(point.price_eur_mwh|float) }}</strong></td><td>{{ '%.4f'|format((point.price_eur_mwh|float) / 10) }}</td>{% if dynamic_price_available %}<td>{{ '%.2f'|format(point.dynamic_net_huf_kwh|float) }}</td><td><strong>{{ '%.2f'|format(point.dynamic_gross_huf_kwh|float) }}</strong></td>{% endif %}</tr>{% endfor %}
@@ -77,5 +77,6 @@
     </section>
     {% endif %}
   </main>
+  {% if missing_delivery_date %}<script>window.alert({{ ('A kért napra (' ~ missing_delivery_date ~ ') nincs eltárolt HUPX/ENTSO-E adat. A legutóbbi elérhető nap marad megjelenítve.')|tojson }});</script>{% endif %}
 </body>
 </html>

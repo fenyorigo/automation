@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 
 from entsoe_day_ahead import (  # noqa: E402
     EntsoeNoData,
+    EntsoeResponseError,
     collection_due,
     delivery_window_utc,
     parse_price_document,
@@ -99,6 +100,11 @@ class EntsoeDayAheadTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("day_ahead_prices_chart", template)
         self.assertLess(template.index("chart-frame"), template.index("day-ahead-table"))
+        self.assertIn("A preferált időszak átlagára", template)
+        self.assertNotIn("Minden negyedórás ár a kiválasztott nézet", template)
+        self.assertIn('name="delivery_date"', template)
+        self.assertIn("nincs eltárolt HUPX/ENTSO-E adat", template)
+        self.assertIn("delivery_date=run.delivery_date.isoformat()", template)
 
     def test_parse_quarter_hour_price_document(self) -> None:
         document = parse_price_document(PRICE_XML)
@@ -116,6 +122,15 @@ class EntsoeDayAheadTest(unittest.TestCase):
             datetime(2026, 10, 9, 22, 30, tzinfo=UTC),
         )
         self.assertEqual(document.points[1].price_eur_mwh, Decimal("82.50"))
+
+    def test_incomplete_entsoe_period_triggers_fallback_error(self) -> None:
+        incomplete = PRICE_XML.replace(
+            b"<Point><position>4</position><price.amount>77.125</price.amount></Point>",
+            b"",
+        )
+        with self.assertRaisesRegex(EntsoeResponseError, "3 of 4 expected") as caught:
+            parse_price_document(incomplete)
+        self.assertEqual(caught.exception.code, "incomplete_data")
 
     def test_no_matching_data_acknowledgement_is_retryable(self) -> None:
         payload = b"""<Acknowledgement_MarketDocument xmlns="urn:test">

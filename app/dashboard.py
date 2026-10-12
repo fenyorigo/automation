@@ -2092,7 +2092,9 @@ DAY_AHEAD_PRICE_VIEWS = {
 }
 
 
-def load_day_ahead_prices(price_view: str = "d_gross") -> dict[str, Any]:
+def load_day_ahead_prices(
+    price_view: str = "d_gross", delivery_date: date | None = None
+) -> dict[str, Any]:
     requested_price_view = (
         price_view if price_view in DAY_AHEAD_PRICE_VIEWS else "d_gross"
     )
@@ -2100,15 +2102,36 @@ def load_day_ahead_prices(price_view: str = "d_gross") -> dict[str, Any]:
     cursor = connection.cursor()
     exchange_rate = None
     tariff = None
+    missing_delivery_date = None
     try:
-        cursor.execute(
-            """SELECT id,source_code,fetched_at,delivery_date,document_mrid,revision_number,
-                      period_start,period_end,currency,price_unit,point_count
-                 FROM electricity_day_ahead_price_runs
-                ORDER BY delivery_date DESC,fetched_at DESC,id DESC LIMIT 1"""
-        )
+        if delivery_date is not None:
+            cursor.execute(
+                """SELECT id,source_code,fetched_at,delivery_date,document_mrid,revision_number,
+                          period_start,period_end,currency,price_unit,point_count
+                     FROM electricity_day_ahead_price_runs
+                    WHERE delivery_date=?
+                    ORDER BY fetched_at DESC,id DESC LIMIT 1""",
+                (delivery_date,),
+            )
+        else:
+            cursor.execute(
+                """SELECT id,source_code,fetched_at,delivery_date,document_mrid,revision_number,
+                          period_start,period_end,currency,price_unit,point_count
+                     FROM electricity_day_ahead_price_runs
+                    ORDER BY delivery_date DESC,fetched_at DESC,id DESC LIMIT 1"""
+            )
         run_rows = rows_as_dicts(cursor)
         run = run_rows[0] if run_rows else None
+        if run is None and delivery_date is not None:
+            missing_delivery_date = delivery_date
+            cursor.execute(
+                """SELECT id,source_code,fetched_at,delivery_date,document_mrid,revision_number,
+                          period_start,period_end,currency,price_unit,point_count
+                     FROM electricity_day_ahead_price_runs
+                    ORDER BY delivery_date DESC,fetched_at DESC,id DESC LIMIT 1"""
+            )
+            fallback_rows = rows_as_dicts(cursor)
+            run = fallback_rows[0] if fallback_rows else None
         points: list[dict[str, Any]] = []
         revision_count = 0
         if run is not None:
@@ -2188,6 +2211,14 @@ def load_day_ahead_prices(price_view: str = "d_gross") -> dict[str, Any]:
             points, summary["average"], price_key=price_key
         )
         summary["secondary_limit"] = secondary_limit
+        primary_prices = [
+            float(point[price_key])
+            for point in points
+            if point["price_tier"] == "primary"
+        ]
+        summary["primary_average"] = (
+            sum(primary_prices) / len(primary_prices) if primary_prices else None
+        )
     return {
         "run": run,
         "points": points,
@@ -2201,6 +2232,7 @@ def load_day_ahead_prices(price_view: str = "d_gross") -> dict[str, Any]:
         "dynamic_price_available": dynamic_price_available,
         "exchange_rate": exchange_rate,
         "tariff": tariff,
+        "missing_delivery_date": missing_delivery_date,
     }
 
 
@@ -5922,15 +5954,35 @@ def weather_forecast() -> str:
 @app.get("/energy/day-ahead-prices")
 def day_ahead_prices() -> str:
     price_view = request.args.get("view", "d_gross")
+    requested_date_text = request.args.get("delivery_date", "").strip()
+    requested_delivery_date = None
+    invalid_delivery_date = None
+    if requested_date_text:
+        try:
+            requested_delivery_date = date.fromisoformat(requested_date_text)
+        except ValueError:
+            invalid_delivery_date = requested_date_text
+    prices = load_day_ahead_prices(price_view, requested_delivery_date)
+    if invalid_delivery_date is not None:
+        prices["missing_delivery_date"] = invalid_delivery_date
     return render_template(
         "day_ahead_prices.html", gnuplot_error=GNUPLOT_ERROR,
-        **load_day_ahead_prices(price_view)
+        **prices,
     )
 
 
 @app.get("/energy/day-ahead-prices/chart.svg")
 def day_ahead_prices_chart() -> Response:
-    prices = load_day_ahead_prices(request.args.get("view", "d_gross"))
+    requested_date_text = request.args.get("delivery_date", "").strip()
+    requested_delivery_date = None
+    if requested_date_text:
+        try:
+            requested_delivery_date = date.fromisoformat(requested_date_text)
+        except ValueError:
+            abort(400)
+    prices = load_day_ahead_prices(
+        request.args.get("view", "d_gross"), requested_delivery_date
+    )
     run, points, summary = prices["run"], prices["points"], prices["summary"]
     if run is None or not points or summary is None:
         abort(404)

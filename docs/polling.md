@@ -81,9 +81,20 @@ az eredmény még nem jelent meg, 15 perc múlva
 válasz nem készít új idősoros másolatot, de minden lekérési kísérlet auditált.
 A napi 15 perces piac normál napon 96 pontot ad; a nyári/téli időszámítás
 váltásánál a nap tényleges UTC-hossza alapján 92 vagy 100 pont is helyes.
+Ha az ENTSO-E válaszából a közölt időszakhoz tartozó bármelyik negyedóra
+hiányzik, a gyűjtő nem fogadja el teljes napi adatsorként, hanem megpróbálja a
+HUPX hivatalos tartalékforrását. A korábban eltárolt hiányos forrásválasz
+auditálási célból megmaradhat, de a felület az ugyanarra a napra később
+eltárolt teljes változatot választja.
 A tárolt idősor D tarifa referencia és piaci megfigyelési adat. Az A1 tarifa
 aktuális számlaköltségét nem helyettesíti, és nem bemenete az automatikus
 energia- vagy klímavezérlésnek.
+
+A napi ársorokra nincs automatikus törlési időkorlát. Legalább egy teljes lezárt
+elszámolási időszak és az aktuális időszak minden napi adatsorát, forrásválaszát
+és valódi revízióját meg kell őrizni. A webes HUPX-oldal felső szállítási
+napjánál korábbi nap választható. Ha a kért naphoz még nincs eltárolt adat, a
+felület figyelmeztető ablakot mutat, és a legutóbbi elérhető nap marad látható.
 
 ## MNB EUR/HUF árfolyam és D tarifás átszámítás
 
