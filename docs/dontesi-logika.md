@@ -158,6 +158,24 @@ ezek önmagukban nem okoznak gázra váltást. A régi, de elérhető Tuya
 szerepű ajtó nem szellőztetési esemény, és nyitott, csukott, ismeretlen vagy
 offline állapotában sem blokkolja közvetlenül a fűtést vagy hűtést.
 
+### Kézi klímaindítás biztonsági kapui
+
+A HiSense-bélyegről indított kézi fűtés vagy hűtés nem automatikus döntés, de
+ugyanazokat a nyílászáró-biztonsági kapukat használja. Külső kontaktus nyitott,
+ismeretlen vagy explicit offline állapota, illetve a módhoz beállított zárás
+utáni stabilizációs idő kemény tiltás; ezt a normál kézi felület sem engedi
+felülbírálni. A belső ajtók nem blokkolnak.
+
+A kültéri küszöb figyelmeztető, felülbírálható kapu: fűtésnél a
+`HEATING_CLIMATE_MIN_OUTDOOR_C` alatti, hűtésnél a
+`COOLING_OUTDOOR_ENABLE_C` alatti érték, valamint a friss kültéri mérés hiánya
+esetén az alkalmazás a konkrét értékkel külön megerősítést kér. A célértéket a
+`HEATING_MAX_TARGET_C` és `COOLING_MIN_TARGET_C` korlátozza. A szerver a
+megerősítés pillanatában ismét ellenőrzi a nyílászárókat, így a két lépés
+közben megnyíló ablak vagy ajtó letiltja a parancsot. A parancs utáni
+ConnectLife-visszaolvasásnak a power, mód, célérték és ventilátorfokozat
+mindegyikében egyeznie kell.
+
 ### Belső ajtók és pillanatnyi hőtechnikai felosztás
 
 A Rita, Veronika és Kristófék szobájába vezető három belső ajtó mind a

@@ -157,6 +157,60 @@
     {% if device.source_system == 'connectlife' %}<div><dt>Ventilátor-beállítás</dt><dd>{% if device.fan_speed == 'auto' %}Auto{% elif device.fan_speed == 'quiet' %}Csendes{% elif device.fan_speed == 'low' %}Alacsony{% elif device.fan_speed in ['medium_low', 'mid_low'] %}Közepesen alacsony{% elif device.fan_speed in ['medium', 'mid'] %}Közepes{% elif device.fan_speed in ['medium_high', 'mid_high'] %}Közepesen magas{% elif device.fan_speed == 'high' %}Magas{% else %}{{ device.fan_speed or '—' }}{% endif %}</dd></div>{% endif %}
     <div><dt>Aktív</dt><dd>{% if device.active is none %}—{% elif device.active %}Igen{% else %}Nem{% endif %}</dd></div>
   </dl>
+  {% if can_write and device.source_system == 'connectlife' and device.polling_enabled %}
+  <form class="device-poll-control" method="post" action="{{ url_for('poll_device_now',device_id=device.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Kézi lekérdezés</button>
+  </form>
+  {% endif %}
+  {% if can_write and device.manual_climate_control is defined %}
+    {% if pending_climate_start and pending_climate_start.device_id == device.id %}
+    <section class="climate-start-confirmation" role="alert">
+      <strong>⚠ Kültéri határ felülbírálása</strong>
+      <p>{{ pending_climate_start.reason }}</p>
+      <p>Biztosan elindítod: {{ 'fűtés' if pending_climate_start.mode == 'heat' else 'hűtés' }}, {{ pending_climate_start.temperature_c }} °C, {{ device.manual_climate_control.fan_speeds[pending_climate_start.fan_speed] }}?</p>
+      <div class="climate-start-actions">
+        <form method="post" action="{{ url_for('start_climate_from_card',device_id=device.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="mode" value="{{ pending_climate_start.mode }}">
+          <input type="hidden" name="temperature_c" value="{{ pending_climate_start.temperature_c }}">
+          <input type="hidden" name="fan_speed" value="{{ pending_climate_start.fan_speed }}">
+          <input type="hidden" name="confirmed" value="1">
+          <input type="hidden" name="confirmation_token" value="{{ pending_climate_start.token }}">
+          <button class="danger-button" type="submit">Igen, felülbírálom és indítom</button>
+        </form>
+        <a class="secondary-link" href="{{ url_for('dashboard',cancel_climate_start=1) }}#device-{{ device.id }}">Mégse</a>
+      </div>
+    </section>
+    {% else %}
+    {% set climate_control = device.manual_climate_control %}
+    {% set selected_guard = climate_control.modes[climate_control.selected_mode] %}
+    <form class="card-climate-control" method="post" action="{{ url_for('start_climate_from_card',device_id=device.id) }}" data-card-climate-control>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <p class="form-title">Kézi klímavezérlés</p>
+      <div class="card-climate-fields">
+        <label>Üzemmód
+          <select name="mode" required data-climate-mode>
+            {% for mode,label in [('heat','Fűtés'),('cool','Hűtés')] %}
+            {% set guard = climate_control.modes[mode] %}
+            <option value="{{ mode }}" data-target-min="{{ guard.target_min_c }}" data-target-max="{{ guard.target_max_c }}" data-blocked="{{ 'true' if guard.hard_blocked else 'false' }}" data-blockers="{{ guard.blockers|join(' ') }}" {{ 'selected' if climate_control.selected_mode == mode }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Célhőmérséklet
+          <input type="number" name="temperature_c" step="1" min="{{ selected_guard.target_min_c }}" max="{{ selected_guard.target_max_c }}" value="{{ climate_control.selected_target_c }}" required data-climate-target>
+        </label>
+        <label>Ventilátor
+          <select name="fan_speed" required>
+            {% for value,label in climate_control.fan_speeds.items() %}<option value="{{ value }}" {{ 'selected' if climate_control.selected_fan_speed == value }}>{{ label }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+      <p class="card-climate-guard {{ 'blocked' if selected_guard.hard_blocked }}" data-climate-guard>{% if selected_guard.hard_blocked %}Indítás blokkolva: {{ selected_guard.blockers|join(' ') }}{% else %}A blokkoló nyílászárók állapota rendben. Kültéri határeltérésnél külön megerősítést kérünk.{% endif %}</p>
+      <button type="submit" data-climate-submit {{ 'disabled' if selected_guard.hard_blocked }}>{{ 'Beállítás alkalmazása' if device.power else 'Klíma bekapcsolása' }}</button>
+    </form>
+    {% endif %}
+  {% endif %}
   {% endif %}
   {% if device.is_water_heater_supply %}
     <div class="device-schedule-note {{ 'schedule-active' if device.water_heater_schedule.enabled else 'schedule-inactive' }}">

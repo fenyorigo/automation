@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from database import Database
 from database_backup import create_scheduled_database_backup, scheduled_backup_due
-from poll_devices import DEFAULT_CONFIG, load_devices, poll_all
+from poll_devices import DEFAULT_CONFIG, PollResult, load_devices, poll_all
 from polling_lock import PollCycleBusy, polling_cycle_lock
 from outdoor_weather import poll_active_outdoor_sources
 from entsoe_day_ahead import poll_day_ahead_prices
@@ -110,6 +110,49 @@ async def run_cycle(
                     )
         successful = sum(1 for item in results if item.success)
         return successful, stored, len(devices)
+
+
+async def run_device_cycle(
+    source_system: str,
+    source_device_id: str,
+    timeout: float,
+    *,
+    poll_origin: str = "manual",
+) -> PollResult:
+    """Poll and persist exactly one configured device under the shared lock."""
+    if poll_origin not in {"automatic", "manual"}:
+        raise ValueError(f"Unsupported poll origin: {poll_origin}")
+    with polling_cycle_lock():
+        config = next(
+            (
+                item
+                for item in load_devices(DEFAULT_CONFIG)
+                if item.source_system == source_system
+                and item.device_id == source_device_id
+            ),
+            None,
+        )
+        if config is None:
+            raise LookupError(
+                f"Unknown configured device: {source_system}/{source_device_id}"
+            )
+        results = await poll_all([config], timeout)
+        if len(results) != 1:
+            raise RuntimeError(
+                f"Single-device polling returned {len(results)} results"
+            )
+        result = results[0]
+        database = Database()
+        try:
+            database.persist(
+                config,
+                result,
+                result.duration_ms,
+                poll_origin=poll_origin,
+            )
+        finally:
+            database.close()
+        return result
 
 
 async def main() -> None:

@@ -174,6 +174,37 @@ indul el.
 
 A kézi kör nem tolja el a periodikus poll eredeti tízperces ütemezését.
 
+Minden aktív, lekérdezési körben szereplő HiSense klíma bélyegén külön
+**Kézi lekérdezés** gomb is található. Ez csak a kiválasztott klíma aktuális
+ConnectLife-állapotát olvassa vissza és menti el; a többi eszközt és az
+időjárási/piaci adatgyűjtést nem futtatja. A művelet a teljes pollingkörrel
+közös zárolást használ, ezért automatikus kör közben nem indul rá arra.
+
+### Kézi klímaindítás a bélyegről
+
+Szerkesztőként a HiSense bélyegen közvetlenül kiválasztható a **Fűtés** vagy
+**Hűtés**, az egész Celsius-fokos célhőmérséklet és a ventilátorfokozat. A
+gomb kikapcsolt klímánál bekapcsol, már működő klímánál pedig a megadott
+beállításokat alkalmazza.
+
+A felület és a szerver ugyanazt a védelmet ellenőrzi. Nyitott, ismeretlen vagy
+Zigbee2MQTT szerint nem elérhető külső nyílászáró, továbbá a bezárás utáni
+beállított várakozás alatt az indítógomb letiltott, és a parancs közvetlen
+beküldése sem hajtható végre. A belső, nem blokkoló ajtók ebbe nem számítanak
+bele.
+
+A célértéket a globális **Fűtés legnagyobb célhőmérséklete**, illetve
+**Hűtés legkisebb célhőmérséklete** korlátozza. A klímás fűtés kültéri alsó
+határa alatt, a hűtés kültéri indítási határa alatt, vagy friss kültéri mérés
+hiányában a művelet nem indul el rögtön: piros megerősítő blokk írja ki a
+konkrét eltérést. A jóváhagyás szándékos kézi felülbírálás; a
+nyílászáró-blokkolás viszont nem bírálható felül ezen a felületen.
+
+Az indítás előtt a ConnectLife friss állapotot olvas, majd a parancs után
+többször visszaellenőrzi a bekapcsolást, az üzemmódot, a célértéket és a
+ventilátorfokozatot. Csak az egyező visszaolvasás jelenik meg sikeresként és
+kerül az állapot-, esemény- és vezérlési auditnaplóba.
+
 A Nous/Tasmota lekérdezés csak adatot olvas. A dugalj reléjét nem kapcsolja,
 és a Tasmota konfigurációját sem módosítja. A beüzemelés és a
 feszültségkalibráció részletes leírása a
@@ -849,6 +880,11 @@ auditot is tartalmaz.
 
 ### 12.1 Közvetlen klímavezérlés
 
+A napi kézi indításhoz elsősorban a kezdőlap HiSense-bélyegének védett
+vezérlője használható; ott az üzemmód is explicit megadható, és érvényesül a
+nyílászáró- valamint kültéri kapuzás. A Klíma oldal régebbi közvetlen
+vezérlője az eseménynapló mellett továbbra is elérhető.
+
 1. Válaszd ki a helyiséget.
 2. Ellenőrizd a legutóbb lekérdezett állapotot és annak időpontját.
 3. Kikapcsolt eszköznél add meg a célhőmérsékletet és válaszd ki a
@@ -862,9 +898,9 @@ eredmény rögtön bekerül az állapot- és klímaesemény-naplóba, ezért nem
 megvárni a következő tízperces pollt.
 
 Bekapcsoláskor a bekapcsolási állapot, a célhőmérséklet és a kiválasztott
-ventilátorsebesség változik. Az üzemmódot és a kiegészítő programokat ez a
-funkció nem módosítja. A sikeres visszaellenőrzéshez a ventilátorfokozatnak is
-egyeznie kell a kéréssel.
+ventilátorsebesség változik. A kezdőlapi vezérlő az üzemmódot is beállítja;
+kiegészítő programokat egyik funkció sem módosít. A sikeres
+visszaellenőrzéshez a ventilátorfokozatnak is egyeznie kell a kéréssel.
 
 ### 12.2 Programozott klímafutás
 

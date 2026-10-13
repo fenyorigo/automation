@@ -133,6 +133,26 @@ dd.power-on { color: #d05a16; }
 .power-switch-control button,.power-switch-actions button { min-height:38px; padding:0 12px; border:0; border-radius:9px; background:var(--green); color:#fff; font:inherit; font-size:.74rem; font-weight:850; cursor:pointer; }
 .power-switch-control button:disabled { opacity:1; background:#d9dddb !important; color:#68716d; cursor:not-allowed; box-shadow:none; }
 .power-switch-control .danger-button,.power-switch-actions .danger-button { background:#b42318; }
+.device-poll-control { margin-top:14px; }
+.device-poll-control button { min-height:38px; padding:0 13px; border:1px solid var(--green); border-radius:9px; background:var(--card); color:var(--green); font:inherit; font-size:.74rem; font-weight:850; cursor:pointer; }
+.device-poll-control button:hover { background:var(--green-soft); }
+.card-climate-control { display:grid; gap:10px; margin-top:14px; padding:13px; border:1px solid var(--line); border-radius:12px; background:#f7f5ee; }
+.card-climate-control .form-title { margin:0; color:var(--ink); font-size:.8rem; font-weight:900; }
+.card-climate-fields { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.card-climate-fields label:last-child { grid-column:1 / -1; }
+.card-climate-fields label { color:var(--muted); font-size:.66rem; font-weight:750; }
+.card-climate-fields input,.card-climate-fields select { display:block; width:100%; min-height:38px; margin-top:4px; padding:6px 7px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); font:inherit; }
+.card-climate-guard { margin:0; color:#235b49; font-size:.7rem; line-height:1.4; }
+.card-climate-guard.blocked { color:#991b1b; font-weight:750; }
+.card-climate-control>button { min-height:40px; border:0; border-radius:9px; padding:0 13px; background:var(--green); color:#fff; font:inherit; font-size:.74rem; font-weight:850; cursor:pointer; }
+.card-climate-control>button:disabled { background:#d9dddb; color:#68716d; cursor:not-allowed; }
+.climate-start-confirmation { margin-top:14px; padding:13px; border:2px solid #b42318; border-radius:12px; background:#fff0ed; color:#7a1812; }
+.climate-start-confirmation>strong { font-weight:900; }
+.climate-start-confirmation p { margin-top:6px; font-size:.76rem; line-height:1.45; }
+.climate-start-actions { display:flex; align-items:center; gap:9px; margin-top:10px; }
+.climate-start-actions form { margin:0; }
+.climate-start-actions button { min-height:38px; padding:0 12px; border:0; border-radius:9px; background:#b42318; color:#fff; font:inherit; font-size:.72rem; font-weight:850; cursor:pointer; }
+.climate-start-actions .secondary-link { color:#7a1812; font-size:.74rem; font-weight:800; }
 .power-off-confirmation { margin-top:14px; padding:13px; border:2px solid #b42318; border-radius:12px; background:#fff0ed; color:#7a1812; }
 .power-off-confirmation strong { font-weight:900; }
 .power-off-confirmation p { margin-top:6px; font-size:.76rem; line-height:1.45; }

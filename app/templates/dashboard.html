@@ -293,6 +293,30 @@
       submitting = true;
     });
 
+    document.querySelectorAll('[data-card-climate-control]').forEach((form) => {
+      const mode = form.querySelector('[data-climate-mode]');
+      const target = form.querySelector('[data-climate-target]');
+      const guard = form.querySelector('[data-climate-guard]');
+      const submit = form.querySelector('[data-climate-submit]');
+      const updateClimateForm = () => {
+        const option = mode.options[mode.selectedIndex];
+        const blocked = option.dataset.blocked === 'true';
+        target.min = option.dataset.targetMin;
+        target.max = option.dataset.targetMax;
+        const current = Number(target.value);
+        if (!Number.isFinite(current) || current < Number(target.min) || current > Number(target.max)) {
+          target.value = mode.value === 'heat' ? target.max : target.min;
+        }
+        submit.disabled = blocked;
+        guard.classList.toggle('blocked', blocked);
+        guard.textContent = blocked
+          ? `Indítás blokkolva: ${option.dataset.blockers}`
+          : 'A blokkoló nyílászárók állapota rendben. Kültéri határeltérésnél külön megerősítést kérünk.';
+      };
+      mode.addEventListener('change', updateClimateForm);
+      updateClimateForm();
+    });
+
     async function refreshAfterCompletedPoll() {
       if (checking || document.hidden || editingInProgress()) return;
       checking = true;

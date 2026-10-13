@@ -5,6 +5,20 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A HiSense-bélyegekről közvetlenül indítható vagy módosítható a kézi fűtés
+  és hűtés, explicit üzemmóddal, egész fokos célértékkel és
+  ventilátorfokozattal. A külső nyílászárók nyitott, ismeretlen, offline vagy
+  zárás utáni stabilizációs állapota kemény tiltás; a kültéri hőmérsékleti
+  küszöb megsértése és a friss kültéri mérés hiánya külön, piros
+  felülbírálási megerősítést kér. A globális fűtési/hűtési célértékhatárok a
+  felületen és szerveroldalon is érvényesülnek. A parancs után a rendszer a
+  power, üzemmód, célérték és ventilátorfokozat mindegyikét visszaolvassa és
+  csak egyező állapotot jelez sikeresnek.
+
+- Minden aktív HiSense-bélyeg külön **Kézi lekérdezés** gombot kapott, amely
+  csak az adott ConnectLife-klímát olvassa vissza és menti, a teljes pollkör
+  közös zárolását használva.
+
 - Elindult a hivatalos ENTSO-E magyar másnapi villamosenergiaár-adatok
   gyűjtése. A collector kezeli a 15 perces piacot, az óraátállítás 23/25 órás
   napjait, a publikálás előtti üres válaszok újrapróbálását, a revíziókat és az

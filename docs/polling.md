@@ -65,6 +65,11 @@ vagy a periodikus poller indította. Ha már fut egy kör, a kézi kérés errő
 visszajelzést ad, az esedékes automatikus kör pedig kimarad. A következő
 automatikus futás az eredeti 10 perces ütemezés szerint történik.
 
+Az aktív HiSense-bélyegeken található eszközszintű **Kézi lekérdezés** csak a
+kiválasztott ConnectLife-klímát olvassa vissza és menti el. Ugyanazt a közös
+zárolást és `manual` eredetjelölést használja, mint a teljes kézi kör, de nem
+pollolja a többi eszközt, az Open-Meteót, az MNB-t vagy a másnapi árakat.
+
 ## ENTSO-E / HUPX másnapi árgyűjtés
 
 Ugyanez a folyamat gyűjti a hivatalos magyar másnapi villamosenergia-árakat.
@@ -439,7 +444,8 @@ esemény és külön helyiség is kiválasztható.
 A `/climate-log` oldalon az öt ConnectLife/Hisense klímához kézzel rögzíthető
 az indítás, majd egy külön művelettel a leállítás. Az indítás aktív eseményt
 hoz létre, és egy klímához egyszerre csak egy aktív esemény tartozhat. A napló
-nem küld parancsot az eszköznek; a tényleges vezérlés későbbi fejlesztés.
+kézi eseményrögzítő része nem küld parancsot az eszköznek; a tényleges
+vezérlés a külön közvetlen vezérlőkből történik.
 A klíma kiválasztásakor a felület bekapcsolás nélkül megjeleníti a legutóbbi
 ConnectLife-lekérdezés célhőmérsékletét. Az indítás eseménye ezt az értéket
 pillanatfelvételként eltárolja, így utólag is látható, milyen célértékkel indult.
@@ -457,6 +463,18 @@ Minden parancs előtt friss ConnectLife-lekérdezés ellenőrzi az előfeltétel
 bekapcsolás csak kikapcsolt, kikapcsolás csak bekapcsolt klímán engedélyezett.
 A parancs után ismételt visszaolvasás a ventilátorfokozatot is igazolja. Minden kérés,
 elutasítás, hiba és igazolt siker a `climate_control_attempts` táblába kerül.
+
+A kezdőlap HiSense-bélyegein emellett védett kézi indítás és
+beállításmódosítás érhető el. Ez explicit `heat` vagy `cool` üzemmódot,
+célhőmérsékletet és ventilátorfokozatot küld. A parancs előtt szerveroldalon is
+újraértékeli az azonos helyiség külső nyílászáróit és a módhoz tartozó zárás
+utáni várakozást. Ezek kemény blokkolók. A friss kültéri mérés hiánya vagy a
+`HEATING_CLIMATE_MIN_OUTDOOR_C`, illetve `COOLING_OUTDOOR_ENABLE_C` határ
+megsértése külön, egyszer használható megerősítő lépést kér. A célérték
+fűtésnél nem haladhatja meg a `HEATING_MAX_TARGET_C`, hűtésnél nem lehet
+kisebb a `COOLING_MIN_TARGET_C` értéknél. Már működő klímánál ugyanígy
+frissíthető az üzemmód, célérték és ventilátorfokozat. A ConnectLife-parancs
+utáni többszöri visszaolvasás mind a négy állapotot igazolja.
 
 ## Jelenlegi állapot
 

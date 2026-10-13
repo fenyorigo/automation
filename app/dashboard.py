@@ -32,11 +32,16 @@ from flask import Flask, Response, abort, g, jsonify, redirect, render_template,
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from poll_devices import DEFAULT_CONFIG, load_devices
-from poll_scheduler import run_cycle
+from poll_scheduler import run_cycle, run_device_cycle
 from polling_lock import PollCycleBusy, polling_cycle_lock, polling_operation_active
 from climate_control import FAN_SPEED_VALUES, ClimateControlResult, control_climate
 from cooling_observer import annotate_upstairs_cooling
 from heating_observer import annotate_ground_floor_heating, annotate_upstairs_heating
+from manual_climate_control import (
+    FAN_SPEED_LABELS,
+    annotate_manual_climate_controls,
+    manual_climate_guard,
+)
 from power_switch_control import control_tasmota_power, control_zigbee_power
 from scheduled_power import WATER_HEATER_HOSTNAME, water_heater_schedule_details
 from computherm_service import connect_device as connect_computherm, restore_test, snapshot as computherm_snapshot, start_test, suppress_heat
@@ -1178,6 +1183,7 @@ def load_dashboard(
             """
             SELECT
               d.id, d.name, d.hostname, d.expected_ip, d.source_system,d.source_device_id,
+              d.source_puid,
               d.device_type,d.model,
               dt.name AS device_type_name,
               d.room_id, r.name AS room_name, z.name AS zone_name,
@@ -3023,6 +3029,8 @@ def dashboard() -> str:
     attempt_origin = session.get("dashboard_poll_origin", "all")
     if request.args.get("cancel_power_off") == "1":
         session.pop("pending_power_off", None)
+    if request.args.get("cancel_climate_start") == "1":
+        session.pop("pending_climate_start", None)
     devices, attempts = load_dashboard(attempt_origin)
     annotate_boiler_operating_states(devices)
     _, outdoor_temperature = load_outdoor_sources()
@@ -3035,6 +3043,7 @@ def dashboard() -> str:
         heating_advice = annotate_upstairs_heating(devices, outdoor_temperature)
         annotate_ground_floor_heating(devices)
     mark_climate_control_devices(devices, outdoor_temperature)
+    annotate_manual_climate_controls(devices, outdoor_temperature)
     mark_problematic_devices(devices)
     outdoor_summary = outdoor_summary_source(outdoor_temperature)
     requested_view = request.args.get("view")
@@ -3076,6 +3085,7 @@ def dashboard() -> str:
         poll_marker=latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
         poll_notice=session.pop("poll_notice", None),
         pending_power_off=session.get("pending_power_off"),
+        pending_climate_start=session.get("pending_climate_start"),
         view_mode=view_mode,
         temperature_mode=temperature_mode,
         cooling_advice=cooling_advice,
@@ -4779,6 +4789,221 @@ def poll_now():
     finally:
         manual_poll_lock.release()
     return redirect(url_for("dashboard"))
+
+
+@app.post("/devices/<int:device_id>/poll-now")
+def poll_device_now(device_id: int):
+    validate_csrf()
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT name,source_system,source_device_id,polling_enabled,is_active
+                 FROM devices WHERE id=?""",
+            (device_id,),
+        )
+        rows = rows_as_dicts(cursor)
+    finally:
+        cursor.close()
+        connection.close()
+    if not rows:
+        abort(404)
+    device = rows[0]
+    if device["source_system"] != "connectlife":
+        abort(400)
+    target = f"{url_for('dashboard')}#device-{device_id}"
+    if not device["is_active"] or not device["polling_enabled"]:
+        session["poll_notice"] = {
+            "kind": "warning",
+            "message": f"{device['name']} nincs az aktív lekérdezési körben.",
+        }
+        return redirect(target)
+    if not manual_poll_lock.acquire(blocking=False):
+        session["poll_notice"] = {
+            "kind": "warning",
+            "message": "Már folyamatban van egy kézi lekérdezés.",
+        }
+        return redirect(target)
+    try:
+        result = asyncio.run(
+            run_device_cycle(
+                "connectlife",
+                str(device["source_device_id"]),
+                float(os.getenv("POLL_TIMEOUT_SECONDS", "5")),
+                poll_origin="manual",
+            )
+        )
+        if result.success:
+            session["poll_notice"] = {
+                "kind": "success",
+                "message": f"{device['name']} állapota frissítve.",
+            }
+        else:
+            session["poll_notice"] = {
+                "kind": "error",
+                "message": (
+                    f"{device['name']} lekérdezése sikertelen: "
+                    f"{result.error_message or result.error_code or 'ismeretlen hiba'}"
+                ),
+            }
+    except PollCycleBusy:
+        session["poll_notice"] = {
+            "kind": "warning",
+            "message": "Már folyamatban van egy automatikus vagy kézi lekérdezés.",
+        }
+    except Exception as error:
+        app.logger.exception("Single-device polling failed")
+        session["poll_notice"] = {
+            "kind": "error",
+            "message": f"{device['name']} lekérdezése sikertelen: {error}",
+        }
+    finally:
+        manual_poll_lock.release()
+    return redirect(target)
+
+
+@app.post("/devices/<int:device_id>/climate/start")
+def start_climate_from_card(device_id: int):
+    validate_csrf()
+    target = f"{url_for('dashboard')}#device-{device_id}"
+    try:
+        mode = request.form["mode"]
+        fan_speed = request.form["fan_speed"]
+        temperature_value = float(request.form["temperature_c"])
+        if mode not in {"heat", "cool"} or fan_speed not in FAN_SPEED_VALUES:
+            raise ValueError
+        if not temperature_value.is_integer():
+            raise ValueError
+        temperature = int(temperature_value)
+    except (KeyError, TypeError, ValueError):
+        abort(400)
+
+    devices, _ = load_dashboard("all")
+    device = next((item for item in devices if int(item["id"]) == device_id), None)
+    if (
+        device is None
+        or device.get("source_system") != "connectlife"
+        or not device.get("control_enabled")
+        or device.get("room_id") is None
+        or not device.get("source_puid")
+    ):
+        abort(404)
+    _, outdoor = load_outdoor_sources()
+    guard = manual_climate_guard(device, devices, outdoor, mode)
+    if not guard["target_min_c"] <= temperature <= guard["target_max_c"]:
+        mode_label = "fűtésnél" if mode == "heat" else "hűtésnél"
+        session["poll_notice"] = {
+            "kind": "warning",
+            "message": (
+                f"{device['name']}: {mode_label} "
+                f"{guard['target_min_c']}–{guard['target_max_c']} °C közötti célérték adható meg."
+            ),
+        }
+        return redirect(target)
+    if guard["hard_blocked"]:
+        session.pop("pending_climate_start", None)
+        session["poll_notice"] = {
+            "kind": "error",
+            "message": f"{device['name']} nem indítható: {' '.join(guard['blockers'])}",
+        }
+        return redirect(target)
+
+    confirmed = request.form.get("confirmed") == "1"
+    submitted_token = request.form.get("confirmation_token")
+    pending = session.get("pending_climate_start")
+    request_values = {
+        "device_id": device_id,
+        "mode": mode,
+        "temperature_c": temperature,
+        "fan_speed": fan_speed,
+    }
+    if confirmed:
+        valid_confirmation = bool(
+            pending
+            and submitted_token
+            and secrets.compare_digest(str(submitted_token), str(pending.get("token", "")))
+            and all(pending.get(key) == value for key, value in request_values.items())
+        )
+        if not valid_confirmation:
+            abort(400)
+        session.pop("pending_climate_start", None)
+    elif guard["outdoor_override_required"]:
+        session["pending_climate_start"] = {
+            **request_values,
+            "device_name": device["name"],
+            "reason": guard["outdoor_warning"],
+            "token": secrets.token_urlsafe(24),
+        }
+        session["poll_notice"] = {
+            "kind": "warning",
+            "message": "A kültéri hőmérsékleti szabály felülbírálásához külön megerősítés szükséges.",
+        }
+        return redirect(target)
+
+    try:
+        with polling_cycle_lock(operation="manual_climate_control"):
+            attempt_id = begin_climate_control_attempt(
+                device_id, True, temperature, fan_speed, requested_mode=mode
+            )
+            result = asyncio.run(
+                control_climate(
+                    str(device["source_puid"]),
+                    True,
+                    temperature,
+                    fan_speed,
+                    mode=mode,
+                    allow_running_update=True,
+                )
+            )
+            try:
+                persist_climate_control(
+                    attempt_id,
+                    device_id,
+                    int(device["room_id"]),
+                    result,
+                    True,
+                    temperature,
+                    fan_speed,
+                )
+            except Exception:
+                app.logger.exception(
+                    "Manual climate command completed but persistence failed (attempt_id=%s)",
+                    attempt_id,
+                )
+                session["poll_notice"] = {
+                    "kind": "error",
+                    "message": (
+                        "A klímaparancs lefutott, de az eredmény naplózása sikertelen. "
+                        f"Auditazonosító: {attempt_id}. Ne ismételd meg a parancsot; frissítsd az oldalt."
+                    ),
+                }
+                return redirect(target)
+    except PollCycleBusy:
+        session["poll_notice"] = {
+            "kind": "warning",
+            "message": "Lekérdezés van folyamatban; a klímaparancs nem indult el.",
+        }
+        return redirect(target)
+
+    if result.status == "verified":
+        verified = result.verified or {}
+        session["poll_notice"] = {
+            "kind": "success",
+            "message": (
+                f"{device['name']} beállítása visszaolvasással ellenőrizve: "
+                f"{'fűtés' if verified.get('mode') == 'heat' else 'hűtés'}, "
+                f"{verified.get('target_temperature_c')} °C, "
+                f"{FAN_SPEED_LABELS.get(str(verified.get('fan_speed')), verified.get('fan_speed'))}."
+            ),
+        }
+    elif result.status == "rejected":
+        session["poll_notice"] = {"kind": "warning", "message": result.error_message}
+    else:
+        session["poll_notice"] = {
+            "kind": "error",
+            "message": f"A klímaparancs sikertelen: {result.error_message}",
+        }
+    return redirect(target)
 
 
 @app.get("/esp32-history")
