@@ -176,6 +176,10 @@ közben megnyíló ablak vagy ajtó letiltja a parancsot. A parancs utáni
 ConnectLife-visszaolvasásnak a power, mód, célérték és ventilátorfokozat
 mindegyikében egyeznie kell.
 
+A működő klíma kézi leállítása mindig megengedett: azt sem nyílászáró-, sem
+kültéri hőmérsékleti kapu nem akadályozhatja. A leállítás is előzetes és utólagos
+ConnectLife-állapotlekérdezéssel, valamint audit- és eseménynaplózással történik.
+
 ### Belső ajtók és pillanatnyi hőtechnikai felosztás
 
 A Rita, Veronika és Kristófék szobájába vezető három belső ajtó mind a

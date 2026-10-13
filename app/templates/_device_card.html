@@ -210,6 +210,12 @@
       <button type="submit" data-climate-submit {{ 'disabled' if selected_guard.hard_blocked }}>{{ 'Beállítás alkalmazása' if device.power else 'Klíma bekapcsolása' }}</button>
     </form>
     {% endif %}
+    {% if device.power %}
+    <form class="card-climate-stop" method="post" action="{{ url_for('stop_climate_from_card',device_id=device.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="danger-button" type="submit">Klíma kikapcsolása</button>
+    </form>
+    {% endif %}
   {% endif %}
   {% endif %}
   {% if device.is_water_heater_supply %}

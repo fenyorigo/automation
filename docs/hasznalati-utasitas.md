@@ -187,6 +187,11 @@ Szerkesztőként a HiSense bélyegen közvetlenül kiválasztható a **Fűtés**
 gomb kikapcsolt klímánál bekapcsol, már működő klímánál pedig a megadott
 beállításokat alkalmazza.
 
+Bekapcsolt állapotban külön piros **Klíma kikapcsolása** gomb is megjelenik.
+A leállítást a nyílászárók vagy a kültéri hőmérséklet nem blokkolják. A
+ConnectLife-állapotot a rendszer ebben az esetben is előtte és utána
+visszaolvassa, a sikeres leállítást pedig az esemény- és auditnaplóban lezárja.
+
 A felület és a szerver ugyanazt a védelmet ellenőrzi. Nyitott, ismeretlen vagy
 Zigbee2MQTT szerint nem elérhető külső nyílászáró, továbbá a bezárás utáni
 beállított várakozás alatt az indítógomb letiltott, és a parancs közvetlen

@@ -475,6 +475,10 @@ fűtésnél nem haladhatja meg a `HEATING_MAX_TARGET_C`, hűtésnél nem lehet
 kisebb a `COOLING_MIN_TARGET_C` értéknél. Már működő klímánál ugyanígy
 frissíthető az üzemmód, célérték és ventilátorfokozat. A ConnectLife-parancs
 utáni többszöri visszaolvasás mind a négy állapotot igazolja.
+Bekapcsolt klímánál a bélyeg külön leállítási gombot mutat. A kikapcsolás nem
+függ nyílászáró- vagy kültéri hőmérsékleti kaputól, de ugyanúgy előzetes
+állapotellenőrzéssel, visszaolvasással, auditálással és az aktív
+`climate_operation_events` esemény lezárásával történik.
 
 ## Jelenlegi állapot
 

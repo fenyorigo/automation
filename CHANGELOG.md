@@ -13,7 +13,9 @@ helyi dátumok.
   felülbírálási megerősítést kér. A globális fűtési/hűtési célértékhatárok a
   felületen és szerveroldalon is érvényesülnek. A parancs után a rendszer a
   power, üzemmód, célérték és ventilátorfokozat mindegyikét visszaolvassa és
-  csak egyező állapotot jelez sikeresnek.
+  csak egyező állapotot jelez sikeresnek. Bekapcsolt klímánál külön piros
+  kikapcsológomb jelenik meg; a biztonságos leállítást a nyílászáró- és kültéri
+  kapuk nem blokkolják, de az eredményt ugyanúgy visszaolvassa és naplózza.
 
 - Minden aktív HiSense-bélyeg külön **Kézi lekérdezés** gombot kapott, amely
   csak az adott ConnectLife-klímát olvassa vissza és menti, a teljes pollkör

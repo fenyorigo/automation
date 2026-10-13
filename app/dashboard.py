@@ -5006,6 +5006,76 @@ def start_climate_from_card(device_id: int):
     return redirect(target)
 
 
+@app.post("/devices/<int:device_id>/climate/stop")
+def stop_climate_from_card(device_id: int):
+    validate_csrf()
+    target = f"{url_for('dashboard')}#device-{device_id}"
+    devices, _ = load_dashboard("all")
+    device = next((item for item in devices if int(item["id"]) == device_id), None)
+    if (
+        device is None
+        or device.get("source_system") != "connectlife"
+        or not device.get("control_enabled")
+        or device.get("room_id") is None
+        or not device.get("source_puid")
+    ):
+        abort(404)
+
+    session.pop("pending_climate_start", None)
+    try:
+        with polling_cycle_lock(operation="manual_climate_control"):
+            attempt_id = begin_climate_control_attempt(
+                device_id, False, None, None
+            )
+            result = asyncio.run(
+                control_climate(str(device["source_puid"]), False, None, None)
+            )
+            try:
+                persist_climate_control(
+                    attempt_id,
+                    device_id,
+                    int(device["room_id"]),
+                    result,
+                    False,
+                    None,
+                    None,
+                )
+            except Exception:
+                app.logger.exception(
+                    "Manual climate stop completed but persistence failed (attempt_id=%s)",
+                    attempt_id,
+                )
+                session["poll_notice"] = {
+                    "kind": "error",
+                    "message": (
+                        "A klíma leállítási parancsa lefutott, de az eredmény naplózása "
+                        f"sikertelen. Auditazonosító: {attempt_id}. Ne ismételd meg a "
+                        "parancsot; frissítsd az oldalt."
+                    ),
+                }
+                return redirect(target)
+    except PollCycleBusy:
+        session["poll_notice"] = {
+            "kind": "warning",
+            "message": "Lekérdezés van folyamatban; a klíma leállítása nem indult el.",
+        }
+        return redirect(target)
+
+    if result.status == "verified":
+        session["poll_notice"] = {
+            "kind": "success",
+            "message": f"{device['name']} kikapcsolását visszaolvasással ellenőriztük.",
+        }
+    elif result.status == "rejected":
+        session["poll_notice"] = {"kind": "warning", "message": result.error_message}
+    else:
+        session["poll_notice"] = {
+            "kind": "error",
+            "message": f"A klíma kikapcsolása sikertelen: {result.error_message}",
+        }
+    return redirect(target)
+
+
 @app.get("/esp32-history")
 def esp32_history() -> str:
     temperature_mode = request.args.get("temperature", "raw")

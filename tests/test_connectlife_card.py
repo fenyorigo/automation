@@ -29,6 +29,8 @@ class ConnectLifeCardTest(unittest.TestCase):
         dashboard = (ROOT / "app" / "dashboard.py").read_text(encoding="utf-8")
         self.assertIn("Kézi klímavezérlés", template)
         self.assertIn("start_climate_from_card", template)
+        self.assertIn("stop_climate_from_card", template)
+        self.assertIn("Klíma kikapcsolása", template)
         self.assertIn("Kültéri határ felülbírálása", template)
         self.assertIn("data-climate-submit", template)
         self.assertIn('operation="manual_climate_control"', dashboard)
