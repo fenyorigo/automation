@@ -5,6 +5,9 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A mérvadó helyiségi hőmérő bélyegén az aktív fűtés vagy hűtés most elnyomja
+  az ugyanarra az üzemre vonatkozó `Fűtést kér` / `Hűtést kér` jelzést.
+
 - A HiSense-bélyegekről közvetlenül indítható vagy módosítható a kézi fűtés
   és hűtés, explicit üzemmóddal, egész fokos célértékkel és
   ventilátorfokozattal. A külső nyílászárók nyitott, ismeretlen, offline vagy

@@ -1023,7 +1023,9 @@ szerkesztői hozzáférés véletlen megszüntetését.
   automatikán belül választott pillanatnyi fordulatszámot vagy légszállítást.
 - A helyiség mérvadó Zigbee-hőmérőjének bélyege külön jelzi a hőigényt és a
   kapcsolódó, frissen visszaolvasott Hisense üzemét. A **Fűtést/Hűtést kér**
-  döntési állapot; a **Fűtés/Hűtés folyamatban** azt jelenti, hogy a klíma
+  a még ki nem szolgált döntési állapot; ha a helyiségben már folyamatban van
+  az adott üzem, ez a jelzés eltűnik, és csak a **Fűtés/Hűtés folyamatban**
+  marad. Ez utóbbi azt jelenti, hogy a klíma
   bekapcsolt, megfelelő üzemmódú állapotot közölt. Ez utóbbi nem bizonyítja,
   hogy a kompresszor az adott másodpercben is működik.
 - A Kért beállítások és Időprofilok jelenleg nem vezérlik a fizikai eszközt.

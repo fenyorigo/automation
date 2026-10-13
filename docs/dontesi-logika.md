@@ -344,7 +344,9 @@ A mérvadó Zigbee-hőmérő bélyegén a termikus igénytől elkülönül a kap
 Hisense tényleges, frissen visszaolvasott üzemállapota. A `Hűtés folyamatban`
 és `Fűtés folyamatban` jelzés bekapcsolt klímát és megfelelő üzemmódot jelent;
 nem kompresszor-telemetria, ezért a pillanatnyi hőtermelést vagy hűtést nem
-bizonyítja.
+bizonyítja. A `Hűtést kér` vagy `Fűtést kér` bélyeg csak ki nem szolgált
+igénynél jelenik meg; az adott üzem aktív állapotában a `folyamatban` jelzés
+elsőbbséget élvez.
 
 ## Kültéri hőmérséklet és fűtési mód választása
 

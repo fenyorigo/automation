@@ -16,6 +16,14 @@ class ClimateRunningBadgeTest(unittest.TestCase):
         self.assertIn("Fűtés folyamatban", template)
         self.assertIn("device.cooling_advice.climate_available", template)
         self.assertIn("device.heating_advice.climate_available", template)
+        self.assertIn(
+            "device.cooling_advice.cooling_demand and not device.cooling_advice.cooling_active",
+            template,
+        )
+        self.assertIn(
+            "device.heating_advice.heating_demand and not device.heating_advice.heating_active",
+            template,
+        )
 
 
 if __name__ == "__main__":
