@@ -2,14 +2,18 @@ import json
 import unittest
 from datetime import UTC
 from decimal import Decimal
+from datetime import datetime
+from unittest.mock import Mock, patch
 
 from zigbee2mqtt_service import (
     TIME_SERIES_PROPERTIES,
     ZigbeeMessageHandler,
+    ZigbeeRepository,
     contact_state_changed,
     inferred_device_type,
     is_outdoor_temperature_sensor,
     is_radiator_thermostat,
+    ota_update_in_progress,
     parse_last_seen,
     sensor_descriptors,
     time_series_event_id,
@@ -151,6 +155,39 @@ class FakeRepository:
 
 
 class ZigbeeDiscoveryTest(unittest.TestCase):
+    def test_ota_update_packets_are_not_measurement_events(self) -> None:
+        self.assertTrue(
+            ota_update_in_progress({"update": {"state": "updating", "progress": 42}})
+        )
+        self.assertTrue(ota_update_in_progress({"update": {"state": "UPDATING"}}))
+        self.assertFalse(ota_update_in_progress({"update": {"state": "idle"}}))
+        self.assertFalse(ota_update_in_progress({"temperature": 20.5}))
+
+    def test_discovery_does_not_repeat_existing_contact_history(self):
+        repository = object.__new__(ZigbeeRepository)
+        cursor = Mock()
+        observed = datetime(2026, 10, 14, 11, 52)
+        cursor.fetchall.return_value = [
+            ("contact", Decimal(1), observed, observed, "{}"),
+            ("temperature", Decimal(20), observed, observed, "{}"),
+        ]
+        cursor.fetchone.return_value = (1,)
+        with patch.object(repository, "_insert_sensor_reading") as insert:
+            repository._bootstrap_time_series(cursor, 1, "test", "contact_sensor")
+        self.assertEqual(insert.call_count, 1)
+        self.assertEqual(insert.call_args.args[3], "temperature")
+
+    def test_discovery_seeds_contact_without_history(self):
+        repository = object.__new__(ZigbeeRepository)
+        cursor = Mock()
+        observed = datetime(2026, 10, 14, 11, 52)
+        cursor.fetchall.return_value = [("contact", Decimal(1), observed, observed, "{}")]
+        cursor.fetchone.return_value = None
+        with patch.object(repository, "_insert_sensor_reading") as insert:
+            repository._bootstrap_time_series(cursor, 1, "test", "contact_sensor")
+        insert.assert_called_once()
+        self.assertEqual(insert.call_args.args[3], "contact")
+
     def test_extracts_only_published_measurement_properties(self) -> None:
         descriptors = {item["property"]: item for item in sensor_descriptors(PLUG)}
         self.assertEqual(

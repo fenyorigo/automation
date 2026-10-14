@@ -5,6 +5,14 @@ helyi dátumok.
 
 ## Kiadatlan
 
+- A Zigbee collector OTA-frissítés alatt továbbra is követi az eszköz
+  állapotát, de az `update.state=updating` teljes állapotcsomagjaiból már nem
+  készít ismétlődő idősoros méréseket.
+
+- A nyílászáró-zárás utáni várakozás a folyamatos zárt állapot kezdetétől
+  számítódik, így az ismételt zárt jelentések nem indítják újra. A Zigbee
+  eszközfelderítés csak új kontaktushoz pótol kezdeti állapotrekordot.
+
 - A mérvadó helyiségi hőmérő bélyegén az aktív fűtés vagy hűtés most elnyomja
   az ugyanarra az üzemre vonatkozó `Fűtést kér` / `Hűtést kér` jelzést.
 

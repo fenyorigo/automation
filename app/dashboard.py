@@ -1241,14 +1241,23 @@ def load_dashboard(
                 WHERE zpc.device_id=d.id AND zpc.property_name='contact') AS zigbee_contact_closed,
               CASE WHEN d.source_system='zigbee2mqtt'
                          AND d.device_type='contact_sensor'
-                   THEN (SELECT csr.observed_at
+                   THEN (SELECT MIN(csr.observed_at)
                            FROM sensor_readings csr
                           WHERE csr.sensor_id=(
                             SELECT cs.id FROM sensors cs
                              WHERE cs.device_id=d.id AND cs.is_active=1
                                AND cs.sensor_type='contact'
                              ORDER BY cs.id DESC LIMIT 1)
-                          ORDER BY csr.observed_at DESC,csr.id DESC LIMIT 1)
+                            AND csr.value=(SELECT current_contact.numeric_value
+                              FROM zigbee2mqtt_property_cache current_contact
+                             WHERE current_contact.device_id=d.id
+                               AND current_contact.property_name='contact')
+                            AND csr.observed_at > COALESCE((
+                              SELECT MAX(previous_contact.observed_at)
+                                FROM sensor_readings previous_contact
+                               WHERE previous_contact.sensor_id=csr.sensor_id
+                                 AND previous_contact.value<>csr.value
+                            ),'1000-01-01'))
               END AS zigbee_contact_observed_at,
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc

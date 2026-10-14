@@ -302,6 +302,12 @@ kártya mutatja, de ezekből nem készül numerikus mérési idősor. Frissen
 párosított TRV az elem százalékát később is jelentheti; a hiányzó első
 elemérték nem collectorhiba.
 
+OTA-frissítés közben a TRV egy firmware-blokkhoz akár teljes, változatlan
+állapotcsomagot is publikálhat. Az `update.state=updating` csomagok továbbra is
+frissítik az állapotcache-t és az eszköz utolsó jelentkezését, de numerikus
+`sensor_readings` sort nem hoznak létre. Így az OTA-forgalom nem jelenik meg
+több ezer ál-mérésként az idősorban.
+
 A szelepút a párosítás megtartásával újrakalibrálható. A Zigbee2MQTT
 eszközoldalán az **Exposes / Valve travel calibration** mezőnél a `calibrate`
 műveletet kell indítani, amely MQTT-n a

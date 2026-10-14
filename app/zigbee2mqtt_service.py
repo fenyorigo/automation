@@ -186,6 +186,20 @@ def scalar_values(value: Any) -> tuple[Decimal | None, str | None]:
     return None, None
 
 
+def ota_update_in_progress(payload: dict[str, Any]) -> bool:
+    """Return true while Zigbee2MQTT is streaming an OTA update.
+
+    During an OTA transfer some devices republish their complete state for
+    nearly every firmware block. Those packets keep the cache fresh but must
+    not turn unchanged values into thousands of time-series rows.
+    """
+    update = payload.get("update")
+    return (
+        isinstance(update, dict)
+        and str(update.get("state") or "").casefold() == "updating"
+    )
+
+
 def time_series_event_id(
     ieee_address: str, property_name: str, observed_at: datetime
 ) -> str:
@@ -389,6 +403,18 @@ class ZigbeeRepository:
             ):
                 continue
             raw = raw_payload if isinstance(raw_payload, str) else json_value(raw_payload)
+            if property_name == "contact":
+                # Discovery is repeated periodically. Seed a new contact only;
+                # cached reports must not become fresh closing transitions.
+                cursor.execute(
+                    """SELECT 1 FROM sensor_readings sr
+                       JOIN sensors s ON s.id=sr.sensor_id
+                       WHERE s.device_id=? AND s.source_system=?
+                         AND s.source_sensor_id=? AND s.is_active=1 LIMIT 1""",
+                    (device_id, SOURCE_SYSTEM, f"{ieee_address}:contact"),
+                )
+                if cursor.fetchone() is not None:
+                    continue
             self._insert_sensor_reading(
                 cursor, device_id, ieee_address, str(property_name), Decimal(str(value)),
                 source_at or received_at, raw,
@@ -647,6 +673,7 @@ class ZigbeeRepository:
         cursor = self.connection.cursor()
         received_at = utc_now_naive()
         source_observed_at = parse_last_seen(payload.get("last_seen"))
+        store_time_series = not ota_update_in_progress(payload)
         try:
             cursor.execute(
                 """SELECT z.device_id,z.ieee_address,z.model_id,d.device_type
@@ -692,7 +719,8 @@ class ZigbeeRepository:
                     ),
                 )
                 if (
-                    property_name in TIME_SERIES_PROPERTIES
+                    store_time_series
+                    and property_name in TIME_SERIES_PROPERTIES
                     and numeric_value is not None
                     and zigbee_property_has_time_series(device_type, property_name)
                 ):
