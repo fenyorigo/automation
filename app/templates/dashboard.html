@@ -216,6 +216,8 @@
   <script>
   (() => {
     const knownPoll = {{ poll_marker|tojson }};
+    const knownClimateCommand = {{ climate_command_marker|tojson }};
+    const knownDeviceState = {{ device_state_marker|tojson }};
     let checking = false;
     let hasUnsavedChanges = false;
     let submitting = false;
@@ -296,8 +298,13 @@
     document.querySelectorAll('[data-card-climate-control]').forEach((form) => {
       const mode = form.querySelector('[data-climate-mode]');
       const target = form.querySelector('[data-climate-target]');
+      const fan = form.querySelector('[data-climate-fan]');
       const guard = form.querySelector('[data-climate-guard]');
       const submit = form.querySelector('[data-climate-submit]');
+      // A böngésző POST/redirect vagy visszalépés után hajlamos a korábbi
+      // űrlapválasztást visszaállítani. A kártya vezérlője mindig ugyanabból
+      // a szerveroldali állapotból induljon, mint a fölötte lévő kijelzés.
+      if (fan && fan.dataset.serverValue) fan.value = fan.dataset.serverValue;
       const updateClimateForm = () => {
         const option = mode.options[mode.selectedIndex];
         const blocked = option.dataset.blocked === 'true';
@@ -307,7 +314,7 @@
         if (!Number.isFinite(current) || current < Number(target.min) || current > Number(target.max)) {
           target.value = mode.value === 'heat' ? target.max : target.min;
         }
-        submit.disabled = blocked;
+        submit.disabled = blocked || form.dataset.commandPending === 'true';
         guard.classList.toggle('blocked', blocked);
         guard.textContent = blocked
           ? `Indítás blokkolva: ${option.dataset.blockers}`
@@ -315,6 +322,20 @@
       };
       mode.addEventListener('change', updateClimateForm);
       updateClimateForm();
+    });
+
+    document.querySelectorAll('[data-trv-settings-control]').forEach((form) => {
+      const pid = form.querySelector('[data-trv-pid]');
+      const valvePositions = form.querySelectorAll('[data-trv-valve-position]');
+      const updateTrvForm = () => {
+        const pidEnabled = pid.value === 'ON';
+        valvePositions.forEach((input) => {
+          input.disabled = pidEnabled;
+          input.closest('label').classList.toggle('field-disabled', pidEnabled);
+        });
+      };
+      pid.addEventListener('change', updateTrvForm);
+      updateTrvForm();
     });
 
     async function refreshAfterCompletedPoll() {
@@ -326,7 +347,13 @@
         });
         if (!response.ok) return;
         const status = await response.json();
-        if (!status.busy && status.latest_poll && status.latest_poll !== knownPoll
+        const pollChanged = !status.busy && status.latest_poll
+          && status.latest_poll !== knownPoll;
+        const climateCommandChanged = status.latest_climate_command
+          && status.latest_climate_command !== knownClimateCommand;
+        const deviceStateChanged = status.latest_device_state
+          && status.latest_device_state !== knownDeviceState;
+        if ((pollChanged || climateCommandChanged || deviceStateChanged)
             && !editingInProgress()) {
           window.location.reload();
         }
@@ -336,7 +363,7 @@
         checking = false;
       }
     }
-    window.setInterval(refreshAfterCompletedPoll, 30000);
+    window.setInterval(refreshAfterCompletedPoll, {{ 5000 if has_pending_climate_commands else 30000 }});
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) refreshAfterCompletedPoll();
     });

@@ -305,6 +305,27 @@ def annotate_upstairs_heating(
     gas_required = [item for item in actionable if item["status"] == "gas_required"]
     climate_rooms = [item for item in actionable if item["status"] == "climate_eligible"]
     blocked = [item for item in demanded if item["blockers"]]
+    active_climate_rooms = [
+        item for item in room_results if item.get("climate_heating_active")
+    ]
+    active_climate_room_ids = {
+        int(item["room_id"]) for item in active_climate_rooms
+    }
+    unserved_demanded = [
+        item for item in demanded
+        if int(item["room_id"]) not in active_climate_room_ids
+    ]
+    open_internal_door_rooms = sorted(
+        {
+            str(item.get("connected_room_name") or item.get("name"))
+            for item in devices
+            if item.get("zone_name") == "Emelet"
+            and item.get("device_type") == "contact_sensor"
+            and item.get("opening_role") == "internal"
+            and item.get("zigbee_contact_closed") is not None
+            and not bool(item.get("zigbee_contact_closed"))
+        }
+    )
 
     if not demanded:
         status = "would_stop" if gas_heating_active or any(
@@ -326,7 +347,14 @@ def annotate_upstairs_heating(
         "status_label": label,
         "preferred_source": preferred_source,
         "demanded_rooms": [item["room_name"] for item in demanded],
+        "unserved_demanded_rooms": [
+            item["room_name"] for item in unserved_demanded
+        ],
         "climate_rooms": [item["room_name"] for item in climate_rooms],
+        "active_climate_rooms": [
+            item["room_name"] for item in active_climate_rooms
+        ],
+        "open_internal_door_rooms": open_internal_door_rooms,
         "gas_required_rooms": [item["room_name"] for item in gas_required],
         "blocked_rooms": [item["room_name"] for item in blocked],
         "outdoor_temperature_c": outdoor.get("temperature_c") if outdoor else None,
@@ -339,13 +367,44 @@ def annotate_upstairs_heating(
         "mixed_operation_allowed": False,
         "calculation_version": "heating-observer-v1",
     }
+    active_thermostats = [
+        item
+        for item in devices
+        if item.get("source_system") == "computherm" and bool(item.get("active"))
+    ]
     for item in devices:
         if item.get("source_system") == "computherm":
+            measured_state = (
+                boiler.get("boiler_measured_operating_state") if boiler else "unknown"
+            )
+            measured_power_w = (
+                boiler.get("boiler_measured_power_w") if boiler else None
+            )
+            measured_label = (
+                boiler.get("boiler_measured_operating_label")
+                if boiler else "Mért állapot: ismeretlen"
+            )
+            if measured_state == "heating" and measured_power_w is not None:
+                if bool(item.get("active")):
+                    measured_label = (
+                        f"Fűtés folyamatban ebben a zónában · {measured_power_w:.0f} W"
+                    )
+                elif active_thermostats:
+                    measured_label = f"Másik zóna fűt · {measured_power_w:.0f} W"
+                else:
+                    measured_label = (
+                        f"Kazán/keringetés utófutás vagy eltérés · "
+                        f"{measured_power_w:.0f} W"
+                    )
             item["boiler_status"] = {
                 "name": boiler["name"] if boiler else "Bosch kazán",
                 "is_on": boiler_on,
                 "thermostat_calling": bool(item.get("active")),
                 "heating_unavailable": bool(item.get("active")) and not boiler_on,
+                "measured_operating_state": measured_state,
+                "measured_operating_label": measured_label,
+                "measured_power_w": measured_power_w,
+                "zone_heating_active": measured_state == "heating" and bool(item.get("active")),
             }
             item["thermostat_target_too_high"] = bool(
                 item.get("target_temperature_c") is not None
@@ -448,7 +507,7 @@ def annotate_ground_floor_heating(
 
     if thermostat_calling and boiler_on:
         status = "gas"
-        label = "Computherm fűtést kér · gázfűtés aktív"
+        label = "Gázfűtés aktív"
     elif thermostat_calling:
         status = "gas_required"
         label = "Computherm fűtést kér · a kazán bekapcsolandó"

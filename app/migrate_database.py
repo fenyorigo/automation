@@ -226,6 +226,14 @@ MIGRATIONS = (
         "v1_55_dynamic_electricity_prices",
         ROOT / "SQL" / "migrations" / "055_home_automation_v1.54_to_v1.55.sql",
     ),
+    (
+        "v1_56_trv_setting_requests",
+        ROOT / "SQL" / "migrations" / "056_home_automation_v1.55_to_v1.56.sql",
+    ),
+    (
+        "v1_57_manual_climate_queue",
+        ROOT / "SQL" / "migrations" / "057_home_automation_v1.56_to_v1.57.sql",
+    ),
 )
 
 

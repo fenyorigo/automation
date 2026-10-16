@@ -171,6 +171,22 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertIn("klarstein-standby-warning", template)
         self.assertIn(".device-card.is-power-off", stylesheet)
 
+    def test_zigbee_power_meter_card_shows_cached_measurements(self) -> None:
+        template = (ROOT / "app" / "templates" / "_device_card.html").read_text()
+        dashboard = (ROOT / "app" / "dashboard.py").read_text()
+
+        for field in (
+            "zigbee_power_w",
+            "zigbee_current_a",
+            "zigbee_voltage_v",
+            "zigbee_energy_today_kwh",
+            "zigbee_energy_month_kwh",
+            "zigbee_energy_total_kwh",
+        ):
+            self.assertIn(field, template)
+            self.assertIn(field, dashboard)
+        self.assertIn("Mai energia", template)
+
     def test_water_heater_card_controls_schedule_instead_of_relay(self) -> None:
         template = (ROOT / "app" / "templates" / "_device_card.html").read_text()
         dashboard = (ROOT / "app" / "dashboard.py").read_text()
@@ -270,6 +286,48 @@ class PowerSwitchControlTest(unittest.TestCase):
         self.assertTrue(boiler["boiler_heating_enabled"])
         self.assertTrue(boiler["boiler_panel_power_on"])
         self.assertFalse(boiler["boiler_panel_power_alert"])
+        self.assertEqual(
+            boiler["boiler_measured_operating_state"], "hot_water_ready"
+        )
+        self.assertIn("Melegvíz-szolgáltatás aktív", boiler["boiler_measured_operating_label"])
+
+    def test_boiler_heating_is_inferred_from_measured_power(self) -> None:
+        observed_at = datetime.now(UTC).replace(tzinfo=None)
+        boiler = {
+            "source_system": "manual", "device_type": "boiler",
+            "manual_power_state": True, "manual_hot_water_state": True,
+            "manual_heating_state": True,
+        }
+        supply = {
+            "source_system": "tasmota", "source_device_id": "nous-kazan",
+            "online": True, "switch_power": True, "temperature_c": 110,
+            "measurement_at": observed_at, "state_at": observed_at,
+            "poll_interval_seconds": 120,
+        }
+
+        annotate_boiler_operating_states([boiler, supply])
+
+        self.assertEqual(boiler["boiler_measured_operating_state"], "heating")
+        self.assertEqual(boiler["boiler_measured_power_w"], 110)
+        self.assertIn("Fűtés folyamatban", boiler["boiler_measured_operating_label"])
+
+    def test_unclassified_boiler_power_is_reported_as_transition(self) -> None:
+        observed_at = datetime.now(UTC).replace(tzinfo=None)
+        boiler = {
+            "source_system": "manual", "device_type": "boiler",
+            "manual_power_state": True, "manual_hot_water_state": True,
+            "manual_heating_state": True,
+        }
+        supply = {
+            "source_system": "tasmota", "source_device_id": "nous-kazan",
+            "online": True, "switch_power": True, "temperature_c": 45,
+            "measurement_at": observed_at, "state_at": observed_at,
+            "poll_interval_seconds": 120,
+        }
+
+        annotate_boiler_operating_states([boiler, supply])
+
+        self.assertEqual(boiler["boiler_measured_operating_state"], "transition")
 
     def test_powered_nous_with_fresh_zero_watts_alerts_for_panel_off(self) -> None:
         observed_at = datetime.now(UTC).replace(tzinfo=None)

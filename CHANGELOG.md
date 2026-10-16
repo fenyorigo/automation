@@ -3,7 +3,56 @@
 A projekt a szemantikus verziózás elvét követi. A kiadás dátumai budapesti
 helyi dátumok.
 
-## Kiadatlan
+## 2.0.0 — 2026-10-16
+
+- A HiSense kézi indítása és leállítása már nem tartja nyitva a böngésző
+  kérését: a parancs tartós adatbázis-sorba kerül, a háttérszolgáltatás hajtja
+  végre. A bélyeg az indítás, visszaolvasás, 25 másodperces stabilizáció és
+  ventilátorállítás fázisát, a kért állapotot, valamint a még eltérő tényleges
+  mezőket mutatja. Folyamatban levő kérésre nem küldhető újabb parancs.
+  A ventilátor visszaellenőrzése számol a ConnectLife olvasási cache-ének
+  késésével és átmeneti parancsvisszhangjával. A rendszer a
+  `t_fan_speed` és `t_fan_speed_s` mezőt együtt írja, és csak hat egymást
+  követő, ötmásodpercenkénti egyezés után tekinti tartósan beállítottnak a
+  fokozatot. Az Automatára visszaeső készülékállapot ezért már nem jelenhet
+  meg tévesen sikeres műveletként.
+
+- A Nous kazán friss teljesítményéből a felület külön mért Bosch-
+  üzemállapotot képez: a kb. 5 W-os alapfogyasztás aktív melegvíz-
+  szolgáltatási készenlét, a kb. 110 W-os fogyasztás pedig folyamatban levő
+  fűtés. A két állítható sáv közötti érték bizonytalan marad; a
+  következtetés nem írja felül a kézi szolgáltatásengedélyeket.
+  A Computherm-bélyeg a magas fogyasztást a saját és a másik CT400
+  reléállapotával kapuzza, ezért megkülönbözteti az adott zóna fűtését, a
+  másik zóna fűtését és a CT-igény nélküli keringetési utófutást.
+
+- A Computherm-bélyegek az aktuális helyiség további önálló hőmérőit névvel,
+  értékkel és időponttal mutatják; a TRV-ket kizárják. Az aktív földszinti
+  állapot felirata rövidebb: **Földszinti javaslat: Gázfűtés aktív**.
+
+- A SONOFF TRV Gen2 bélyege most külön mutatja a fűtési és nyugalmi
+  szelepállást, a PID-et, a gyerekzárat, a tényleges működést, az
+  ablakfigyelést, az ideiglenes módot és a termosztát-linket. A lenyitható
+  beállításpanelen a PID, a gyerekzár és – kikapcsolt PID mellett – mindkét
+  szelepállás módosítható. Az MQTT-parancs friss eszközállapotból ellenőrzött,
+  az eredmény auditált; alvó TRV esetén a felület külön jelzi a még nem
+  igazolt parancsot.
+  Az elküldött, de még vissza nem mért értékek tartós **Parancs elküldve**
+  köztes állapotot kapnak; cache-egyezéskor automatikusan visszaigazolttá,
+  30 perc elteltével pedig külön figyelmeztetéssel nem igazolttá válnak.
+
+- A HiSense bekapcsolás most a ConnectLife alkalmazással azonos kétlépcsős
+  folyamatot használ: előbb bekapcsolja és visszaellenőrzi az üzemmódot és
+  célhőmérsékletet, majd 25 másodperc stabilizáció után, csak eltérés esetén külön
+  parancsban állítja a ventilátorfokozatot. Ha csak az utóbbi nem igazolható
+  vissza, a napló ezt
+  külön ventilátor-ellenőrzési hibaként rögzíti, de a ténylegesen visszaolvasott
+  bekapcsolt állapotot akkor is eltárolja és megjeleníti a bélyegen.
+
+- A Zigbee energiamérős dugaljak bélyege ismét megjeleníti az
+  állapotcache aktuális teljesítmény-, áram- és feszültségértékét, valamint
+  az eszköz napi, havi és összes energiaszámlálóját. Ettől hosszú távú
+  dugalj-idősor továbbra sem készül.
 
 - A Zigbee collector OTA-frissítés alatt továbbra is követi az eszköz
   állapotát, de az `update.state=updating` teljes állapotcsomagjaiból már nem

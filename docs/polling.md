@@ -228,8 +228,10 @@ időpontját pedig a fogadás idejétől külön tárolja. A temperature, humidi
 battery jelentések külön, időbélyeges `sensor_readings` sorokként is
 megmaradnak. Az energiamérős Zigbee router-dugaljak `power`, `current`,
 `voltage` és `energy` értékei csak az állapotcache legfrissebb értékeként
-maradnak meg; ezekből nem készül hosszú távú idősor. A relé `state` értéke
-szintén csak az állapotcache része.
+maradnak meg; ezekből nem készül hosszú távú idősor. A bélyeg az aktuális
+teljesítményt, áramot, feszültséget és az eszköz által közölt
+napi/havi/összes energiaértéket ebből a cache-ből mutatja. A relé `state`
+értéke szintén csak az állapotcache része.
 Az eseményazonosító a fizikai IEEE-címből, tulajdonságból és forrásoldali
 `last_seen` időből készül, ezért retained vagy ismételt üzenet nem duplázza
 ugyanazt a mintát.
@@ -296,11 +298,25 @@ meglévő `sensors` és `sensor_readings` táblákban is megmaradnak:
 | `heat_percentage_hour` | `heating_activity` | `percent` |
 | `battery` | `battery` | `percent` |
 
-A külön érkező jelentések önálló idősoros pontok. A `system_mode`,
-`fault_code` és `motor_travel_calibration_status` állapotot a cache és a
-kártya mutatja, de ezekből nem készül numerikus mérési idősor. Frissen
+A külön érkező jelentések önálló idősoros pontok. Az `idle_valve_position`,
+`smart_temperature_control`, `child_lock`, `open_window`,
+`open_window_detected`, az ideiglenes mód és a termosztát-link értékei a
+`zigbee2mqtt_property_cache` táblából kerülnek a kártyára. A `system_mode`,
+`fault_code` és `motor_travel_calibration_status` állapotot szintén a cache és
+a kártya mutatja, de ezekből nem készül numerikus mérési idősor. Frissen
 párosított TRV az elem százalékát később is jelentheti; a hiányzó első
 elemérték nem collectorhiba.
+
+A bélyegről kiadott PID-, gyerekzár- és szelepállás-parancs a
+`zigbee2mqtt/FRIENDLY_NAME/set` topicra kerül. Sikeresnek csak a parancs utáni,
+nem retained eszközállapot egyezése számít; az alvó eszköz miatti időtúllépés
+`unverified`, nem bizonyított sikertelenség. A kísérlet a registry auditnaplóban
+megmarad. Bekapcsolt PID mellett a két fix szelepállást a TRV nem alkalmazza.
+Az elküldött, de még nem igazolt kérés a `trv_setting_requests` táblában marad
+függőben. A dashboard minden betöltéskor összeveti a kért értékeket a
+Zigbee2MQTT-cache-sel: egyezéskor `verified`, 30 perc után egyezés nélkül
+`expired` lesz. Ez akadályozza meg, hogy az UI a várakozás alatt a régi értéket
+aktuális állapotként mutassa.
 
 OTA-frissítés közben a TRV egy firmware-blokkhoz akár teljes, változatlan
 állapotcsomagot is publikálhat. Az `update.state=updating` csomagok továbbra is
@@ -469,6 +485,10 @@ Minden parancs előtt friss ConnectLife-lekérdezés ellenőrzi az előfeltétel
 bekapcsolás csak kikapcsolt, kikapcsolás csak bekapcsolt klímán engedélyezett.
 A parancs után ismételt visszaolvasás a ventilátorfokozatot is igazolja. Minden kérés,
 elutasítás, hiba és igazolt siker a `climate_control_attempts` táblába kerül.
+Ha a bekapcsolás, az üzemmód és a célérték teljesül, de a külön, 25 másodperccel később
+küldött ventilátorparancs nem, a kérés figyelmeztetéssel zárul, miközben a
+visszaolvasott tényleges állapot a `device_states` és az üzemelési események
+közé is bekerül.
 
 A kezdőlap HiSense-bélyegein emellett védett kézi indítás és
 beállításmódosítás érhető el. Ez explicit `heat` vagy `cool` üzemmódot,
@@ -570,6 +590,10 @@ javasolt külön tartós `DASHBOARD_SECRET_KEY` értéket megadni a környezetbe
 A Bosch 7000i részben kézzel kezelt eszköz: a műszerfal külön jelölőnégyzetben
 tartja nyilván a tápellátás kézi tartalékjelzését, a melegvíz-szolgáltatást és
 a fűtést. Ha a Nous elérhető, a tényleges tápellátás forrása annak reléállapota.
+A friss teljesítmény egy ettől elkülönített mért üzemállapotot is ad:
+a beállítható alsó power-határtól 20 W-ig melegvíz-készenlét, 80 W-tól
+tényleges fűtés, a kettő között bizonytalan átmeneti állapot. A sávok a
+globális beállításoknál módosíthatók.
 A Hisense klímákhoz és a kazánhoz
 megadható az utolsó szerviz dátuma. Az adatok és a korábbi szervizek története a
 MariaDB-ben maradnak meg. A következő szerviz időpontja a szerelővel való

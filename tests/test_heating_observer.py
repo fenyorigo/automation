@@ -196,6 +196,44 @@ class HeatingObserverTest(unittest.TestCase):
         self.assertEqual(advice["preferred_source"], "climate")
         self.assertFalse(advice["mixed_operation_allowed"])
 
+    def test_upstairs_summary_reports_active_climates_and_open_internal_doors(self) -> None:
+        devices = [
+            device(
+                1, "Zb Rita", "zigbee2mqtt", 19.0,
+                room_id=1, room_name="Rita",
+            ),
+            device(
+                2, "HS Rita", "connectlife", 19.0,
+                room_id=1, room_name="Rita", power=True,
+            ),
+            device(
+                3, "Zb Veronika", "zigbee2mqtt", 19.0,
+                room_id=2, room_name="Veronika",
+            ),
+            device(
+                4, "HS Veronika", "connectlife", 19.0,
+                room_id=2, room_name="Veronika", power=True,
+            ),
+            device(
+                5, "Tuya Rita belső", "zigbee2mqtt", room_id=3,
+                room_name="Kisnappali", device_type="contact_sensor",
+                opening_role="internal", connected_room_id=1,
+                connected_room_name="Rita", zigbee_contact_closed=False,
+            ),
+            device(
+                6, "Tuya Veronika belső", "zigbee2mqtt", room_id=3,
+                room_name="Kisnappali", device_type="contact_sensor",
+                opening_role="internal", connected_room_id=2,
+                connected_room_name="Veronika", zigbee_contact_closed=True,
+            ),
+        ]
+
+        advice = annotate_upstairs_heating(devices, {"temperature_c": 7.0})
+
+        self.assertEqual(advice["active_climate_rooms"], ["Rita", "Veronika"])
+        self.assertEqual(advice["open_internal_door_rooms"], ["Rita"])
+        self.assertEqual(advice["unserved_demanded_rooms"], [])
+
     def test_ground_floor_thermostat_gets_gas_only_advice(self) -> None:
         devices = [
             device(
@@ -226,7 +264,48 @@ class HeatingObserverTest(unittest.TestCase):
         ]
         advice = annotate_ground_floor_heating(devices)
         self.assertEqual(advice["status"], "gas")
+        self.assertEqual(advice["status_label"], "Gázfűtés aktív")
         self.assertFalse(advice["boiler_action_required"])
+
+    def test_measured_boiler_heating_is_gated_by_each_thermostat(self) -> None:
+        devices = [
+            device(
+                1, "CT400 emelet", "computherm", 19.0,
+                room_id=1, zone_name="Emelet", active=False,
+            ),
+            device(4, "Zb kisnappali", "zigbee2mqtt", 19.0, room_id=1),
+            device(
+                2, "CT400 földszint", "computherm", 18.5,
+                room_id=2, zone_name="Földszint", active=True,
+            ),
+            device(
+                5, "Zb nappali", "zigbee2mqtt", 18.5,
+                room_id=2, zone_name="Földszint",
+            ),
+            device(
+                3, "Bosch", "manual", None, room_id=None, device_type="boiler",
+                managed_manually=True, manual_power_state=True,
+                boiler_heating_enabled=True,
+                boiler_measured_operating_state="heating",
+                boiler_measured_operating_label="Fűtés folyamatban · 110 W",
+                boiler_measured_power_w=110.0,
+            ),
+        ]
+
+        annotate_upstairs_heating(devices, {"temperature_c": 10.0})
+
+        upstairs = next(item for item in devices if item["name"] == "CT400 emelet")
+        ground = next(item for item in devices if item["name"] == "CT400 földszint")
+        self.assertEqual(
+            upstairs["boiler_status"]["measured_operating_label"],
+            "Másik zóna fűt · 110 W",
+        )
+        self.assertEqual(
+            ground["boiler_status"]["measured_operating_label"],
+            "Fűtés folyamatban ebben a zónában · 110 W",
+        )
+        self.assertFalse(upstairs["boiler_status"]["zone_heating_active"])
+        self.assertTrue(ground["boiler_status"]["zone_heating_active"])
 
     def test_ground_floor_uses_same_room_zigbee_and_computherm_average(self) -> None:
         devices = [

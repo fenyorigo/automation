@@ -12,8 +12,9 @@ class PollStatusMarkerTest(unittest.TestCase):
         template = (ROOT / "app/templates/dashboard.html").read_text(
             encoding="utf-8"
         )
-        self.assertIn("setInterval(refreshAfterCompletedPoll, 30000)", template)
-        self.assertNotIn("setInterval(refreshAfterCompletedPoll, 5000)", template)
+        self.assertIn("5000 if has_pending_climate_commands else 30000", template)
+        self.assertIn("latest_climate_command", template)
+        self.assertIn("latest_device_state", template)
 
     def test_status_uses_same_attempt_timestamp_as_dashboard(self) -> None:
         source = (ROOT / "app/dashboard.py").read_text(encoding="utf-8")
@@ -23,6 +24,7 @@ class PollStatusMarkerTest(unittest.TestCase):
         self.assertIn("MAX(pa.attempted_at)", function)
         self.assertIn("WHERE d.is_active=1", function)
         self.assertNotIn("MAX(completed_at)", function)
+        self.assertIn("MAX(ds.observed_at)", function)
 
     def test_latest_value_indexes_are_registered_as_a_migration(self) -> None:
         migration = (

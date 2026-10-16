@@ -101,6 +101,9 @@ h3 { margin-top: 3px; font-size: 1.25rem; letter-spacing: -.025em; }
 .temperature-provenance { min-height:34px; margin:-9px 0 16px; color:var(--muted); font-size:.72rem; line-height:1.45; }
 .temperature-provenance strong { color:var(--ink); }
 .temperature-provenance.unavailable strong { color:#9a5b00; }
+.computherm-room-thermometers { display:grid; gap:3px; margin:-8px 0 16px; padding:10px 12px; border-radius:10px; background:#eef3f0; color:var(--muted); font-size:.7rem; line-height:1.4; }
+.computherm-room-thermometers strong { color:var(--ink); }
+.computherm-room-thermometers .stale { color:#9a5b00; }
 .internal-opening-provenance { margin:10px 0 16px; }
 .cooling-advice { display:grid; gap:5px; margin:0 0 16px; padding:12px 14px; border-radius:12px; background:#eef3f0; }
 .cooling-advice strong { color:var(--ink); }
@@ -148,6 +151,17 @@ dd.power-on { color: #d05a16; }
 .card-climate-control>button:disabled { background:#d9dddb; color:#68716d; cursor:not-allowed; }
 .card-climate-stop { margin-top:9px; }
 .card-climate-stop button { width:100%; min-height:40px; border:0; border-radius:9px; padding:0 13px; background:#b42318; color:#fff; font:inherit; font-size:.74rem; font-weight:850; cursor:pointer; }
+.trv-settings { margin-top:14px; padding:11px 13px; border:1px solid var(--line); border-radius:12px; background:#f7f5ee; }
+.trv-settings summary { color:var(--green); font-size:.76rem; font-weight:850; cursor:pointer; }
+.trv-settings form { display:grid; gap:10px; margin-top:12px; }
+.trv-setting-fields { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.trv-setting-fields label { color:var(--muted); font-size:.66rem; font-weight:750; }
+.trv-setting-fields input,.trv-setting-fields select { display:block; width:100%; min-height:38px; margin-top:4px; padding:6px 7px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); font:inherit; }
+.trv-setting-fields .field-disabled { opacity:.55; }
+.trv-settings p { margin:0; color:var(--muted); font-size:.68rem; line-height:1.4; }
+.trv-settings button { min-height:40px; border:0; border-radius:9px; padding:0 13px; background:var(--green); color:#fff; font:inherit; font-size:.74rem; font-weight:850; cursor:pointer; }
+.trv-command-pending { color:#8a5a00; font-size:.72rem; line-height:1.25; text-transform:none; }
+.trv-command-expired { margin-top:12px; padding:10px 12px; border-radius:10px; background:#fff0ed; color:#7a1812; font-size:.72rem; line-height:1.4; }
 .climate-start-confirmation { margin-top:14px; padding:13px; border:2px solid #b42318; border-radius:12px; background:#fff0ed; color:#7a1812; }
 .climate-start-confirmation>strong { font-weight:900; }
 .climate-start-confirmation p { margin-top:6px; font-size:.76rem; line-height:1.45; }
@@ -586,3 +600,17 @@ td small { display: block; margin-top: 2px; color: var(--muted); }
   display: block;
   text-transform: none;
 }
+.climate-command-progress {
+  display: grid;
+  gap: .35rem;
+  margin: 1rem 0;
+  padding: .9rem 1rem;
+  border: 1px solid #d6b86d;
+  border-radius: 1rem;
+  background: #fff7dc;
+  color: #4b3a0b;
+}
+
+.climate-command-progress strong { color: #7b5800; }
+.climate-command-progress small { display: block; }
+.climate-command-differences { font-weight: 700; }

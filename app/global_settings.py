@@ -59,6 +59,8 @@ SETTINGS = (
     Setting("CLIMATE_SERVICE_MODE", "Klímaszerviz folyamatban", "false", "boolean", "Minden automatikus klímaszabályt felfüggeszt; a kézi szervizpróbákat nem korlátozza.", validator=lambda value: value in {"true", "false"}),
     Setting("BOILER_SERVICE_MODE", "Gázkazánszerviz folyamatban", "false", "boolean", "Felfüggeszti a fűtési szabályokat és engedélyezi a védett Computherm szerviztesztet.", validator=lambda value: value in {"true", "false"}),
     Setting("BOILER_PANEL_ON_MIN_POWER_W", "Bosch power bekapcsolási teljesítményhatára", "2.0", "number", "Watt; bekapcsolt Nous mellett legalább ekkora friss fogyasztás igazolja a kazán power kapcsolójának bekapcsolt állapotát. A mért nyugalmi fogyasztás kb. 5 W.", number_between(0.1, 100)),
+    Setting("BOILER_HOT_WATER_IDLE_MAX_POWER_W", "Bosch melegvíz-készenlét felső teljesítményhatára", "20", "number", "Watt; a power-bekapcsolási határtól eddig a mérés melegvíz-szolgáltatásra kész alapállapotnak számít. A megfigyelt alapfogyasztás kb. 5 W.", number_between(1, 500)),
+    Setting("BOILER_HEATING_ACTIVE_MIN_POWER_W", "Bosch aktív fűtés alsó teljesítményhatára", "80", "number", "Watt; legalább ekkora friss fogyasztás ténylegesen folyamatban levő fűtést jelez. Az első megfigyelt fűtési érték kb. 110 W.", number_between(2, 1000)),
     Setting("WATER_HEATER_SCHEDULE_ENABLED", "Villanybojler automatikus időablaka", "true", "boolean", "A Nous bojler tápellátását kizárólag az automation kapcsolja a megadott napi időablak szerint.", validator=lambda value: value in {"true", "false"}),
     Setting("WATER_HEATER_ON_TIME", "Villanybojler bekapcsolási idő", "05:00", "time", "A napi tápellátási időablak kezdete.", validator=lambda value: re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value) is not None),
     Setting("WATER_HEATER_OFF_TIME", "Villanybojler kikapcsolási idő", "12:00", "time", "A napi tápellátási időablak vége; éjfélen átnyúló időablak is megadható.", validator=lambda value: re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value) is not None),
@@ -156,6 +158,17 @@ def save(values_to_save: dict[str, str]) -> None:
         normalized["HEATING_ROOM_REQUEST_OFF_C"].replace(",", ".")
     ):
         raise ValueError("A fűtési igény bekapcsolási határának kisebbnek kell lennie a kikapcsolási határnál.")
+    boiler_idle_max = float(
+        normalized["BOILER_HOT_WATER_IDLE_MAX_POWER_W"].replace(",", ".")
+    )
+    boiler_heating_min = float(
+        normalized["BOILER_HEATING_ACTIVE_MIN_POWER_W"].replace(",", ".")
+    )
+    if boiler_idle_max >= boiler_heating_min:
+        raise ValueError(
+            "A Bosch melegvíz-készenléti felső határának kisebbnek kell lennie "
+            "az aktív fűtés alsó határánál."
+        )
     if normalized["WATER_HEATER_ON_TIME"] == normalized["WATER_HEATER_OFF_TIME"]:
         raise ValueError("A villanybojler be- és kikapcsolási ideje nem lehet azonos.")
     heating_secondary_weight = sum(

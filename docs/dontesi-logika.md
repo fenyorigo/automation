@@ -172,9 +172,13 @@ A kültéri küszöb figyelmeztető, felülbírálható kapu: fűtésnél a
 esetén az alkalmazás a konkrét értékkel külön megerősítést kér. A célértéket a
 `HEATING_MAX_TARGET_C` és `COOLING_MIN_TARGET_C` korlátozza. A szerver a
 megerősítés pillanatában ismét ellenőrzi a nyílászárókat, így a két lépés
-közben megnyíló ablak vagy ajtó letiltja a parancsot. A parancs utáni
-ConnectLife-visszaolvasásnak a power, mód, célérték és ventilátorfokozat
-mindegyikében egyeznie kell.
+közben megnyíló ablak vagy ajtó letiltja a parancsot. Az indítás
+kétlépcsős: először a bekapcsolást, az üzemmódot és a célértéket írja,
+majd ezek sikeres visszaolvasása és 25 másodperc stabilizáció után – ha szükséges –
+külön állítja a ventilátorfokozatot. A végső ConnectLife-visszaolvasásnak a power, mód,
+célérték és ventilátorfokozat mindegyikében egyeznie kell a teljes sikerhez.
+Részleges teljesülésnél a tényleges visszaolvasott állapot akkor is frissíti
+a bélyeget és az üzemelési eseményt.
 
 A működő klíma kézi leállítása mindig megengedett: azt sem nyílászáró-, sem
 kültéri hőmérsékleti kapu nem akadályozhatja. A leállítás is előzetes és utólagos
@@ -215,6 +219,22 @@ első új pollig az állapot ellenőrzésre vár. A felismerési határ a
 `BOILER_PANEL_ON_MIN_POWER_W` globális beállítás; alapértéke 2 W, míg a próbán
 mért nyugalmi fogyasztás stabil 5 W.
 
+A friss Nous-teljesítmény a kézzel megadott szolgáltatásengedélytől
+elkülönített, **mért üzemállapotot** is ad. A power-bekapcsolási határ és
+a `BOILER_HOT_WATER_IDLE_MAX_POWER_W` (alapérték: 20 W) közötti
+fogyasztás melegvíz-szolgáltatásra kész alapállapot; a megfigyelt érték
+kb. 5 W. A `BOILER_HEATING_ACTIVE_MIN_POWER_W` (alapérték: 80 W)
+feletti fogyasztás ténylegesen folyamatban levő fűtést jelent; az első mért
+érték kb. 110 W. A két sáv közötti adat átmeneti vagy még nem
+besorolt marad, ezért egy tüske nem kap tévesen biztos állapotot. Az 5 W nem
+pillanatnyi melegvíz-vételezést, hanem a szolgáltatás aktív készenlétét
+jelenti. A mért állapot nem írja felül a kézi szolgáltatásjelöléseket.
+A teljesítményből a zóna nem állapítható meg. A felület ezért az aktív
+fűtési sávot a két CT400 `active` reléállapotával kapuzza: az igényt adó
+termosztátnál az adott zóna fűtését, az inaktívnál a másik zóna fűtését
+jelzi. Ha magas fogyasztás mellett egyik CT sem kér fűtést, az állapot
+keringetési utófutás vagy ellenőrzendő eltérés.
+
 A földszinti zónában nincs klíma, ezért ott nincs hőforrás-választás. A
 Computherm aktuális helyiségében lévő friss Zigbee-hőmérő és a CT mérése
 alapértelmezetten 50–50%-os cselekedeti átlagot ad; ha csak az egyik friss, az
@@ -223,15 +243,22 @@ reléigényét és az automation határértékből számított hőigényét. A B
 bekapcsolási figyelmeztetése továbbra is a valódi CT-reléigényt követi. Ez
 megfigyelő információ, eszközparancsot nem küld.
 
+A Computherm-kártya az aktuális helyiség minden önálló
+`temperature_sensor` eszközét névvel és értékkel is megmutatja. A TRV-k
+radiátorközeli mérései ebből a listából és a cselekedeti átlagból is kimaradnak.
+
 ## Radiátortermosztátok
 
 A SONOFF TRV-ZBT saját hőmérséklete a radiátor közelsége miatt aktív
 gázfűtéskor torzított lehet, ezért nem kerül be a helyiségi hőigény számításába.
 Az induló, szándékosan egyszerű szabály szerint csak kikapcsolt Bosch/gázfűtés
 mellett használható kiegészítő helyiségi információként. A jelenlegi verzió a
-TRV adatait gyűjti és megjeleníti, de sem a szelepet, sem a kazánt nem vezérli
-belőlük. A kevert klíma–gáz stratégia továbbra is későbbi, külön jóváhagyott
-lépés.
+TRV adatait gyűjti és megjeleníti. A bélyegről kézzel állítható a PID,
+gyerekzár, valamint a fűtési és nyugalmi szelepállás, de ezekből az alkalmazás
+nem képez automatikus hőigényt és a kazánt sem vezérli. A mostani gázfűtési
+próba alapállapota PID kikapcsolva, mindkét szelepállás 100%, tehát a TRV nem
+fojtja a radiátort. A kevert klíma–gáz stratégia továbbra is későbbi, külön
+jóváhagyott lépés.
 
 ## Szervizmódok és Computherm-próba
 
@@ -244,7 +271,9 @@ a fűtési döntéseket függeszti fel, és engedélyezi a Computherm szerviztes
 A kezdőlap aktív szervizmód esetén piros figyelmeztetést mutat.
 
 A klímaszerviz-parancs explicit módot (`cool` vagy `heat`), célhőmérsékletet és
-ventilátorfokozatot küld. A készülék hardveres `16–30 °C` tartománya megmarad.
+ventilátorfokozatot küld. A ventilátorfokozatot itt is csak a bekapcsolás
+sikeres visszaolvasása után állítja. A készülék hardveres `16–30 °C`
+tartománya megmarad.
 A siker feltétele, hogy a visszaolvasott bekapcsolt állapot, üzemmód,
 célhőmérséklet és ventilátorfokozat mind megfeleljen a kérésnek. A kért mód az
 auditnapló része.

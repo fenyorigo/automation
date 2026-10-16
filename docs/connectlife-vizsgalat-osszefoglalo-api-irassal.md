@@ -246,6 +246,21 @@ Az alábbi értékeket a ConnectLife telefonos alkalmazásban végzett kontroll�
 | Mid-high | `8` | `t_fan_mute = 0` |
 | High | `9` | `t_fan_mute = 0` |
 
+A 2026-10-16-i vezérlési tesztek alapján a megbízható íráshoz a
+`t_fan_speed` és `t_fan_speed_s` mezőt azonos értékkel, együtt kell küldeni.
+Az egymezős automation-parancs a Háló klímánál már átmenetileg sem
+változtatta meg az Automata (`0/0`) állapotot. A kétmezős parancs ezzel
+szemben a Dolgozó és a Háló klímán is tartósan beállította a kért
+fokozatot.
+
+Az első visszaolvasás önmagában nem tekinthető bizonyítéknak. Egy korábbi
+próbánál a felhő rövid időre visszaadta a kért `7/7` értéket, majd a készülék
+Automatára váltott. Az automation ezért a ventilátorparancs után
+ötmásodpercenként olvas vissza, és csak hat egymást követő egyezés, vagyis
+30 másodpercnyi stabil állapot után jelöli sikeresnek a műveletet. Eltéréskor
+újrapróbálja a kétmezős parancsot, és a felületen addig a kért, valamint a
+ténylegesen visszaolvasott állapot külön látható.
+
 A Quiet beállítást célszerű külön funkcióként kezelni, nem pusztán `t_fan_speed = 1` fokozatként, mert vele együtt a `t_fan_mute` is `1` lesz. A profil `property-list` válasza a normál `t_fan_speed` értékkészletben csak a `0,5,6,7,8,9` értékeket hirdeti; a Quiet során megfigyelt `1` tehát speciális állapot.
 
 **Fontos:** a ventilátorértékek csak bekapcsolt készüléknél hordozzák a kiválasztott fokozatot. Kikapcsolás után a felhőben a `t_fan_speed` `0`-ra áll vissza, ezért kikapcsolt állapotból nem lehet visszakövetkeztetni a korábban használt ventilátorfokozatra.

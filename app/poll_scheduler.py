@@ -18,6 +18,7 @@ from entsoe_day_ahead import poll_day_ahead_prices
 from mnb_exchange_rate import poll_mnb_exchange_rate
 from scheduled_climate import process_due_climate_schedules
 from scheduled_power import reconcile_water_heater_schedule
+from manual_climate_queue import process_manual_climate_queue
 
 
 async def run_cycle(
@@ -207,6 +208,18 @@ async def main() -> None:
             next_poll = started + min(configured_interval, 10)
         if args.once:
             return
+        try:
+            processed_manual = await process_manual_climate_queue()
+            if processed_manual:
+                print(
+                    f"{datetime.now().isoformat(timespec='seconds')} "
+                    "manual climate command complete", flush=True,
+                )
+        except Exception as error:
+            print(
+                f"{datetime.now().isoformat(timespec='seconds')} "
+                f"manual climate command failed: {error}", flush=True,
+            )
         try:
             processed = await process_due_climate_schedules()
             if processed:

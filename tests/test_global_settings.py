@@ -55,6 +55,12 @@ class ReloadEnvironmentTest(unittest.TestCase):
         self.assertEqual(settings["HEATING_CLIMATE_MIN_OUTDOOR_C"].default, "5.0")
         self.assertEqual(settings["HEATING_MIN_COP"].default, "2.5")
         self.assertEqual(settings["BOILER_PANEL_ON_MIN_POWER_W"].default, "2.0")
+        self.assertEqual(
+            settings["BOILER_HOT_WATER_IDLE_MAX_POWER_W"].default, "20"
+        )
+        self.assertEqual(
+            settings["BOILER_HEATING_ACTIVE_MIN_POWER_W"].default, "80"
+        )
 
     def test_water_heater_schedule_defaults_are_ui_managed(self) -> None:
         settings = {item.key: item for item in global_settings.SETTINGS}
@@ -81,6 +87,13 @@ class ReloadEnvironmentTest(unittest.TestCase):
         values["WATER_HEATER_ON_TIME"] = "05:00"
         values["WATER_HEATER_OFF_TIME"] = "05:00"
         with self.assertRaisesRegex(ValueError, "nem lehet azonos"):
+            global_settings.save(values)
+
+    def test_save_rejects_overlapping_boiler_power_bands(self) -> None:
+        values = {item.key: item.default for item in global_settings.SETTINGS}
+        values["BOILER_HOT_WATER_IDLE_MAX_POWER_W"] = "90"
+        values["BOILER_HEATING_ACTIVE_MIN_POWER_W"] = "80"
+        with self.assertRaisesRegex(ValueError, "melegvíz-készenléti"):
             global_settings.save(values)
 
     def test_reload_updates_values_and_reports_restart_keys(self) -> None:

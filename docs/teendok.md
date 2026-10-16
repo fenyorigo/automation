@@ -63,6 +63,10 @@
 
 ## Bosch üzemmódok teljesítményalapú felismerése
 
+- [x] A kb. 5 W-os alapállapotot melegvíz-készenlétként, a 80 W feletti
+  fogyasztást folyamatban levő fűtésként kijelezni. A fűtési zónát nem a
+  teljesítmény, hanem a két CT400 reléigénye azonosítja; CT-igény nélkül a
+  magasabb fogyasztás utófutás vagy eltérés.
 - [ ] A következő kazánszerviz alatt nagy gyakorisággal rögzíteni a Bosch
   nyugalmi, melegvíz-indítási, fűtésindítási, tartós fűtési és leállás utáni
   teljesítményprofilját.
@@ -85,6 +89,20 @@
 - [ ] A szerviz alatt megmérni a kazán leállása utáni keringetőszivattyú-
   utánfutást. A jelenlegi becslés kb. 30 másodperc; ezt az események és a
   teljesítményprofil értelmezésénél figyelembe kell venni.
+
+## Computherm napi program
+
+- [x] Igazolni, hogy a helyi Broadlink/Hysen `get_full_status()` a CT400-ból
+  visszaadja a hat munkanapi és két hétvégi időszak kezdését és
+  célhőmérsékletét. A 2026-10-16-i olvasás az appban beállított 19 °C-os
+  programot mindkét termosztáton visszaadta.
+- [ ] Kontrollált próbában egy jövőbeli periódus idejét és hőmérsékletét
+  a Computherm appban ideiglenesen módosítani, előtte–utána helyi
+  állapotpillanatképet olvasni, majd az appban visszaállítani. Ezzel a
+  kétirányú megfeleltetés automation-oldali írás nélkül igazolható.
+- [ ] Csak a kontrollpróba után készíteni előnézettel, visszaolvasással,
+  auditnaplóval és eredeti program-visszaállítással védett
+  `set_schedule()` kezelést az automationban.
 
 ## SONOFF TRV-ZBT radiátorszelepek
 

@@ -99,6 +99,9 @@ A kártyák az eszköz típusától függően mutathatják:
 - a Computherm mért és beállított hőmérsékletét;
 - mindkét Computherm fűtési javaslatát: az emeleten a klíma–gáz választást, a
   földszinten pedig a termosztátigény és a Bosch állapota szerinti gázfűtést;
+- a Computherm-bélyegen az aktuálisan hozzárendelt helyiség további önálló
+  hőmérőinek nevét, értékét és mérési idejét. A radiátorközeli TRV-k nem
+  szerepelnek ebben a felsorolásban;
 - a Nous/Tasmota pillanatnyi teljesítményét, feszültségét, relé- és
   terheltségi állapotát, továbbá az összes fogyasztást és annak kezdőidejét;
 - a Bosch 7000i kézi állapotát és szervizadatait.
@@ -109,14 +112,27 @@ A kártyák az eszköz típusától függően mutathatják:
   a `contact=false` nyitott állapotot jelent. Az állapotváltások időbélyeggel
   megmaradnak, és a helyiség szellőztetési naplóját automatikusan vezérlik.
 - a SONOFF TRV Gen2 radiátorszelepnél a radiátorközeli hőmérsékletet,
-  célértéket, szelepnyitást, órás fűtési aktivitást, üzemmódot, kalibrációt,
-  hibajelzést, elemet és LQI-t. A kártya megjegyzése emlékeztet rá, hogy ez a
-  hőmérséklet aktív gázfűtés alatt nem helyiségi vezérlési alap.
+  célértéket, működési állapotot, külön a fűtési és nyugalmi szelepállást, a
+  PID-et, gyerekzárat, ablakfigyelést, ideiglenes módot, termosztát-linket,
+  órás fűtési aktivitást, kalibrációt, hibajelzést, elemet és LQI-t. A kártya
+  megjegyzése emlékeztet rá, hogy a TRV hőmérséklete aktív gázfűtés alatt nem
+  helyiségi vezérlési alap.
 
-A TRV-k ebben a fázisban csak megfigyelt eszközök: az alkalmazás nem módosítja
-a célértéküket, üzemmódjukat vagy szelepállásukat. Új TRV párosítás után
-automatikusan létrejön, de a megfelelő helyiséget a **Nyilvántartás** oldalon
-hozzá kell rendelni.
+A **TRV beállítások** lenyitható részen a PID, a gyerekzár, valamint kikapcsolt
+PID mellett a fűtési és nyugalmi szelepállás módosítható. A parancsot az
+alkalmazás friss MQTT-állapotból visszaellenőrzi és naplózza. Az elemes TRV-t a
+mentés előtt rövid gombnyomással célszerű felébreszteni. A Boost/Timer,
+termosztát-link, célérték és rendszerüzemmód egyelőre csak információ: ezek nem
+részei az automatikus vezérlésnek. Új TRV párosítás után az eszköz automatikusan
+létrejön, de a megfelelő helyiséget a **Nyilvántartás** oldalon hozzá kell
+rendelni.
+
+Ha a parancs kiküldése után még nem érkezett vissza az új eszközállapot, az
+érintett mezők a régi érték helyett **Parancs elküldve → kért érték** jelzést
+mutatnak. A visszaigazoló Zigbee-jelentés ezt automatikusan a tényleges értékre
+cseréli. Harminc perc után a kérés **nem igazolt** állapotba kerül, és a kártya
+ismét az utoljára ténylegesen visszaolvasott értéket mutatja külön
+figyelmeztetéssel.
 
 A kezdőlap **Eszköztípus** listájának **Problémás eszközök** nézete az
 egyértelmű beavatkozást igénylő állapotokat gyűjti össze. Ide tartozik a TRV
@@ -205,10 +221,14 @@ hiányában a művelet nem indul el rögtön: piros megerősítő blokk írja ki
 konkrét eltérést. A jóváhagyás szándékos kézi felülbírálás; a
 nyílászáró-blokkolás viszont nem bírálható felül ezen a felületen.
 
-Az indítás előtt a ConnectLife friss állapotot olvas, majd a parancs után
-többször visszaellenőrzi a bekapcsolást, az üzemmódot, a célértéket és a
-ventilátorfokozatot. Csak az egyező visszaolvasás jelenik meg sikeresként és
-kerül az állapot-, esemény- és vezérlési auditnaplóba.
+Az indítás előtt a ConnectLife friss állapotot olvas. Először a
+bekapcsolást, az üzemmódot és a célértéket küldi el, majd ezek sikeres
+visszaolvasása után ellenőrzi az induló ventilátorfokozatot. Ha az eltér a
+kérttől, 25 másodperc stabilizációs várakozás után a ventilátorbeállítást külön
+második parancsként küldi el. Csak a power, üzemmód, célérték és
+ventilátorfokozat egyező végső visszaolvasása jelenik meg teljes sikerként.
+Ha csak a ventilátorfokozat tér el, a felület figyelmeztet, de a tényleges
+bekapcsolt állapotot eltárolja és a bélyegen azonnal megjeleníti.
 
 A Nous/Tasmota lekérdezés csak adatot olvas. A dugalj reléjét nem kapcsolja,
 és a Tasmota konfigurációját sem módosítja. A beüzemelés és a
@@ -426,12 +446,14 @@ pontosan egyeznie kell a firmware `/api/v1/measurements` válaszának `device_id
 mezőjével; a jelenlegi konfigurációban ez a hostname. A panelre írt gyári
 azonosítót ettől elkülönítve kell nyilvántartani.
 
-A Bosch 7000i jelenleg közvetlen hálózati táplálást kap, nincs előtte aktív
-Nous dugalj. A Bosch kártyáján ezért a **Feszültség alatt**, **Melegvíz-
-szolgáltatás** és **Fűtés** állapotot kézzel kell nyilvántartani. A Kézi
-állapot űrlapon mindhárom egyszerű jelölőnégyzet, külön ki/be választópár
-nélkül. A korábbi fogyasztásalapú kazán-power felismerés csak új kazándugalj
-telepítése esetén használható ismét.
+A Bosch 7000i tápellátását a **Nous kazán** kapcsolja és méri. A Bosch
+kártyáján a **Feszültség alatt**, **Melegvíz-szolgáltatás** és **Fűtés**
+engedélyt továbbra is kézzel tartjuk nyilván; az űrlapon mindhárom egyszerű
+jelölőnégyzet. Ettől külön jelenik meg a Nous friss méréséből származó
+tényleges üzemállapot: kb. 5 W-nál a melegvíz-szolgáltatás aktív
+készenlétben van, a jelenlegi kb. 110–130 W-os szint pedig folyamatban levő
+fűtést jelent. A két biztos sáv közötti teljesítményt a felület átmeneti
+vagy még nem besorolt állapotnak jelzi.
 
 ### Okosdugaljak kézi kapcsolása
 
@@ -904,8 +926,10 @@ megvárni a következő tízperces pollt.
 
 Bekapcsoláskor a bekapcsolási állapot, a célhőmérséklet és a kiválasztott
 ventilátorsebesség változik. A kezdőlapi vezérlő az üzemmódot is beállítja;
-kiegészítő programokat egyik funkció sem módosít. A sikeres
-visszaellenőrzéshez a ventilátorfokozatnak is egyeznie kell a kéréssel.
+kiegészítő programokat egyik funkció sem módosít. A ventilátorfokozat a
+bekapcsolás igazolása után, szükség esetén külön második parancsban kerül
+beállításra. A sikeres végső visszaellenőrzéshez ennek is egyeznie kell a
+kéréssel.
 
 ### 12.2 Programozott klímafutás
 

@@ -161,7 +161,9 @@ A pontos határértékeket, súlyokat és biztonsági feltételeket nem itt, han
 
 - A Bosch tápellátását ismét a `nous-kazan` (`.47`,
   `C8:C9:A3:2B:35:60`) kapcsolja és méri. A kazánpanel, a melegvíz- és a
-  fűtésengedély állapota továbbra is kézi nyilvántartású. A dugalj a teljes
+  fűtésengedély állapota továbbra is kézi nyilvántartású. A Nous friss
+  teljesítménye ugyanakkor már a tényleges üzemet is jelzi: kb. 5 W a
+  melegvíz-készenlét, kb. 110–130 W a folyamatban levő fűtés. A dugalj a teljes
   Tasmota-reset után új rekordként, nulláról induló mérési előzménnyel került
   vissza; az első ellenőrzött terhelés 8 W és 231 V volt.
 - Az aktív `nous-bojler` a Télikert WC-ben lévő 1,8 kW-os villanybojlert

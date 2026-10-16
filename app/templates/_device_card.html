@@ -11,9 +11,11 @@
   {% if device.cooling_advice is defined and device.cooling_advice.cooling_demand and not device.cooling_advice.cooling_active %}<span class="badge cooling-demand">Hűtést kér</span>{% endif %}
   {% if device.heating_advice is defined and device.heating_advice.heating_demand and not device.heating_advice.heating_active %}<span class="badge heating-demand">Fűtést kér</span>{% endif %}
   {% if device.boiler_status is defined %}<span class="badge {{ 'boiler-on' if device.boiler_status.is_on else 'boiler-off' }}">{{ device.boiler_status.name }}: {{ 'bekapcsolva' if device.boiler_status.is_on else 'kikapcsolva' }}</span>{% endif %}
+  {% if device.boiler_status is defined and device.boiler_status.measured_operating_label %}<span class="badge {{ 'climate-running' if device.boiler_status.measured_operating_state == 'heating' else ('boiler-on' if device.boiler_status.measured_operating_state == 'hot_water_ready' else 'boiler-off') }}">{{ device.boiler_status.measured_operating_label }}</span>{% endif %}
   {% if device.boiler_status is defined and device.boiler_status.heating_unavailable %}<span class="badge heating-alert">Fűtést kér, de a kazán ki van kapcsolva</span>{% endif %}
   {% if device.thermostat_target_too_high is defined and device.thermostat_target_too_high %}<span class="badge heating-alert">Célérték {{ device.maximum_heating_target_c|temperature }} °C fölött</span>{% endif %}
   {% if device.managed_manually %}<span class="badge {{ 'heating-alert' if device.boiler_panel_power_alert else ('boiler-on' if device.boiler_panel_power_state == 'on' else 'boiler-off') }}">{{ device.boiler_panel_power_label }}</span>{% endif %}
+  {% if device.managed_manually %}<span class="badge {{ 'climate-running' if device.boiler_measured_operating_state == 'heating' else ('boiler-on' if device.boiler_measured_operating_state == 'hot_water_ready' else 'boiler-off') }}">{{ device.boiler_measured_operating_label }}</span>{% endif %}
   {% if device.problematic %}
   <div class="device-problem" role="status">
     <strong>Figyelmet igényel</strong>
@@ -37,6 +39,7 @@
   </div>
   <p class="temperature-provenance"><strong>2000 W-os villanyfűtő</strong><br>A tényleges fűtést az SP ebédlő méri.</p>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
+  <div class="temperature"><span class="temperature-value">{% if device.zigbee_power_w is not none %}{{ device.zigbee_power_w|float|round(1) }}{% else %}—{% endif %}</span><span class="temperature-unit"> W</span></div>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' %}
   {% if device.opening_role == 'internal' %}<p class="temperature-provenance internal-opening-provenance"><strong>Belső ajtó · nem blokkol</strong><br>{{ device.room_name }} ↔ {{ device.connected_room_name or 'nincs kapcsolt helyiség' }}</p>{% endif %}
   <div class="contact-state {% if device.zigbee_contact_closed is none %}unknown{% elif device.zigbee_contact_closed %}closed{% else %}open{% endif %}">
@@ -54,6 +57,14 @@
   <div class="temperature"><span class="temperature-value {{ 'stale-measurement' if device.measurement_is_stale }}">{{ device.temperature_c if device.temperature_c is not none else '—' }}</span><span class="temperature-unit {{ 'stale-measurement' if device.measurement_is_stale }}"> W</span></div>
   {% else %}
   <div class="temperature"><span class="temperature-value {% if device.source_system == 'shelly_mqtt' %}shelly-{{ device.shelly_status_class }}{% elif device.display_temperature_is_stale %}stale-measurement{% endif %}">{{ device.display_temperature_c|temperature }}</span><span class="temperature-unit {% if device.source_system == 'shelly_mqtt' %}shelly-{{ device.shelly_status_class }}{% elif device.display_temperature_is_stale %}stale-measurement{% endif %}">°C</span></div>
+  {% if device.source_system == 'computherm' and device.room_thermometers|default([]) %}
+  <div class="computherm-room-thermometers">
+    <strong>További helyiségi hőmérő</strong>
+    {% for thermometer in device.room_thermometers %}
+    <span class="{{ 'stale' if thermometer.measurement_is_stale }}">{{ thermometer.name }}: {{ thermometer.temperature_c|temperature }} °C{% if thermometer.measurement_at %} · <time>{{ thermometer.measurement_at|local_time }}</time>{% endif %}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% if device.cooling_advice is defined %}
     <p class="temperature-provenance">
       <strong>{{ device.display_temperature_kind }}</strong> · {{ device.cooling_advice.calculation_version }}
@@ -90,6 +101,11 @@
   {% endif %}
   {% if device.source_system == 'zigbee2mqtt' and device.device_type == 'power_meter' %}
   <dl class="state-grid">
+    <div><dt>Mai energia</dt><dd>{% if device.zigbee_energy_today_kwh is not none %}{{ device.zigbee_energy_today_kwh|float|round(3) }} kWh{% else %}—{% endif %}</dd></div>
+    <div><dt>Havi energia</dt><dd>{% if device.zigbee_energy_month_kwh is not none %}{{ device.zigbee_energy_month_kwh|float|round(3) }} kWh{% else %}—{% endif %}</dd></div>
+    <div><dt>Összes energia</dt><dd>{% if device.zigbee_energy_total_kwh is not none %}{{ device.zigbee_energy_total_kwh|float|round(3) }} kWh{% else %}—{% endif %}</dd></div>
+    <div><dt>Feszültség</dt><dd>{% if device.zigbee_voltage_v is not none %}{{ device.zigbee_voltage_v|float|round(1) }} V{% else %}—{% endif %}</dd></div>
+    <div><dt>Áram</dt><dd>{% if device.zigbee_current_a is not none %}{{ device.zigbee_current_a|float|round(2) }} A{% else %}—{% endif %}</dd></div>
     <div><dt>Kapcsolat</dt><dd>{{ 'Aktív' if device.online else 'Nincs friss adat' }}</dd></div>
     <div><dt>Dugalj</dt><dd>{% if device.switch_power is none %}—{% elif device.switch_power %}Bekapcsolva{% else %}Kikapcsolva{% endif %}</dd></div>
     <div><dt>Típus</dt><dd>{{ device.zigbee_type or 'Zigbee' }}</dd></div>
@@ -104,17 +120,55 @@
     <div><dt>Modell</dt><dd>{{ device.zigbee_model or '—' }}</dd></div>
   </dl>
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'radiator_thermostat' %}
+  {% set requested_trv = device.trv_requested_settings if device.trv_setting_feedback|default('') == 'pending' else {} %}
   <dl class="state-grid">
     <div><dt>Célhőmérséklet</dt><dd>{% if device.trv_target_temperature_c is not none %}{{ device.trv_target_temperature_c|temperature }} °C{% else %}—{% endif %}</dd></div>
-    <div><dt>Szelepnyitás</dt><dd>{% if device.trv_valve_position_percent is not none %}{{ device.trv_valve_position_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>Működés</dt><dd>{% if device.trv_running_state == 'heat' %}Fűt{% elif device.trv_running_state == 'idle' %}Nyugalmi{% else %}{{ device.trv_running_state or '—' }}{% endif %}</dd></div>
+    <div><dt>Fűtési szelepállás</dt><dd>{% if 'heating_valve_position' in requested_trv %}<span class="trv-command-pending">Parancs elküldve → {{ requested_trv.heating_valve_position|int }}%</span>{% elif device.trv_heating_valve_position_percent is not none %}{{ device.trv_heating_valve_position_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>Nyugalmi szelepállás</dt><dd>{% if 'idle_valve_position' in requested_trv %}<span class="trv-command-pending">Parancs elküldve → {{ requested_trv.idle_valve_position|int }}%</span>{% elif device.trv_idle_valve_position_percent is not none %}{{ device.trv_idle_valve_position_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>PID vezérlés</dt><dd>{% if 'smart_temperature_control' in requested_trv %}<span class="trv-command-pending">Parancs elküldve → {{ 'Bekapcsolva' if requested_trv.smart_temperature_control == 'ON' else 'Kikapcsolva' }}</span>{% else %}{{ 'Bekapcsolva' if device.trv_pid_control == 'ON' else ('Kikapcsolva' if device.trv_pid_control == 'OFF' else '—') }}{% endif %}</dd></div>
+    <div><dt>Gyerekzár</dt><dd>{% if 'child_lock' in requested_trv %}<span class="trv-command-pending">Parancs elküldve → {{ 'Zárolva' if requested_trv.child_lock == 'LOCK' else 'Feloldva' }}</span>{% else %}{{ 'Zárolva' if device.trv_child_lock == 'LOCK' else ('Feloldva' if device.trv_child_lock == 'UNLOCK' else '—') }}{% endif %}</dd></div>
     <div><dt>Órás fűtési aktivitás</dt><dd>{% if device.trv_heating_activity_percent is not none %}{{ device.trv_heating_activity_percent|float|round(0)|int }}%{% else %}—{% endif %}</dd></div>
     <div><dt>Üzemmód</dt><dd>{% if device.trv_system_mode == 'heat' %}Fűtés{% elif device.trv_system_mode == 'off' %}Kikapcsolva{% else %}{{ device.trv_system_mode or '—' }}{% endif %}</dd></div>
+    <div><dt>Ablakfigyelés</dt><dd>{{ 'Bekapcsolva' if device.trv_open_window_detection == 'ON' else ('Kikapcsolva' if device.trv_open_window_detection == 'OFF' else '—') }}</dd></div>
+    <div><dt>Nyitott ablak</dt><dd>{% if device.trv_open_window_detected is none %}—{% elif device.trv_open_window_detected %}Észlelve{% else %}Nem észlelt{% endif %}</dd></div>
+    <div><dt>Ideiglenes mód</dt><dd>{% if device.trv_temporary_mode == 'boost' %}Boost{% elif device.trv_temporary_mode == 'timer' %}Időzített{% elif device.trv_temporary_mode == 'disabled' %}Kikapcsolva{% else %}{{ device.trv_temporary_mode or '—' }}{% endif %}</dd></div>
+    <div><dt>Ideiglenes beállítás</dt><dd>{% if device.trv_temporary_mode in ['boost','timer'] %}{{ device.trv_temporary_target_temperature_c|temperature }} °C · {{ device.trv_temporary_duration_minutes|int }} perc{% else %}—{% endif %}</dd></div>
+    <div><dt>Termosztát-link</dt><dd>{{ 'Bekapcsolva' if device.trv_thermostat_linkage == 'ON' else ('Kikapcsolva' if device.trv_thermostat_linkage == 'OFF' else '—') }}</dd></div>
+    <div><dt>Linkelt célérték</dt><dd>{% if device.trv_linkage_target_temperature_c is not none %}{{ device.trv_linkage_target_temperature_c|temperature }} °C{% else %}—{% endif %}</dd></div>
     <div><dt>Kalibráció</dt><dd>{% if device.trv_calibration_status == 'success' %}Sikeres{% else %}{{ device.trv_calibration_status or '—' }}{% endif %}</dd></div>
     <div><dt>Hibajelzés</dt><dd>{% if device.trv_fault_code in [none, '', 'none'] %}Nincs{% else %}{{ device.trv_fault_code }}{% endif %}</dd></div>
     <div><dt>Elem</dt><dd>{% if device.zigbee_battery_percent is not none %}{{ device.zigbee_battery_percent|float|round(0)|int }}%{% else %}Még nincs adat{% endif %}</dd></div>
     <div><dt>Jelminőség</dt><dd>{% if device.zigbee_linkquality is not none %}{{ device.zigbee_linkquality|int }} LQI{% else %}—{% endif %}</dd></div>
     <div><dt>Modell</dt><dd>{{ device.zigbee_model or '—' }}</dd></div>
   </dl>
+  {% if device.trv_setting_feedback|default('') == 'expired' %}
+  <p class="trv-command-expired"><strong>A legutóbbi parancs nem igazolt.</strong> A bélyeg ismét a ténylegesen utoljára visszaolvasott állapotot mutatja.</p>
+  {% endif %}
+  {% if can_write %}
+  <details class="trv-settings">
+    <summary>TRV beállítások</summary>
+    <form method="post" action="{{ url_for('update_trv_settings',device_id=device.id) }}" data-trv-settings-control>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="trv-setting-fields">
+        <label>PID vezérlés<select name="smart_temperature_control" data-trv-pid>
+          {% set form_pid = requested_trv.get('smart_temperature_control', device.trv_pid_control) %}
+          <option value="OFF" {{ 'selected' if form_pid != 'ON' }}>Kikapcsolva</option>
+          <option value="ON" {{ 'selected' if form_pid == 'ON' }}>Bekapcsolva</option>
+        </select></label>
+        <label>Gyerekzár<select name="child_lock">
+          {% set form_lock = requested_trv.get('child_lock', device.trv_child_lock) %}
+          <option value="LOCK" {{ 'selected' if form_lock == 'LOCK' }}>Zárolva</option>
+          <option value="UNLOCK" {{ 'selected' if form_lock != 'LOCK' }}>Feloldva</option>
+        </select></label>
+        <label>Fűtési szelepállás (%)<input name="heating_valve_position" data-trv-valve-position type="number" min="0" max="100" step="1" required value="{{ requested_trv.get('heating_valve_position', device.trv_heating_valve_position_percent if device.trv_heating_valve_position_percent is not none else 100)|int }}"></label>
+        <label>Nyugalmi szelepállás (%)<input name="idle_valve_position" data-trv-valve-position type="number" min="0" max="100" step="1" required value="{{ requested_trv.get('idle_valve_position', device.trv_idle_valve_position_percent if device.trv_idle_valve_position_percent is not none else 100)|int }}"></label>
+      </div>
+      <p>Bekapcsolt PID mellett a két fix szelepállást a TRV nem alkalmazza. Az elemes eszközt a mentés előtt érdemes rövid gombnyomással felébreszteni.</p>
+      <button type="submit">TRV beállítások mentése</button>
+    </form>
+  </details>
+  {% endif %}
   {% elif device.source_system == 'zigbee2mqtt' and device.device_type == 'contact_sensor' %}
   <dl class="state-grid contact-details">
     <div><dt>Szerep</dt><dd>{{ 'Belső, nem blokkoló' if device.opening_role == 'internal' else 'Külső, blokkoló' }}</dd></div>
@@ -164,6 +218,25 @@
   </form>
   {% endif %}
   {% if can_write and device.manual_climate_control is defined %}
+    {% set pending_command = device.pending_climate_command|default(none) %}
+    {% if pending_command %}
+    {% set observed = pending_command.observed_state %}
+    <section class="climate-command-progress" role="status">
+      <strong>{% if pending_command.requested_power %}Kért állapot{% else %}Kikapcsolás folyamatban{% endif %}</strong>
+      {% if pending_command.requested_power %}
+      <span>{{ 'Fűtés' if pending_command.requested_mode == 'heat' else 'Hűtés' }} · {{ pending_command.requested_temperature_c|temperature }} °C · {{ device.manual_climate_control.fan_speeds.get(pending_command.requested_fan_speed,pending_command.requested_fan_speed) }}</span>
+      {% endif %}
+      <small>Fázis: {{ {'queued':'sorban áll','preflight':'kiinduló állapot lekérése','power_mode_target':'bekapcsolás, üzemmód és célérték küldése','verify_power':'indítás visszaolvasása','stabilizing_fan':'előfűtés / ventilátorparancsra vár','setting_fan':'ventilátorfokozat beállítása','verify_fan':'ventilátorfokozat visszaolvasása','confirming_fan':'ventilátorfokozat tartós megerősítése','restoring_fan':'kiinduló ventilátorfokozat visszaállítása'}.get(pending_command.execution_phase,pending_command.execution_phase) }}</small>
+      {% if observed %}
+      <small class="climate-command-differences">Még eltér:
+        {% if observed.power|default(device.power) != pending_command.requested_power %}állapot{% endif %}
+        {% if pending_command.requested_power and observed.mode|default(device.mode) != pending_command.requested_mode %} · üzemmód ({{ observed.mode|default(device.mode) }}){% endif %}
+        {% if pending_command.requested_power and observed.target_temperature_c|default(device.target_temperature_c)|float != pending_command.requested_temperature_c|float %} · célhőmérséklet ({{ observed.target_temperature_c|default(device.target_temperature_c)|temperature }} °C){% endif %}
+        {% if pending_command.requested_power and observed.fan_speed|default(device.fan_speed) != pending_command.requested_fan_speed %} · ventilátor ({{ device.manual_climate_control.fan_speeds.get(observed.fan_speed|default(device.fan_speed),observed.fan_speed|default(device.fan_speed)) }}){% endif %}
+      </small>
+      {% else %}<small>A tényleges állapot első visszaolvasására vár.</small>{% endif %}
+    </section>
+    {% endif %}
     {% if pending_climate_start and pending_climate_start.device_id == device.id %}
     <section class="climate-start-confirmation" role="alert">
       <strong>⚠ Kültéri határ felülbírálása</strong>
@@ -185,7 +258,7 @@
     {% else %}
     {% set climate_control = device.manual_climate_control %}
     {% set selected_guard = climate_control.modes[climate_control.selected_mode] %}
-    <form class="card-climate-control" method="post" action="{{ url_for('start_climate_from_card',device_id=device.id) }}" data-card-climate-control>
+    <form class="card-climate-control" method="post" action="{{ url_for('start_climate_from_card',device_id=device.id) }}" autocomplete="off" data-card-climate-control data-command-pending="{{ 'true' if pending_command else 'false' }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <p class="form-title">Kézi klímavezérlés</p>
       <div class="card-climate-fields">
@@ -201,19 +274,19 @@
           <input type="number" name="temperature_c" step="1" min="{{ selected_guard.target_min_c }}" max="{{ selected_guard.target_max_c }}" value="{{ climate_control.selected_target_c }}" required data-climate-target>
         </label>
         <label>Ventilátor
-          <select name="fan_speed" required>
+          <select name="fan_speed" required data-climate-fan data-server-value="{{ climate_control.selected_fan_speed }}">
             {% for value,label in climate_control.fan_speeds.items() %}<option value="{{ value }}" {{ 'selected' if climate_control.selected_fan_speed == value }}>{{ label }}</option>{% endfor %}
           </select>
         </label>
       </div>
       <p class="card-climate-guard {{ 'blocked' if selected_guard.hard_blocked }}" data-climate-guard>{% if selected_guard.hard_blocked %}Indítás blokkolva: {{ selected_guard.blockers|join(' ') }}{% else %}A blokkoló nyílászárók állapota rendben. Kültéri határeltérésnél külön megerősítést kérünk.{% endif %}</p>
-      <button type="submit" data-climate-submit {{ 'disabled' if selected_guard.hard_blocked }}>{{ 'Beállítás alkalmazása' if device.power else 'Klíma bekapcsolása' }}</button>
+      <button type="submit" data-climate-submit {{ 'disabled' if selected_guard.hard_blocked or pending_command }}>{{ 'Beállítás alkalmazása' if device.power else 'Klíma bekapcsolása' }}</button>
     </form>
     {% endif %}
     {% if device.power %}
     <form class="card-climate-stop" method="post" action="{{ url_for('stop_climate_from_card',device_id=device.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="danger-button" type="submit">Klíma kikapcsolása</button>
+      <button class="danger-button" type="submit" {{ 'disabled' if pending_command }}>Klíma kikapcsolása</button>
     </form>
     {% endif %}
   {% endif %}
@@ -265,9 +338,16 @@
   {% endif %}
   {% if device.heating_zone_advice is defined %}
   <div class="heating-zone-advice {{ device.heating_zone_advice.status }}">
+    {% if device.heating_zone_advice.climate_selection and device.heating_zone_advice.active_climate_rooms %}
+    <strong>{{ device.heating_zone_advice.zone_label }} állapot: Klímafűtés folyamatban</strong>
+    <small>Klíma bekapcsolva: {{ device.heating_zone_advice.active_climate_rooms|join(', ') }}.</small>
+    <small>Belső ajtók nyitva: {{ device.heating_zone_advice.open_internal_door_rooms|join(', ') if device.heating_zone_advice.open_internal_door_rooms else 'nincs' }}.</small>
+    {% if device.heating_zone_advice.unserved_demanded_rooms %}<small>További, még ki nem szolgált fűtési igény: {{ device.heating_zone_advice.unserved_demanded_rooms|join(', ') }}.</small>{% endif %}
+    {% else %}
     <strong>{{ device.heating_zone_advice.zone_label }} javaslat: {{ device.heating_zone_advice.status_label }}</strong>
     {% if device.heating_zone_advice.demanded_rooms %}<small>Fűtést kér: {{ device.heating_zone_advice.demanded_rooms|join(', ') }}.</small>{% endif %}
     {% if device.heating_zone_advice.climate_rooms %}<small>Klímával fűthető: {{ device.heating_zone_advice.climate_rooms|join(', ') }}.</small>{% endif %}
+    {% endif %}
     {% if device.heating_zone_advice.gas_required_rooms %}<small>Gázt igényel: {{ device.heating_zone_advice.gas_required_rooms|join(', ') }}.</small>{% endif %}
     {% if device.heating_zone_advice.blocked_rooms %}<small>Blokkolt helyiség: {{ device.heating_zone_advice.blocked_rooms|join(', ') }}.</small>{% endif %}
     {% if device.heating_zone_advice.action_temperature_c is defined and device.heating_zone_advice.action_temperature_c is not none %}<small>Cselekedeti: {{ device.heating_zone_advice.action_temperature_c|temperature }} °C · automation-határ: {{ device.heating_zone_advice.room_threshold_c|temperature }} °C.</small>{% endif %}

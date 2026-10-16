@@ -51,7 +51,11 @@ azonosítók a nem verziózott `config/devices.json` fájlban vannak.
 | Hőmérő | `Zb vendégszoba` | Földszint / Vendégszoba |
 | Kültéri hőmérő | `Zb ext` | Zónán kívüli / Kültéri |
 | Radiátortermosztát | `TRV-G2 nappali bal` | Földszint / Nappali |
+| Radiátortermosztát | `TRV-G2 nappali jobb` | Földszint / Nappali |
+| Radiátortermosztát | `TRV-G2 ebédlő` | Földszint / Ebédlő |
 | Radiátortermosztát | `TRV-G2 Kristófék` | Emelet / Kristófék |
+| Radiátortermosztát | `TRV-G2 Rita` | Emelet / Rita |
+| Radiátortermosztát | `TRV-G2 háló` | Emelet / Háló |
 | Nyitásérzékelő | `Tuya dolgozó ablak` | Emelet / Dolgozó |
 | Nyitásérzékelő | `Tuya erkélyajtó` | Emelet / Dolgozó |
 | Nyitásérzékelő | `Tuya háló` | Emelet / Háló |
@@ -84,8 +88,10 @@ nappali; a kapcsolt második helyiség az ajtó túloldalán levő hálószoba.
 
 A `TRV-G2 nappali bal` fizikai azonosítója `0xa4c138222cb21929`, a
 `TRV-G2 Kristófék` azonosítója `0xa4c138972d1d2804`; mindkettő modellje
-`TRV-ZBT`. Mindkét szelep automatikusan felismert, helyiséghez rendelt és
-idősorosan gyűjtött eszköz.
+`TRV-ZBT`. Mind a hat szelep automatikusan felismert, helyiséghez rendelt és
+idősorosan gyűjtött eszköz. A gázfűtési próba kezdetén mindegyiken ki van
+kapcsolva a PID, a fűtési és nyugalmi szelepállás egyaránt 100%, ezért egyik
+sem fojtja a radiátort.
 
 ## Routerek, MQTT-hőmérők és fogyasztásmérők
 
@@ -110,9 +116,12 @@ régi rekordot és annak 180 mérését a felhasználó kérésére töröltük.
 
 A SONOFF S60ZBTPF Zigbee router-dugaljak `power`, `current`, `voltage` és
 `energy` értékei csak a `zigbee2mqtt_property_cache` legfrissebb állapotaként
-maradnak meg, ezekből nem készül mérési idősor. A reléállapot szintén a Zigbee
-állapotcache része. Közülük csak az `SP ebédlő` kapcsolható az UI-ról; a többi
-router védetten megfigyelési célú. A `Nous main IT` és `Nous auxiliary IT`
+maradnak meg, ezekből nem készül mérési idősor. Az aktuális teljesítményt,
+áramot, feszültséget, valamint a dugalj által közölt napi, havi és összes
+energiát a bélyeg az állapotcache-ből jeleníti meg. A reléállapot szintén a
+Zigbee állapotcache része. Közülük csak az `SP ebédlő` kapcsolható az UI-ról;
+a többi router védetten megfigyelési célú. A `Nous main IT` és
+`Nous auxiliary IT`
 részletes Tasmota-méréseiből az aktuális és az előző naptári hónap marad meg;
 a többi Tasmota dugalj csak a legfrissebb mérési és állapotrekordját őrzi.
 

@@ -43,6 +43,7 @@ from manual_climate_control import (
     manual_climate_guard,
 )
 from power_switch_control import control_tasmota_power, control_zigbee_power
+from trv_control import control_trv_settings
 from scheduled_power import WATER_HEATER_HOSTNAME, water_heater_schedule_details
 from computherm_service import connect_device as connect_computherm, restore_test, snapshot as computherm_snapshot, start_test, suppress_heat
 from database_backup import create_database_export, export_directory, list_database_exports
@@ -1217,7 +1218,10 @@ def load_dashboard(
                 WHERE zpc.device_id=d.id AND zpc.property_name='occupied_heating_setpoint') AS trv_target_temperature_c,
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
-                WHERE zpc.device_id=d.id AND zpc.property_name='heating_valve_position') AS trv_valve_position_percent,
+                WHERE zpc.device_id=d.id AND zpc.property_name='heating_valve_position') AS trv_heating_valve_position_percent,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='idle_valve_position') AS trv_idle_valve_position_percent,
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='heat_percentage_hour') AS trv_heating_activity_percent,
@@ -1230,6 +1234,36 @@ def load_dashboard(
               (SELECT zpc.text_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='motor_travel_calibration_status') AS trv_calibration_status,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='running_state') AS trv_running_state,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='smart_temperature_control') AS trv_pid_control,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='child_lock') AS trv_child_lock,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='open_window') AS trv_open_window_detection,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='open_window_detected') AS trv_open_window_detected,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='temporary_mode_mode') AS trv_temporary_mode,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='temporary_mode_duration') AS trv_temporary_duration_minutes,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='temporary_mode_target_temperature') AS trv_temporary_target_temperature_c,
+              (SELECT zpc.text_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='remote_temperature_linkage') AS trv_thermostat_linkage,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='remote_setpoint_temperature') AS trv_linkage_target_temperature_c,
               (SELECT zpc.numeric_value
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='humidity') AS zigbee_humidity_percent,
@@ -1266,6 +1300,24 @@ def load_dashboard(
                                      JSON_UNQUOTE(zpc.value_json)))
                  FROM zigbee2mqtt_property_cache zpc
                 WHERE zpc.device_id=d.id AND zpc.property_name='state') AS zigbee_power_state,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='power') AS zigbee_power_w,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='current') AS zigbee_current_a,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='voltage') AS zigbee_voltage_v,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='energy_today') AS zigbee_energy_today_kwh,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='energy_month') AS zigbee_energy_month_kwh,
+              (SELECT zpc.numeric_value
+                 FROM zigbee2mqtt_property_cache zpc
+                WHERE zpc.device_id=d.id AND zpc.property_name='energy') AS zigbee_energy_total_kwh,
               CASE WHEN d.source_system='shelly_mqtt'
                    THEN (SELECT MAX(msr.observed_at)
                            FROM sensors ms
@@ -1433,11 +1485,36 @@ def load_dashboard(
             attempt_params,
         )
         attempts = rows_as_dicts(cursor)
+        cursor.execute(
+            """SELECT a.id,a.device_id,a.requested_power,a.requested_temperature_c,
+                      a.requested_fan_speed,a.requested_mode,a.execution_phase,
+                      a.verified_state,a.requested_at,a.started_at,a.phase_updated_at
+                 FROM climate_control_attempts a
+                 JOIN (
+                   SELECT device_id,MAX(id) AS id
+                     FROM climate_control_attempts
+                    WHERE status='requested' AND execution_phase IS NOT NULL
+                    GROUP BY device_id
+                 ) latest ON latest.id=a.id"""
+        )
+        pending_climate_attempts = {
+            int(item["device_id"]): item for item in rows_as_dicts(cursor)
+        }
     finally:
         cursor.close()
         connection.close()
 
     for device in devices:
+        pending_attempt = pending_climate_attempts.get(int(device["id"]))
+        if pending_attempt is not None:
+            observed = pending_attempt.get("verified_state")
+            if isinstance(observed, str):
+                try:
+                    observed = json.loads(observed)
+                except (TypeError, ValueError):
+                    observed = None
+            pending_attempt["observed_state"] = observed or {}
+            device["pending_climate_command"] = pending_attempt
         device["source_label"] = SOURCE_LABELS.get(
             device["source_system"], device["source_system"]
         )
@@ -1519,6 +1596,9 @@ def load_dashboard(
             > timedelta(hours=1)
         )
 
+    annotate_trv_setting_requests(devices)
+    annotate_computherm_room_thermometers(devices)
+
     computherm_targets = [
         item
         for item in devices
@@ -1538,6 +1618,128 @@ def load_dashboard(
                 device["derived_target_temperature_c"] = minimum
                 device["derived_target_source"] = " és ".join(locations)
     return devices, attempts
+
+
+def annotate_computherm_room_thermometers(
+    devices: list[dict[str, Any]],
+) -> None:
+    """Attach independent thermometers in the CT's current room to its card."""
+    for thermostat in devices:
+        if thermostat.get("source_system") != "computherm":
+            continue
+        room_id = thermostat.get("room_id")
+        thermostat["room_thermometers"] = sorted(
+            (
+                {
+                    "id": item.get("id"),
+                    "name": item.get("name"),
+                    "temperature_c": item.get("temperature_c"),
+                    "measurement_at": item.get("measurement_at"),
+                    "measurement_is_stale": item.get("measurement_is_stale", False),
+                }
+                for item in devices
+                if room_id is not None
+                and item.get("room_id") == room_id
+                and item.get("id") != thermostat.get("id")
+                and item.get("device_type") == "temperature_sensor"
+                and item.get("temperature_c") is not None
+            ),
+            key=lambda item: str(item.get("name") or "").casefold(),
+        )
+
+
+TRV_SETTING_CONFIRMATION_TIMEOUT = timedelta(minutes=30)
+TRV_SETTING_DEVICE_FIELDS = {
+    "smart_temperature_control": "trv_pid_control",
+    "child_lock": "trv_child_lock",
+    "heating_valve_position": "trv_heating_valve_position_percent",
+    "idle_valve_position": "trv_idle_valve_position_percent",
+}
+
+
+def trv_setting_value_matches(actual: Any, requested: Any) -> bool:
+    if isinstance(requested, (int, float)) and not isinstance(requested, bool):
+        try:
+            return abs(float(actual) - float(requested)) < 0.01
+        except (TypeError, ValueError):
+            return False
+    return str(actual or "").strip().casefold() == str(requested).strip().casefold()
+
+
+def annotate_trv_setting_requests(devices: list[dict[str, Any]]) -> None:
+    """Expose an unconfirmed TRV command until cache state catches up."""
+    trv_devices = {
+        int(item["id"]): item
+        for item in devices
+        if item.get("source_system") == "zigbee2mqtt"
+        and item.get("device_type") == "radiator_thermostat"
+    }
+    if not trv_devices:
+        return
+    connection = connect_database()
+    cursor = connection.cursor()
+    now = datetime.now(UTC).replace(tzinfo=None)
+    try:
+        placeholders = ",".join("?" for _ in trv_devices)
+        cursor.execute(
+            f"""SELECT r.id,r.device_id,r.requested_settings,r.requested_at,r.status
+                  FROM trv_setting_requests r
+                  JOIN (
+                    SELECT device_id,MAX(id) AS id
+                      FROM trv_setting_requests
+                     WHERE device_id IN ({placeholders})
+                     GROUP BY device_id
+                  ) latest ON latest.id=r.id
+                 WHERE r.status IN ('pending','expired')""",
+            tuple(trv_devices),
+        )
+        changed = False
+        for row in rows_as_dicts(cursor):
+            device = trv_devices[int(row["device_id"])]
+            requested = json.loads(row["requested_settings"])
+            matches = all(
+                trv_setting_value_matches(
+                    device.get(TRV_SETTING_DEVICE_FIELDS[key]), value
+                )
+                for key, value in requested.items()
+                if key in TRV_SETTING_DEVICE_FIELDS
+            )
+            status = str(row["status"])
+            if status == "pending" and matches:
+                status = "verified"
+                cursor.execute(
+                    """UPDATE trv_setting_requests
+                          SET status='verified',verified_state=?,completed_at=?
+                        WHERE id=? AND status='pending'""",
+                    (json.dumps(requested), now, row["id"]),
+                )
+                changed = True
+            elif (
+                status == "pending"
+                and now - row["requested_at"] > TRV_SETTING_CONFIRMATION_TIMEOUT
+            ):
+                status = "expired"
+                cursor.execute(
+                    """UPDATE trv_setting_requests
+                          SET status='expired',completed_at=?,
+                              error_code='confirmation_timeout',
+                              error_message='A Zigbee2MQTT-cache 30 percen belül nem igazolta a kért állapotot.'
+                        WHERE id=? AND status='pending'""",
+                    (now, row["id"]),
+                )
+                changed = True
+            if status in {"pending", "expired"}:
+                device["trv_setting_feedback"] = status
+                device["trv_requested_settings"] = requested
+                device["trv_setting_requested_at"] = row["requested_at"]
+        if changed:
+            connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
 
 
 def load_historic_esp32_devices() -> list[dict[str, Any]]:
@@ -1622,6 +1824,9 @@ def annotate_boiler_operating_states(devices: list[dict[str, Any]]) -> None:
     boiler["boiler_panel_power_state"] = "unpowered"
     boiler["boiler_panel_power_label"] = "Kazán power: nincs táp"
     boiler["boiler_panel_power_alert"] = False
+    boiler["boiler_measured_operating_state"] = "unpowered"
+    boiler["boiler_measured_operating_label"] = "Mért állapot: nincs tápellátás"
+    boiler["boiler_measured_power_w"] = None
     panel_on = False
     if supply_power and supply is not None:
         measurement_at = supply.get("measurement_at")
@@ -1636,18 +1841,47 @@ def annotate_boiler_operating_states(devices: list[dict[str, Any]]) -> None:
         if not measurement_fresh:
             boiler["boiler_panel_power_state"] = "pending"
             boiler["boiler_panel_power_label"] = "Kazán power: ellenőrzésre vár"
+            boiler["boiler_measured_operating_state"] = "pending"
+            boiler["boiler_measured_operating_label"] = "Mért állapot: friss mérésre vár"
         else:
             threshold = float(os.getenv("BOILER_PANEL_ON_MIN_POWER_W", "2.0"))
-            panel_on = float(supply.get("temperature_c") or 0) >= threshold
+            measured_power_w = float(supply.get("temperature_c") or 0)
+            boiler["boiler_measured_power_w"] = measured_power_w
+            panel_on = measured_power_w >= threshold
             if panel_on:
                 boiler["boiler_panel_power_state"] = "on"
                 boiler["boiler_panel_power_label"] = "Kazán power aktív"
+                idle_max = float(
+                    os.getenv("BOILER_HOT_WATER_IDLE_MAX_POWER_W", "20")
+                )
+                heating_min = float(
+                    os.getenv("BOILER_HEATING_ACTIVE_MIN_POWER_W", "80")
+                )
+                if measured_power_w >= heating_min:
+                    boiler["boiler_measured_operating_state"] = "heating"
+                    boiler["boiler_measured_operating_label"] = (
+                        f"Fűtés folyamatban · {measured_power_w:.0f} W"
+                    )
+                elif measured_power_w <= idle_max:
+                    boiler["boiler_measured_operating_state"] = "hot_water_ready"
+                    boiler["boiler_measured_operating_label"] = (
+                        f"Melegvíz-szolgáltatás aktív · {measured_power_w:.0f} W"
+                    )
+                else:
+                    boiler["boiler_measured_operating_state"] = "transition"
+                    boiler["boiler_measured_operating_label"] = (
+                        f"Átmeneti vagy még nem besorolt fogyasztás · {measured_power_w:.0f} W"
+                    )
             else:
                 boiler["boiler_panel_power_state"] = "off"
                 boiler["boiler_panel_power_label"] = (
                     "Nous bekapcsolva, de a kazán power kapcsolója ki van kapcsolva"
                 )
                 boiler["boiler_panel_power_alert"] = True
+                boiler["boiler_measured_operating_state"] = "panel_off"
+                boiler["boiler_measured_operating_label"] = (
+                    f"Kazán power kikapcsolva · {measured_power_w:.0f} W"
+                )
     boiler["boiler_panel_power_on"] = panel_on
     boiler["boiler_hot_water_enabled"] = bool(
         panel_on and boiler.get("manual_hot_water_state")
@@ -3081,6 +3315,18 @@ def dashboard() -> str:
         (item["last_poll_at"] for item in devices if item["last_poll_at"]),
         default=None,
     )
+    latest_device_state = max(
+        (item["state_at"] for item in devices if item["state_at"]),
+        default=None,
+    )
+    marker_connection = connect_database()
+    marker_cursor = marker_connection.cursor()
+    try:
+        marker_cursor.execute("SELECT MAX(phase_updated_at) FROM climate_control_attempts")
+        latest_climate_command = marker_cursor.fetchone()[0]
+    finally:
+        marker_cursor.close()
+        marker_connection.close()
     return render_template(
         "dashboard.html",
         devices=devices,
@@ -3092,6 +3338,17 @@ def dashboard() -> str:
         offline_count=offline_count,
         latest_poll=latest_poll,
         poll_marker=latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
+        device_state_marker=(
+            latest_device_state.isoformat(timespec="milliseconds")
+            if latest_device_state else None
+        ),
+        climate_command_marker=(
+            latest_climate_command.isoformat(timespec="milliseconds")
+            if latest_climate_command else None
+        ),
+        has_pending_climate_commands=any(
+            item.get("pending_climate_command") for item in devices
+        ),
         poll_notice=session.pop("poll_notice", None),
         pending_power_off=session.get("pending_power_off"),
         pending_climate_start=session.get("pending_climate_start"),
@@ -3169,12 +3426,29 @@ def poll_status():
                 WHERE d.is_active=1"""
         )
         latest_poll = cursor.fetchone()[0]
+        cursor.execute("SELECT MAX(phase_updated_at) FROM climate_control_attempts")
+        latest_climate_command = cursor.fetchone()[0]
+        cursor.execute(
+            """SELECT MAX(ds.observed_at)
+                 FROM device_states ds
+                 JOIN devices d ON d.id=ds.device_id
+                WHERE d.is_active=1"""
+        )
+        latest_device_state = cursor.fetchone()[0]
     finally:
         cursor.close()
         connection.close()
     response = jsonify({
         "busy": polling_operation_active(),
         "latest_poll": latest_poll.isoformat(timespec="milliseconds") if latest_poll else None,
+        "latest_climate_command": (
+            latest_climate_command.isoformat(timespec="milliseconds")
+            if latest_climate_command else None
+        ),
+        "latest_device_state": (
+            latest_device_state.isoformat(timespec="milliseconds")
+            if latest_device_state else None
+        ),
     })
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -4950,68 +5224,22 @@ def start_climate_from_card(device_id: int):
         return redirect(target)
 
     try:
-        with polling_cycle_lock(operation="manual_climate_control"):
-            attempt_id = begin_climate_control_attempt(
-                device_id, True, temperature, fan_speed, requested_mode=mode
-            )
-            result = asyncio.run(
-                control_climate(
-                    str(device["source_puid"]),
-                    True,
-                    temperature,
-                    fan_speed,
-                    mode=mode,
-                    allow_running_update=True,
-                )
-            )
-            try:
-                persist_climate_control(
-                    attempt_id,
-                    device_id,
-                    int(device["room_id"]),
-                    result,
-                    True,
-                    temperature,
-                    fan_speed,
-                )
-            except Exception:
-                app.logger.exception(
-                    "Manual climate command completed but persistence failed (attempt_id=%s)",
-                    attempt_id,
-                )
-                session["poll_notice"] = {
-                    "kind": "error",
-                    "message": (
-                        "A klímaparancs lefutott, de az eredmény naplózása sikertelen. "
-                        f"Auditazonosító: {attempt_id}. Ne ismételd meg a parancsot; frissítsd az oldalt."
-                    ),
-                }
-                return redirect(target)
-    except PollCycleBusy:
+        attempt_id = begin_climate_control_attempt(
+            device_id, True, temperature, fan_speed, requested_mode=mode, queued=True
+        )
+    except RuntimeError as error:
         session["poll_notice"] = {
             "kind": "warning",
-            "message": "Lekérdezés van folyamatban; a klímaparancs nem indult el.",
+            "message": str(error),
         }
         return redirect(target)
-
-    if result.status == "verified":
-        verified = result.verified or {}
-        session["poll_notice"] = {
-            "kind": "success",
-            "message": (
-                f"{device['name']} beállítása visszaolvasással ellenőrizve: "
-                f"{'fűtés' if verified.get('mode') == 'heat' else 'hűtés'}, "
-                f"{verified.get('target_temperature_c')} °C, "
-                f"{FAN_SPEED_LABELS.get(str(verified.get('fan_speed')), verified.get('fan_speed'))}."
-            ),
-        }
-    elif result.status == "rejected":
-        session["poll_notice"] = {"kind": "warning", "message": result.error_message}
-    else:
-        session["poll_notice"] = {
-            "kind": "error",
-            "message": f"A klímaparancs sikertelen: {result.error_message}",
-        }
+    session["poll_notice"] = {
+        "kind": "success",
+        "message": (
+            f"{device['name']}: a klímaparancs sorba állítva "
+            f"(auditazonosító: {attempt_id}). A bélyegen követhető a végrehajtás."
+        ),
+    }
     return redirect(target)
 
 
@@ -5032,56 +5260,22 @@ def stop_climate_from_card(device_id: int):
 
     session.pop("pending_climate_start", None)
     try:
-        with polling_cycle_lock(operation="manual_climate_control"):
-            attempt_id = begin_climate_control_attempt(
-                device_id, False, None, None
-            )
-            result = asyncio.run(
-                control_climate(str(device["source_puid"]), False, None, None)
-            )
-            try:
-                persist_climate_control(
-                    attempt_id,
-                    device_id,
-                    int(device["room_id"]),
-                    result,
-                    False,
-                    None,
-                    None,
-                )
-            except Exception:
-                app.logger.exception(
-                    "Manual climate stop completed but persistence failed (attempt_id=%s)",
-                    attempt_id,
-                )
-                session["poll_notice"] = {
-                    "kind": "error",
-                    "message": (
-                        "A klíma leállítási parancsa lefutott, de az eredmény naplózása "
-                        f"sikertelen. Auditazonosító: {attempt_id}. Ne ismételd meg a "
-                        "parancsot; frissítsd az oldalt."
-                    ),
-                }
-                return redirect(target)
-    except PollCycleBusy:
+        attempt_id = begin_climate_control_attempt(
+            device_id, False, None, None, queued=True
+        )
+    except RuntimeError as error:
         session["poll_notice"] = {
             "kind": "warning",
-            "message": "Lekérdezés van folyamatban; a klíma leállítása nem indult el.",
+            "message": str(error),
         }
         return redirect(target)
-
-    if result.status == "verified":
-        session["poll_notice"] = {
-            "kind": "success",
-            "message": f"{device['name']} kikapcsolását visszaolvasással ellenőriztük.",
-        }
-    elif result.status == "rejected":
-        session["poll_notice"] = {"kind": "warning", "message": result.error_message}
-    else:
-        session["poll_notice"] = {
-            "kind": "error",
-            "message": f"A klíma kikapcsolása sikertelen: {result.error_message}",
-        }
+    session["poll_notice"] = {
+        "kind": "success",
+        "message": (
+            f"{device['name']}: a kikapcsolási parancs sorba állítva "
+            f"(auditazonosító: {attempt_id})."
+        ),
+    }
     return redirect(target)
 
 
@@ -5520,17 +5714,27 @@ def climate_log() -> str:
 def begin_climate_control_attempt(
     device_id: int, requested_power: bool, requested_temperature: int | None,
     requested_fan_speed: str | None, requested_mode: str | None = None,
+    *, queued: bool = False,
 ) -> int:
     connection = connect_database()
     cursor = connection.cursor()
     try:
+        if queued:
+            cursor.execute(
+                """SELECT id FROM climate_control_attempts
+                    WHERE device_id=? AND status='requested'
+                      AND execution_phase IS NOT NULL LIMIT 1 FOR UPDATE""",
+                (device_id,),
+            )
+            if cursor.fetchone() is not None:
+                raise RuntimeError("Ehhez a klímához már van folyamatban lévő parancs.")
         cursor.execute(
             """INSERT INTO climate_control_attempts
                (device_id,requested_by,requested_power,requested_temperature_c,
-                requested_fan_speed,requested_mode,status)
-               VALUES (?,?,?,?,?,?,'requested')""",
+                requested_fan_speed,requested_mode,status,execution_phase,phase_updated_at)
+               VALUES (?,?,?,?,?,?,'requested',?,UTC_TIMESTAMP(3))""",
             (device_id, g.current_user["id"], requested_power, requested_temperature,
-             requested_fan_speed, requested_mode),
+             requested_fan_speed, requested_mode, "queued" if queued else None),
         )
         attempt_id = int(cursor.lastrowid)
         connection.commit()
@@ -5562,7 +5766,10 @@ def persist_climate_control(
         )
         if cursor.rowcount != 1:
             raise RuntimeError("A vezérlési auditkérés nem frissíthető.")
-        if result.status == "verified" and result.verified is not None:
+        # A visszaolvasott tényleges állapot akkor is mérvadó, ha a teljes
+        # kérésnek csak egy része (például a ventilátorfokozat) nem teljesült.
+        # Enélkül a bélyeg tévesen a parancs előtti állapotban maradna.
+        if result.verified is not None:
             verified = result.verified
             event_token = now.strftime("%Y%m%dT%H%M%S%f")
             cursor.execute(
@@ -5575,7 +5782,7 @@ def persist_climate_control(
                  f"connectlife:control:{device_id}:{event_token}",
                  json.dumps(verified["raw"], ensure_ascii=False, default=str)),
             )
-            if requested_power:
+            if bool(verified.get("power")):
                 cursor.execute(
                     "SELECT 1 FROM climate_operation_events WHERE device_id=? AND ended_at IS NULL",
                     (device_id,),
@@ -5685,6 +5892,14 @@ def control_climate_from_ui():
         }
     elif result.status == "rejected":
         session["climate_log_notice"] = {"kind": "warning", "message": result.error_message}
+    elif result.error_code == "fan_verification_failed" and result.verified:
+        session["climate_log_notice"] = {
+            "kind": "warning",
+            "message": (
+                "A klíma bekapcsolt, de a kért ventilátorfokozat nem érvényesült. "
+                "A tényleges visszaolvasott állapotot eltároltuk."
+            ),
+        }
     else:
         session["climate_log_notice"] = {
             "kind": "error", "message": f"A klímaparancs sikertelen: {result.error_message}"
@@ -6957,6 +7172,156 @@ def load_switchable_device(device_id: int) -> dict[str, Any] | None:
     finally:
         cursor.close()
         connection.close()
+
+
+def load_controllable_trv(device_id: int) -> dict[str, Any] | None:
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT d.id,d.name,d.source_device_id,zd.friendly_name
+                 FROM devices d
+                 JOIN zigbee2mqtt_devices zd ON zd.device_id=d.id
+                WHERE d.id=? AND d.is_active=1
+                  AND d.source_system='zigbee2mqtt'
+                  AND d.device_type='radiator_thermostat'
+                  AND LOWER(COALESCE(zd.model_id,''))='trv-zbt'""",
+            (device_id,),
+        )
+        rows = rows_as_dicts(cursor)
+        return rows[0] if rows else None
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.post("/devices/<int:device_id>/trv-settings")
+def update_trv_settings(device_id: int):
+    validate_csrf()
+    device = load_controllable_trv(device_id)
+    if device is None:
+        abort(404)
+
+    pid = request.form.get("smart_temperature_control", "").upper()
+    child_lock = request.form.get("child_lock", "").upper()
+    if pid not in {"ON", "OFF"} or child_lock not in {"LOCK", "UNLOCK"}:
+        abort(400)
+
+    requested: dict[str, Any] = {
+        "smart_temperature_control": pid,
+        "child_lock": child_lock,
+    }
+    if pid == "OFF":
+        try:
+            heating_position = int(request.form["heating_valve_position"])
+            idle_position = int(request.form["idle_valve_position"])
+        except (KeyError, TypeError, ValueError):
+            abort(400)
+        if not 0 <= heating_position <= 100 or not 0 <= idle_position <= 100:
+            abort(400)
+        requested.update(
+            heating_valve_position=heating_position,
+            idle_valve_position=idle_position,
+        )
+
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """INSERT INTO trv_setting_requests
+                 (device_id,requested_settings,requested_by,status)
+               VALUES (?,?,?,'pending')""",
+            (
+                device_id, json.dumps(requested, ensure_ascii=False),
+                g.current_user["id"],
+            ),
+        )
+        request_id = int(cursor.lastrowid)
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+
+    result = control_trv_settings(str(device["friendly_name"]), requested)
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        if result.status == "verified":
+            cursor.execute(
+                """UPDATE trv_setting_requests
+                      SET status='verified',verified_state=?,
+                          completed_at=CURRENT_TIMESTAMP(3)
+                    WHERE id=?""",
+                (
+                    json.dumps(result.verified_state, ensure_ascii=False),
+                    request_id,
+                ),
+            )
+        elif result.status == "failed":
+            cursor.execute(
+                """UPDATE trv_setting_requests
+                      SET status='failed',verified_state=?,
+                          completed_at=CURRENT_TIMESTAMP(3),
+                          error_code=?,error_message=?
+                    WHERE id=?""",
+                (
+                    json.dumps(result.verified_state, ensure_ascii=False),
+                    result.error_code, result.error_message, request_id,
+                ),
+            )
+        else:
+            cursor.execute(
+                """UPDATE trv_setting_requests
+                      SET verified_state=?,error_code=?,error_message=?
+                    WHERE id=?""",
+                (
+                    json.dumps(result.verified_state, ensure_ascii=False),
+                    result.error_code, result.error_message, request_id,
+                ),
+            )
+        audit_registry(
+            cursor, "device", device_id, "trv_settings",
+            {
+                "requested": requested,
+                "status": result.status,
+                "verified_state": result.verified_state,
+                "error_code": result.error_code,
+                "error_message": result.error_message,
+            },
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+
+    if result.status == "verified":
+        session["poll_notice"] = {
+            "kind": "success",
+            "message": f"{device['name']}: a TRV-beállítások visszaigazolva.",
+        }
+    elif result.status == "unverified":
+        session["poll_notice"] = {
+            "kind": "warning",
+            "message": (
+                f"{device['name']}: a parancs elküldve, de még nincs "
+                "visszaigazolás. Ébreszd fel rövid gombnyomással, majd próbáld újra."
+            ),
+        }
+    else:
+        session["poll_notice"] = {
+            "kind": "error",
+            "message": (
+                f"{device['name']}: a TRV-beállítás sikertelen "
+                f"({result.error_code or 'ismeretlen hiba'})."
+            ),
+        }
+    return redirect(url_for("dashboard") + f"#device-{device_id}")
 
 
 def reconcile_boiler_supply_state(

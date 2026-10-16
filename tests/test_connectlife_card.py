@@ -33,8 +33,12 @@ class ConnectLifeCardTest(unittest.TestCase):
         self.assertIn("Klíma kikapcsolása", template)
         self.assertIn("Kültéri határ felülbírálása", template)
         self.assertIn("data-climate-submit", template)
-        self.assertIn('operation="manual_climate_control"', dashboard)
-        self.assertIn("allow_running_update=True", dashboard)
+        self.assertIn("pending_climate_command", template)
+        self.assertIn("Még eltér:", template)
+        self.assertIn("queued=True", dashboard)
+        queue = (ROOT / "app" / "manual_climate_queue.py").read_text(encoding="utf-8")
+        self.assertIn('operation="manual_climate_control"', queue)
+        self.assertIn("allow_running_update=True", queue)
 
 
 if __name__ == "__main__":

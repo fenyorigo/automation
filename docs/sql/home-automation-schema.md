@@ -28,7 +28,10 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `thermostat_service_tests`: visszaállítható Computherm szerviztesztek eredeti és legutóbbi állapota
 - `thermostat_service_commands`: a szerviztesztek parancs- és visszaolvasási auditnaplója
 - `climate_control_attempts`: a közvetlen, időzített és szervizcélú
-  ConnectLife-parancsok auditja; a `requested_mode` a kért üzemmódot is megőrzi
+  ConnectLife-parancsok auditja; a `requested_mode` a kért üzemmódot is megőrzi.
+  A közvetlen UI-parancsoknál az `execution_phase`, `started_at` és
+  `phase_updated_at` mezők tartós végrehajtási sort és köztes állapotjelzést
+  biztosítanak; a `verified_state` a legutóbbi visszaolvasást is tartalmazhatja.
 - `device_power_control_attempts`: a dedikált kapcsolható dugaljak kézi vagy
   ütemezett kapcsolási kérései, opcionális kérő felhasználója, `ui`/`schedule`
   eredete, előzetes és visszaigazolt reléállapota, valamint hibája
@@ -164,6 +167,13 @@ kereskedői díját és ÁFA-kulcsát tárolja. A kezdeti rekord 2026. szeptembe
 negyedórás nettó és bruttó D energiadíj származtatott adat, ezért nem
 duplikáljuk az adatbázisban: a nyers HUPX-ár, az adott napi MNB-árfolyam és az
 adott napon hatályos paraméter alapján újraszámítható.
+
+A `trv_setting_requests` a kézzel kiadott SONOFF TRV Gen2 PID-, gyerekzár- és
+szelepállás-kéréseket őrzi. A `pending` állapot a kiküldött, de cache-ből még
+nem igazolt parancs, a `verified` a visszaolvasott egyezés, az `expired` a
+30 percen belül meg nem erősített kérés, a `failed` pedig a bizonyított
+parancsküldési hiba. A kért és – ha rendelkezésre áll – a visszaolvasott
+állapot JSON-ként megmarad.
 
 ## Seed fájlok
 
