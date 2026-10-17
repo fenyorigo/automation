@@ -127,6 +127,9 @@ class Database:
                     )
                 if result.state is not None:
                     self._insert_state(cursor, device_id, config, result)
+                    self._insert_computherm_clock_sync(
+                        cursor, device_id, config, result
+                    )
                     self._apply_tasmota_state_retention(cursor, config, device_id)
             self._insert_attempt(cursor, device_id, result, duration_ms, poll_origin)
             self.connection.commit()
@@ -518,6 +521,40 @@ class Database:
                    WHERE device_id=? AND ended_at IS NULL""",
                 (observed_at, state.get("target_temperature_c"), device_id),
             )
+
+    @staticmethod
+    def _insert_computherm_clock_sync(
+        cursor: mariadb.Cursor,
+        device_id: int,
+        config: DeviceConfig,
+        result: PollResult,
+    ) -> None:
+        if config.source_system != "computherm" or result.state is None:
+            return
+        event = result.state.get("clock_sync")
+        if not isinstance(event, dict):
+            return
+        cursor.execute(
+            """INSERT INTO computherm_clock_syncs
+               (device_id,trigger_origin,drift_seconds,threshold_seconds,
+                requested_local_time,preflight_state,verified_state,success,
+                error_message,detected_at,completed_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                device_id,
+                event.get("trigger_origin", "automatic"),
+                int(event["drift_seconds"]),
+                int(event["threshold_seconds"]),
+                str(event["requested_local_time"]),
+                json_value(event.get("preflight_state")),
+                json_value(event.get("verified_state"))
+                if event.get("verified_state") is not None else None,
+                bool(event.get("success")),
+                event.get("error_message"),
+                maria_timestamp(str(event["detected_at"])),
+                maria_timestamp(str(event["completed_at"])),
+            ),
+        )
 
     @staticmethod
     def _insert_attempt(

@@ -16,6 +16,8 @@ DAY_NAMES_HU = {
     7: "Vasárnap",
 }
 
+SECONDS_PER_WEEK = 7 * 24 * 60 * 60
+
 
 def connect_device(config: dict[str, Any], factory: Callable[..., Any] = broadlink.gendevice):
     device = factory(
@@ -49,6 +51,43 @@ def clock_details(state: dict[str, Any]) -> dict[str, Any]:
         "day": day,
         "day_name": DAY_NAMES_HU.get(day, f"Ismeretlen ({day})"),
     }
+
+
+def clock_drift_seconds(
+    state: dict[str, Any], reference_local_time: datetime
+) -> int | None:
+    """Return signed CT400 clock drift, including weekday, on a circular week.
+
+    A positive value means the thermostat is ahead of the reference clock.
+    The CT400 has no calendar date, so Sunday/Monday comparisons must wrap at
+    the nearest week boundary.
+    """
+    try:
+        day = int(state["dayofweek"])
+        hour = int(state["hour"])
+        minute = int(state["min"])
+        second = int(state["sec"])
+        if not (
+            1 <= day <= 7
+            and 0 <= hour <= 23
+            and 0 <= minute <= 59
+            and 0 <= second <= 59
+        ):
+            raise ValueError
+    except (KeyError, TypeError, ValueError):
+        return None
+    device_seconds = (
+        (day - 1) * 24 * 60 * 60 + hour * 60 * 60 + minute * 60 + second
+    )
+    reference_seconds = (
+        (reference_local_time.isoweekday() - 1) * 24 * 60 * 60
+        + reference_local_time.hour * 60 * 60
+        + reference_local_time.minute * 60
+        + reference_local_time.second
+    )
+    difference = device_seconds - reference_seconds
+    half_week = SECONDS_PER_WEEK // 2
+    return int((difference + half_week) % SECONDS_PER_WEEK - half_week)
 
 
 def weekly_program(state: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:

@@ -105,7 +105,11 @@ A kártyák az eszköz típusától függően mutathatják:
 - a Computherm saját óráját és magyar napnevét. Szerkesztőként az **Idő
   szinkronizálása** gomb az automation szerver budapesti helyi idejét írja a
   CT400-ba, majd visszaolvassa az eredményt. A sikerüzenet csak igazolt
-  egyezés után jelenik meg;
+  egyezés után jelenik meg. A tízperces automatikus lekérdezés ugyanezt
+  naplózva elvégzi, ha a CT400 napja és ideje több mint öt perccel eltér a
+  think260x budapesti idejétől; pontosan öt perc eltérés még nem indít írást.
+  Az alapértelmezett ötperces küszöb a **Globális beállítások / CT400
+  óraszinkronizálási eltérés** mezőben módosítható, újraindítás nélkül;
 - a Computherm visszaolvasott heti programját: külön a hat hétköznapi és a két
   hétvégi kezdőidőt, mindegyik mellett a hozzá tartozó célhőmérsékletet;
 - a Computherm **Kézi lekérdezés** gombját, amely csak olvasási művelettel

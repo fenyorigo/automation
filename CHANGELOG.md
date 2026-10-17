@@ -3,6 +3,16 @@
 A projekt a szemantikus verziózás elvét követi. A kiadás dátumai budapesti
 helyi dátumok.
 
+## 2.1.1 — 2026-10-17
+
+- A tízperces automatikus Computherm-lekérdezés a CT400 hétköznapját és idejét
+  a think260x Europe/Budapest szerinti órájához méri. Öt percnél nagyobb
+  abszolút eltérésnél automatikusan szinkronizál, majd az eredményt
+  visszaolvassa. A küszöb a Globális beállítások között, percben módosítható,
+  és a poller újraindítása nélkül életbe lép. A sikeres és sikertelen korrekció
+  külön adatbázis-auditnaplóba és a poller naplójába kerül. A szinkronhibától
+  a szabályos hőmérsékletmérés még eltárolódik.
+
 ## 2.1.0 — 2026-10-17
 
 - A Computherm CT400 bélyege megmutatja a termosztát saját `óra:perc:másodperc`

@@ -238,6 +238,10 @@ MIGRATIONS = (
         "v1_58_computherm_schedule_changes",
         ROOT / "SQL" / "migrations" / "058_home_automation_v1.57_to_v1.58.sql",
     ),
+    (
+        "v1_59_computherm_clock_syncs",
+        ROOT / "SQL" / "migrations" / "059_home_automation_v1.58_to_v1.59.sql",
+    ),
 )
 
 

@@ -52,6 +52,7 @@ def number_between(low: float, high: float) -> Callable[[str], bool]:
 SETTINGS = (
     Setting("DEFAULT_POLL_INTERVAL_MINUTES", "Alap lekérdezési gyakoriság", "10", "number", "Perc; az összes eszköz alapértékének visszaállításakor ezt használjuk.", integer_between(1, 1440)),
     Setting("POLL_TIMEOUT_SECONDS", "Lekérdezési időkorlát", "5", "number", "Másodperc.", number_between(1, 120)),
+    Setting("COMPUTHERM_CLOCK_SYNC_THRESHOLD_MINUTES", "CT400 óraszinkronizálási eltérés", "5", "number", "Perc; az automatikus lekérdezés csak ennél nagyobb óra- vagy napeltérésnél állítja be a CT400 idejét. Pontosan ekkora eltérés még nem indít írást.", number_between(1, 1440)),
     Setting("DATABASE_BACKUP_DIR", "Adatbázismentések könyvtára", str(ROOT / "exports"), "text"),
     Setting("DATABASE_BACKUP_TIME", "Napi mentés időpontja", "03:00", "time", validator=lambda value: re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value) is not None),
     Setting("DATABASE_BACKUP_KEEP", "Megőrzött automatikus mentések", "30", "number", validator=integer_between(1, 3650)),

@@ -1,6 +1,6 @@
 # Home Automation
 
-Current application release: **2.1.0**.
+Current application release: **2.1.1**.
 
 Local-first home climate and energy monitoring and control for ESP32/DS18B20
 sensors, Zigbee2MQTT-based SONOFF sensors, local-MQTT Shelly H&T Gen3 sensors,

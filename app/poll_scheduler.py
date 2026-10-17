@@ -40,7 +40,11 @@ async def run_cycle(
         if not devices and not poll_outdoor:
             return 0, 0, 0
         configs = {(item.source_system, item.device_id): item for item in devices}
-        results = await poll_all(devices, timeout)
+        results = await poll_all(
+            devices,
+            timeout,
+            synchronize_computherm_clock=(poll_origin == "automatic"),
+        )
         database = Database()
         stored = 0
         try:

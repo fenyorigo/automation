@@ -40,6 +40,13 @@ class ReloadEnvironmentTest(unittest.TestCase):
         self.assertTrue(settings["VENTILATION_LONG_THRESHOLD_MINUTES"].validator("15"))
         self.assertFalse(settings["VENTILATION_CONTACT_CLOSE_DELAY_SECONDS"].validator("2"))
 
+    def test_computherm_clock_threshold_is_ui_managed_in_minutes(self) -> None:
+        settings = {item.key: item for item in global_settings.SETTINGS}
+        setting = settings["COMPUTHERM_CLOCK_SYNC_THRESHOLD_MINUTES"]
+        self.assertEqual(setting.default, "5")
+        self.assertTrue(setting.validator("7.5"))
+        self.assertFalse(setting.validator("0"))
+
     def test_cooling_observer_defaults_are_ui_managed(self) -> None:
         settings = {item.key: item for item in global_settings.SETTINGS}
         self.assertEqual(settings["COOLING_ROOM_REQUEST_ON_C"].default, "27.5")

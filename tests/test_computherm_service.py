@@ -4,6 +4,7 @@ import unittest
 from datetime import datetime
 
 from app.computherm_service import (
+    clock_drift_seconds,
     clock_details,
     restore_test,
     set_weekly_program,
@@ -89,6 +90,24 @@ class ComputhermServiceTest(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "nem igazolta vissza"):
             sync_clock(StaleClock(), datetime(2026, 10, 17, 10, 22, 33))
+
+    def test_clock_drift_includes_weekday_and_wraps_week_boundary(self):
+        reference = datetime(2026, 10, 19, 0, 2, 0)  # Monday
+        self.assertEqual(
+            clock_drift_seconds(
+                {"dayofweek": 7, "hour": 23, "min": 59, "sec": 0},
+                reference,
+            ),
+            -180,
+        )
+
+    def test_clock_drift_returns_none_for_invalid_clock(self):
+        self.assertIsNone(
+            clock_drift_seconds(
+                {"dayofweek": 8, "hour": 12, "min": 0, "sec": 0},
+                datetime(2026, 10, 17, 12, 0, 0),
+            )
+        )
 
     def test_weekly_program_normalizes_six_plus_two_periods(self):
         state = {

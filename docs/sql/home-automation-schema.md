@@ -30,6 +30,9 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `computherm_schedule_changes`: a CT400 heti programjának kért, írás előtti
   és visszaellenőrzött állapotát, valamint a sikeres és sikertelen módosításokat
   felhasználóhoz és eszközhöz kötve őrző auditnapló
+- `computherm_clock_syncs`: az automatikus CT400-órakorrekciók észlelt
+  eltérését, küszöbét, írás előtti és visszaellenőrzött állapotát, valamint a
+  sikeres és sikertelen szinkronizálásokat őrző auditnapló
 - `climate_control_attempts`: a közvetlen, időzített és szervizcélú
   ConnectLife-parancsok auditja; a `requested_mode` a kért üzemmódot is megőrzi.
   A közvetlen UI-parancsoknál az `execution_phase`, `started_at` és

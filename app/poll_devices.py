@@ -18,10 +18,13 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import broadlink
 from connectlife.api import ConnectLifeApi
 from dotenv import load_dotenv
+
+from computherm_service import clock_drift_seconds, sync_clock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +34,7 @@ CONNECTLIFE_FAN_SPEED = {
     0: "auto", 1: "quiet", 5: "low", 6: "medium_low", 7: "medium",
     8: "medium_high", 9: "high",
 }
+LOCAL_TIMEZONE = ZoneInfo("Europe/Budapest")
 
 
 @dataclass(frozen=True)
@@ -71,6 +75,10 @@ class PollResult:
 
 def utc_now() -> str:
     return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def budapest_now() -> datetime:
+    return datetime.now(LOCAL_TIMEZONE)
 
 
 def load_devices(path: Path) -> list[DeviceConfig]:
@@ -139,7 +147,12 @@ def poll_esp32(config: DeviceConfig, timeout: float) -> PollResult:
         return failed(config, "invalid_response", error)
 
 
-def poll_computherm(config: DeviceConfig, timeout: float) -> PollResult:
+def poll_computherm(
+    config: DeviceConfig,
+    timeout: float,
+    *,
+    synchronize_clock: bool = False,
+) -> PollResult:
     started = time.monotonic()
     try:
         device = broadlink.gendevice(
@@ -151,6 +164,59 @@ def poll_computherm(config: DeviceConfig, timeout: float) -> PollResult:
         device.timeout = int(max(timeout, 1))
         device.auth()
         status = device.get_full_status()
+        clock_sync: dict[str, Any] | None = None
+        if synchronize_clock:
+            threshold_seconds = max(
+                60,
+                round(
+                    float(
+                        os.getenv(
+                            "COMPUTHERM_CLOCK_SYNC_THRESHOLD_MINUTES", "5"
+                        ).replace(",", ".")
+                    )
+                    * 60
+                ),
+            )
+            detected_at = utc_now()
+            reference_time = budapest_now()
+            drift_seconds = clock_drift_seconds(status, reference_time)
+            if (
+                drift_seconds is not None
+                and abs(drift_seconds) > threshold_seconds
+            ):
+                requested_time = budapest_now()
+                clock_sync = {
+                    "trigger_origin": "automatic",
+                    "drift_seconds": drift_seconds,
+                    "threshold_seconds": threshold_seconds,
+                    "detected_at": detected_at,
+                    "requested_local_time": requested_time.isoformat(),
+                    "preflight_state": dict(status),
+                    "verified_state": None,
+                    "success": False,
+                    "error_message": None,
+                }
+                try:
+                    _, verified = sync_clock(
+                        device, requested_time, preflight=dict(status)
+                    )
+                except Exception as error:
+                    clock_sync["error_message"] = (
+                        f"{type(error).__name__}: {error}"
+                    )
+                else:
+                    status = verified
+                    clock_sync["verified_state"] = dict(verified)
+                    clock_sync["success"] = True
+                finally:
+                    clock_sync["completed_at"] = utc_now()
+                    outcome = "success" if clock_sync["success"] else "failed"
+                    print(
+                        f"{datetime.now().isoformat(timespec='seconds')} "
+                        f"Computherm clock sync {config.device_id}: {outcome}, "
+                        f"drift={drift_seconds}s",
+                        flush=True,
+                    )
         measurements = [
             {
                 "sensor_id": f"computherm:{config.device_id}:room_temp",
@@ -171,6 +237,8 @@ def poll_computherm(config: DeviceConfig, timeout: float) -> PollResult:
             "auto_mode": bool(status.get("auto_mode")),
             "raw": status,
         }
+        if clock_sync is not None:
+            state["clock_sync"] = clock_sync
         return PollResult(
             source_system=config.source_system,
             device_id=config.device_id,
@@ -572,7 +640,12 @@ async def poll_connectlife(configs: list[DeviceConfig]) -> list[PollResult]:
     return results
 
 
-async def poll_all(devices: list[DeviceConfig], timeout: float) -> list[PollResult]:
+async def poll_all(
+    devices: list[DeviceConfig],
+    timeout: float,
+    *,
+    synchronize_computherm_clock: bool = False,
+) -> list[PollResult]:
     local = [
         item for item in devices
         if item.source_system in {
@@ -589,7 +662,17 @@ async def poll_all(devices: list[DeviceConfig], timeout: float) -> list[PollResu
             "linux_system": poll_linux_system,
             "network_device": poll_network_device,
         }[item.source_system]
-        tasks.append(asyncio.to_thread(function, item, timeout))
+        if item.source_system == "computherm":
+            tasks.append(
+                asyncio.to_thread(
+                    function,
+                    item,
+                    timeout,
+                    synchronize_clock=synchronize_computherm_clock,
+                )
+            )
+        else:
+            tasks.append(asyncio.to_thread(function, item, timeout))
     local_results = await asyncio.gather(*tasks)
     cloud_results = await poll_connectlife(connectlife)
     return [*local_results, *cloud_results]
