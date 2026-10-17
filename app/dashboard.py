@@ -45,7 +45,17 @@ from manual_climate_control import (
 from power_switch_control import control_tasmota_power, control_zigbee_power
 from trv_control import control_trv_settings
 from scheduled_power import WATER_HEATER_HOSTNAME, water_heater_schedule_details
-from computherm_service import connect_device as connect_computherm, restore_test, snapshot as computherm_snapshot, start_test, suppress_heat
+from computherm_service import (
+    clock_details as computherm_clock_details,
+    connect_device as connect_computherm,
+    restore_test,
+    set_weekly_program as set_computherm_weekly_program,
+    snapshot as computherm_snapshot,
+    start_test,
+    suppress_heat,
+    sync_clock as sync_computherm_clock,
+    weekly_program as computherm_weekly_program,
+)
 from database_backup import create_database_export, export_directory, list_database_exports
 from global_settings import (
     SETTINGS as GLOBAL_SETTINGS,
@@ -1567,6 +1577,27 @@ def load_dashboard(
             device["network_http_status"] = network_state.get("http_status")
             device["network_resolved_ip"] = network_state.get("resolved_ip")
             device["network_check_mode"] = network_state.get("check_mode", "http")
+        if device["source_system"] == "computherm":
+            try:
+                computherm_state = json.loads(device["state_raw"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                computherm_state = {}
+            clock = computherm_clock_details(computherm_state)
+            device["computherm_time"] = clock["time"]
+            device["computherm_day_name"] = clock["day_name"]
+            device["computherm_weekly_program"] = computherm_weekly_program(
+                computherm_state
+            )
+            try:
+                device["computherm_minimum_temperature_c"] = float(
+                    computherm_state.get("svl", 5)
+                )
+                device["computherm_maximum_temperature_c"] = float(
+                    computherm_state.get("svh", 35)
+                )
+            except (TypeError, ValueError):
+                device["computherm_minimum_temperature_c"] = 5.0
+                device["computherm_maximum_temperature_c"] = 35.0
         device["switch_power"] = normalized_switch_power(device)
         device["is_klarstein_supply"] = bool(
             device["source_system"] == "zigbee2mqtt"
@@ -5092,7 +5123,7 @@ def poll_device_now(device_id: int):
     if not rows:
         abort(404)
     device = rows[0]
-    if device["source_system"] != "connectlife":
+    if device["source_system"] not in {"connectlife", "computherm"}:
         abort(400)
     target = f"{url_for('dashboard')}#device-{device_id}"
     if not device["is_active"] or not device["polling_enabled"]:
@@ -5110,7 +5141,7 @@ def poll_device_now(device_id: int):
     try:
         result = asyncio.run(
             run_device_cycle(
-                "connectlife",
+                str(device["source_system"]),
                 str(device["source_device_id"]),
                 float(os.getenv("POLL_TIMEOUT_SECONDS", "5")),
                 poll_origin="manual",
@@ -6333,7 +6364,208 @@ def disable_boiler_service_mode():
 def computherm_config(source_device_id: str) -> dict[str, Any]:
     config = next((item for item in load_devices(DEFAULT_CONFIG) if item.source_system=="computherm" and item.device_id==source_device_id), None)
     if config is None: raise RuntimeError("A Computherm nincs a pollerkonfigurációban.")
-    return asdict(config)
+    values = asdict(config)
+    # DeviceConfig uses ``device_id`` while the BroadLink helper deliberately
+    # consumes the database-facing ``source_device_id`` name.  Keep the alias
+    # here so every interactive CT400 operation (clock, schedule, service test)
+    # receives the same complete connection payload as the poller.
+    values["source_device_id"] = config.device_id
+    return values
+
+
+def computherm_schedule_from_form() -> dict[str, list[dict[str, Any]]]:
+    program: dict[str, list[dict[str, Any]]] = {"weekday": [], "weekend": []}
+    for group, count in (("weekday", 6), ("weekend", 2)):
+        for index in range(count):
+            time_value = request.form.get(f"{group}_time_{index}", "")
+            match = re.fullmatch(r"([01]\d|2[0-3]):([0-5]\d)", time_value)
+            if match is None:
+                raise ValueError("Minden periódushoz érvényes kezdőidőt kell megadni.")
+            try:
+                temperature = float(
+                    request.form[f"{group}_temperature_{index}"].replace(",", ".")
+                )
+            except (KeyError, TypeError, ValueError) as error:
+                raise ValueError(
+                    "Minden periódushoz érvényes célhőmérsékletet kell megadni."
+                ) from error
+            program[group].append(
+                {
+                    "start_hour": int(match.group(1)),
+                    "start_minute": int(match.group(2)),
+                    "temp": temperature,
+                }
+            )
+    return program
+
+
+def insert_computherm_state(
+    cursor: mariadb.Cursor,
+    device_id: int,
+    state: dict[str, Any],
+    event_kind: str,
+) -> None:
+    observed_at = datetime.now(UTC).replace(tzinfo=None)
+    event_token = observed_at.strftime("%Y%m%dT%H%M%S%f")
+    cursor.execute(
+        """INSERT INTO device_states
+           (device_id,observed_at,power,mode,target_temperature_c,online,active,
+            auto_mode,source_system,source_event_id,raw_state)
+           VALUES (?,?,?,?,?,1,?,?,'computherm',?,?)""",
+        (
+            device_id,
+            observed_at,
+            bool(state.get("power")),
+            "auto" if state.get("auto_mode") else "manual",
+            state.get("thermostat_temp"),
+            bool(state.get("active")),
+            bool(state.get("auto_mode")),
+            f"computherm:{event_kind}:{device_id}:{event_token}",
+            json.dumps(state, ensure_ascii=False, default=str),
+        ),
+    )
+
+
+@app.post("/devices/<int:device_id>/computherm/sync-clock")
+@editor_required
+def sync_computherm_device_clock(device_id: int):
+    validate_csrf()
+    connection = connect_database()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            """SELECT source_device_id FROM devices
+               WHERE id=? AND is_active=1 AND source_system='computherm'""",
+            (device_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            abort(404)
+        with polling_cycle_lock(operation="computherm_clock_sync"):
+            control = connect_computherm(computherm_config(str(row[0])))
+            preflight = computherm_snapshot(control)
+            # Authentication and the preflight read may take several seconds.
+            # Capture the time immediately before the actual write.
+            requested_time = local_now()
+            _, verified = sync_computherm_clock(
+                control, requested_time, preflight=preflight
+            )
+
+        insert_computherm_state(cursor, device_id, verified, "clock-sync")
+        connection.commit()
+        clock = computherm_clock_details(verified)
+        session["poll_notice"] = {
+            "kind": "success",
+            "message": (
+                f"A CT400 órája szinkronizálva: {clock['time']} · "
+                f"{clock['day_name']}."
+            ),
+        }
+    except PollCycleBusy as error:
+        connection.rollback()
+        session["poll_notice"] = {"kind": "error", "message": str(error)}
+    except Exception as error:
+        connection.rollback()
+        if hasattr(error, "code"):
+            raise
+        session["poll_notice"] = {
+            "kind": "error",
+            "message": f"A CT400 óraszinkronizálása sikertelen: {error}",
+        }
+    finally:
+        cursor.close()
+        connection.close()
+    return redirect(url_for("dashboard") + f"#device-{device_id}")
+
+
+@app.post("/devices/<int:device_id>/computherm/schedule")
+@editor_required
+def update_computherm_schedule(device_id: int):
+    validate_csrf()
+    target = url_for("dashboard") + f"#device-{device_id}"
+    try:
+        requested = computherm_schedule_from_form()
+    except ValueError as error:
+        session["poll_notice"] = {"kind": "error", "message": str(error)}
+        return redirect(target)
+
+    connection = connect_database()
+    cursor = connection.cursor()
+    preflight: dict[str, Any] | None = None
+    verified: dict[str, Any] | None = None
+    try:
+        cursor.execute(
+            """SELECT source_device_id FROM devices
+               WHERE id=? AND is_active=1 AND source_system='computherm'""",
+            (device_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            abort(404)
+        with polling_cycle_lock(operation="computherm_schedule_update"):
+            control = connect_computherm(computherm_config(str(row[0])))
+            preflight = computherm_snapshot(control)
+            _, verified, requested = set_computherm_weekly_program(
+                control,
+                requested["weekday"],
+                requested["weekend"],
+                preflight=preflight,
+            )
+        insert_computherm_state(cursor, device_id, verified, "schedule-update")
+        cursor.execute(
+            """INSERT INTO computherm_schedule_changes
+               (device_id,requested_by,requested_schedule,preflight_state,
+                verified_state,success,completed_at)
+               VALUES (?,?,?,?,?,1,?)""",
+            (
+                device_id,
+                g.current_user["id"],
+                json.dumps(requested, ensure_ascii=False),
+                json.dumps(preflight, ensure_ascii=False, default=str),
+                json.dumps(verified, ensure_ascii=False, default=str),
+                datetime.now(UTC).replace(tzinfo=None),
+            ),
+        )
+        connection.commit()
+        session["poll_notice"] = {
+            "kind": "success",
+            "message": "A CT400 heti programja elmentve és visszaellenőrizve.",
+        }
+    except Exception as error:
+        connection.rollback()
+        if hasattr(error, "code"):
+            raise
+        try:
+            cursor.execute(
+                """INSERT INTO computherm_schedule_changes
+                   (device_id,requested_by,requested_schedule,preflight_state,
+                    verified_state,success,error_message,completed_at)
+                   VALUES (?,?,?,?,?,0,?,?)""",
+                (
+                    device_id,
+                    g.current_user["id"],
+                    json.dumps(requested, ensure_ascii=False),
+                    json.dumps(preflight, ensure_ascii=False, default=str)
+                    if preflight is not None else None,
+                    json.dumps(verified, ensure_ascii=False, default=str)
+                    if verified is not None else None,
+                    str(error),
+                    datetime.now(UTC).replace(tzinfo=None),
+                ),
+            )
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            app.logger.exception("Computherm schedule audit failed")
+        app.logger.exception("Computherm schedule update failed")
+        session["poll_notice"] = {
+            "kind": "error",
+            "message": f"A CT400 heti programjának mentése sikertelen: {error}",
+        }
+    finally:
+        cursor.close()
+        connection.close()
+    return redirect(target)
 
 
 @app.post("/service-tests/computherm/<int:device_id>/<action>")

@@ -234,6 +234,10 @@ MIGRATIONS = (
         "v1_57_manual_climate_queue",
         ROOT / "SQL" / "migrations" / "057_home_automation_v1.56_to_v1.57.sql",
     ),
+    (
+        "v1_58_computherm_schedule_changes",
+        ROOT / "SQL" / "migrations" / "058_home_automation_v1.57_to_v1.58.sql",
+    ),
 )
 
 

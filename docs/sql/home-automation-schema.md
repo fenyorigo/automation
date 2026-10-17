@@ -27,6 +27,9 @@ ESP32, ConnectLife, Computherm, Zigbee2MQTT és Shelly MQTT adatok tárolásáho
 - `sensors`: szenzorok, például DS18B20, ConnectLife beltéri hőmérséklet, Computherm hőmérséklet
 - `thermostat_service_tests`: visszaállítható Computherm szerviztesztek eredeti és legutóbbi állapota
 - `thermostat_service_commands`: a szerviztesztek parancs- és visszaolvasási auditnaplója
+- `computherm_schedule_changes`: a CT400 heti programjának kért, írás előtti
+  és visszaellenőrzött állapotát, valamint a sikeres és sikertelen módosításokat
+  felhasználóhoz és eszközhöz kötve őrző auditnapló
 - `climate_control_attempts`: a közvetlen, időzített és szervizcélú
   ConnectLife-parancsok auditja; a `requested_mode` a kért üzemmódot is megőrzi.
   A közvetlen UI-parancsoknál az `execution_phase`, `started_at` és

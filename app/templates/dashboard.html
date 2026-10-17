@@ -338,6 +338,30 @@
       updateTrvForm();
     });
 
+    document.querySelectorAll('[data-computherm-schedule]').forEach((form) => {
+      const validateScheduleOrder = () => {
+        form.querySelectorAll('[data-schedule-time]').forEach((input) => {
+          input.setCustomValidity('');
+        });
+        form.querySelectorAll('[data-schedule-group]').forEach((group) => {
+          const inputs = [...group.querySelectorAll('[data-schedule-time]')];
+          let previous = -1;
+          inputs.forEach((input) => {
+            const parts = input.value.split(':').map(Number);
+            if (parts.length !== 2 || parts.some((value) => !Number.isFinite(value))) return;
+            const current = parts[0] * 60 + parts[1];
+            if (current < previous) {
+              input.setCustomValidity('A kezdőidőknek a periódusok sorrendjében kell maradniuk.');
+            }
+            previous = current;
+          });
+        });
+      };
+      form.addEventListener('input', validateScheduleOrder);
+      form.addEventListener('change', validateScheduleOrder);
+      validateScheduleOrder();
+    });
+
     async function refreshAfterCompletedPoll() {
       if (checking || document.hidden || editingInProgress()) return;
       checking = true;

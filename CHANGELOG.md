@@ -3,6 +3,32 @@
 A projekt a szemantikus verziózás elvét követi. A kiadás dátumai budapesti
 helyi dátumok.
 
+## 2.1.0 — 2026-10-17
+
+- A Computherm CT400 bélyege megmutatja a termosztát saját `óra:perc:másodperc`
+  értékét és a `dayofweek` mezőből képzett magyar napnevet. A szerkesztők az
+  **Idő szinkronizálása** gombbal az automation szerver Europe/Budapest
+  szerinti helyi idejét és ISO-hétköznapját írhatják az eszközbe. A művelet a
+  pollerrel közös zárolást használ, azonnal visszaolvassa az állapotot, és csak
+  igazolt egyezés után jelez sikert; a visszaolvasott állapot rögtön bekerül az
+  eszközállapotok közé. Az időmintavétel közvetlenül az írás előtt történik,
+  ezért a több másodperces BroadLink-kapcsolódás és hitelesítés nem okoz téves
+  visszaellenőrzési hibát.
+
+- A CT400 bélyege az időszinkronizálás alatt megjeleníti a termosztátból
+  visszaolvasott heti programot: a hat hétköznapi
+  és két hétvégi kezdőidőt, valamint a hozzájuk tartozó félfokos célértékeket.
+  Az időszinkronizálás mellett külön **Kézi lekérdezés** frissíti a CT400
+  teljes állapotát, így a telefonos alkalmazásban módosított célérték, mód,
+  reléállapot, óra és heti program várakozás nélkül megjeleníthető.
+
+- A hat hétköznapi és két hétvégi CT400-periódus kezdőideje és félfokos
+  célértéke a bélyegen szerkeszthető. A böngésző és a szerver egyaránt őrzi a
+  periódusok időrendi sorrendjét; a szerver emellett ellenőrzi az eszköz saját
+  alsó és felső hőmérsékleti határát. A teljes program írás előtt mentett,
+  utána visszaolvasott és csak pontos egyezéskor sikeres; minden próbálkozás
+  felhasználóhoz kötött auditnaplóba kerül.
+
 ## 2.0.0 — 2026-10-16
 
 - A HiSense kézi indítása és leállítása már nem tartja nyitva a böngésző

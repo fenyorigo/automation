@@ -207,6 +207,8 @@
   <dl class="state-grid">
     <div><dt>Célhőmérséklet</dt><dd>{{ device.target_temperature_c|temperature }} °C</dd></div>
     <div><dt>Állapot</dt><dd class="{{ 'power-on' if device.source_system == 'connectlife' and device.power else '' }}">{% if device.power is none %}—{% elif device.power %}Bekapcsolva{% else %}Kikapcsolva{% endif %}</dd></div>
+    {% if device.source_system == 'computherm' %}<div><dt>Nap</dt><dd>{{ device.computherm_day_name or '—' }}</dd></div>
+    <div><dt>CT400 ideje</dt><dd>{{ device.computherm_time or '—' }}</dd></div>{% endif %}
     <div><dt>Üzemmód</dt><dd>{{ device.mode or '—' }}</dd></div>
     {% if device.source_system == 'connectlife' %}<div><dt>Ventilátor-beállítás</dt><dd>{% if device.fan_speed == 'auto' %}Auto{% elif device.fan_speed == 'quiet' %}Csendes{% elif device.fan_speed == 'low' %}Alacsony{% elif device.fan_speed in ['medium_low', 'mid_low'] %}Közepesen alacsony{% elif device.fan_speed in ['medium', 'mid'] %}Közepes{% elif device.fan_speed in ['medium_high', 'mid_high'] %}Közepesen magas{% elif device.fan_speed == 'high' %}Magas{% else %}{{ device.fan_speed or '—' }}{% endif %}</dd></div>{% endif %}
     <div><dt>Aktív</dt><dd>{% if device.active is none %}—{% elif device.active %}Igen{% else %}Nem{% endif %}</dd></div>
@@ -216,6 +218,58 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit">Kézi lekérdezés</button>
   </form>
+  {% endif %}
+  {% if can_write and device.source_system == 'computherm' and device.polling_enabled %}
+  <div class="computherm-card-controls">
+    <form class="device-poll-control" method="post" action="{{ url_for('sync_computherm_device_clock',device_id=device.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Idő szinkronizálása</button>
+    </form>
+    <form class="device-poll-control" method="post" action="{{ url_for('poll_device_now',device_id=device.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Kézi lekérdezés</button>
+    </form>
+  </div>
+  {% set ct_program = device.computherm_weekly_program|default({}) %}
+  <section class="computherm-program" aria-label="CT400 heti program">
+    <strong class="computherm-program-title">Beállított heti program</strong>
+    {% if can_write and ct_program.get('weekday',[])|length == 6 and ct_program.get('weekend',[])|length == 2 %}
+    <form method="post" action="{{ url_for('update_computherm_schedule',device_id=device.id) }}" data-computherm-schedule>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="computherm-program-groups">
+        {% for group,label,days in [('weekday','Hétköznap','hétfő–péntek'),('weekend','Hétvége','szombat–vasárnap')] %}
+        <fieldset data-schedule-group="{{ group }}">
+          <legend>{{ label }}<small>{{ days }}</small></legend>
+          <div class="computherm-program-fields">
+            {% for period in ct_program[group] %}
+            <div class="computherm-program-row">
+              <span>{{ loop.index }}.</span>
+              <input aria-label="{{ label }} {{ loop.index }}. periódus kezdőideje" type="time" name="{{ group }}_time_{{ loop.index0 }}" step="60" value="{{ period.time }}" required data-schedule-time>
+              <label><input aria-label="{{ label }} {{ loop.index }}. periódus célhőmérséklete" type="number" name="{{ group }}_temperature_{{ loop.index0 }}" min="{{ device.computherm_minimum_temperature_c }}" max="{{ device.computherm_maximum_temperature_c }}" step="0.5" value="{{ period.temperature_c }}" required><span>°C</span></label>
+            </div>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% endfor %}
+      </div>
+      <p class="computherm-program-note">A kezdőidőknek csoportonként időrendben kell maradniuk. Mentéskor a teljes programot visszaellenőrizzük.</p>
+      <button type="submit">Heti program mentése</button>
+    </form>
+    {% else %}
+    <div class="computherm-program-groups">
+      <div>
+        <strong>Hétköznap</strong>
+        <small>hétfő–péntek</small>
+        <ol>{% for period in ct_program.get('weekday',[]) %}<li><time>{{ period.time }}</time><span>{{ period.temperature_c|temperature }} °C</span></li>{% else %}<li class="program-unavailable">Nincs visszaolvasott adat</li>{% endfor %}</ol>
+      </div>
+      <div>
+        <strong>Hétvége</strong>
+        <small>szombat–vasárnap</small>
+        <ol>{% for period in ct_program.get('weekend',[]) %}<li><time>{{ period.time }}</time><span>{{ period.temperature_c|temperature }} °C</span></li>{% else %}<li class="program-unavailable">Nincs visszaolvasott adat</li>{% endfor %}</ol>
+      </div>
+    </div>
+    {% endif %}
+  </section>
   {% endif %}
   {% if can_write and device.manual_climate_control is defined %}
     {% set pending_command = device.pending_climate_command|default(none) %}

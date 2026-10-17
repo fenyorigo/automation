@@ -102,6 +102,19 @@ A kártyák az eszköz típusától függően mutathatják:
 - a Computherm-bélyegen az aktuálisan hozzárendelt helyiség további önálló
   hőmérőinek nevét, értékét és mérési idejét. A radiátorközeli TRV-k nem
   szerepelnek ebben a felsorolásban;
+- a Computherm saját óráját és magyar napnevét. Szerkesztőként az **Idő
+  szinkronizálása** gomb az automation szerver budapesti helyi idejét írja a
+  CT400-ba, majd visszaolvassa az eredményt. A sikerüzenet csak igazolt
+  egyezés után jelenik meg;
+- a Computherm visszaolvasott heti programját: külön a hat hétköznapi és a két
+  hétvégi kezdőidőt, mindegyik mellett a hozzá tartozó célhőmérsékletet;
+- a Computherm **Kézi lekérdezés** gombját, amely csak olvasási művelettel
+  frissíti a teljes termosztátállapotot, benne az órát és a heti programot is;
+- szerkesztőként a hat hétköznapi és két hétvégi programperiódus kezdőidejét
+  és célhőmérsékletét. A célérték 0,5 °C-os lépésben módosítható, az időpontok
+  pedig nem bonthatják meg a periódusok sorrendjét. A **Heti program mentése**
+  a teljes programot egyben írja, majd visszaolvassa és ellenőrzi; hiba esetén
+  nem jelenít meg sikert. Az írás előtti és utáni állapot auditnaplóban marad;
 - a Nous/Tasmota pillanatnyi teljesítményét, feszültségét, relé- és
   terheltségi állapotát, továbbá az összes fogyasztást és annak kezdőidejét;
 - a Bosch 7000i kézi állapotát és szervizadatait.

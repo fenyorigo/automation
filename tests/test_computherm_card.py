@@ -33,6 +33,32 @@ class ComputhermCardTest(unittest.TestCase):
         self.assertIn("További helyiségi hőmérő", template)
         self.assertIn("device.room_thermometers", template)
 
+    def test_template_displays_clock_and_sync_button(self) -> None:
+        template = (ROOT / "app" / "templates" / "_device_card.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("CT400 ideje", template)
+        self.assertIn("device.computherm_day_name", template)
+        self.assertIn("sync_computherm_device_clock", template)
+        self.assertIn("Idő szinkronizálása", template)
+        self.assertIn("Beállított heti program", template)
+        self.assertIn("ct_program.get('weekday',[])", template)
+        self.assertIn("ct_program.get('weekend',[])", template)
+        self.assertIn("computherm-card-controls", template)
+        self.assertIn("poll_device_now", template)
+        self.assertIn("Kézi lekérdezés", template)
+        self.assertIn("update_computherm_schedule", template)
+        self.assertIn("Heti program mentése", template)
+        self.assertIn('step="0.5"', template)
+
+    def test_dashboard_validates_schedule_order_in_browser(self) -> None:
+        template = (ROOT / "app" / "templates" / "dashboard.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("data-computherm-schedule", template)
+        self.assertIn("current < previous", template)
+        self.assertIn("setCustomValidity", template)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -139,6 +139,29 @@ dd.power-on { color: #d05a16; }
 .device-poll-control { margin-top:14px; }
 .device-poll-control button { min-height:38px; padding:0 13px; border:1px solid var(--green); border-radius:9px; background:var(--card); color:var(--green); font:inherit; font-size:.74rem; font-weight:850; cursor:pointer; }
 .device-poll-control button:hover { background:var(--green-soft); }
+.computherm-card-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; }
+.computherm-card-controls .device-poll-control { margin-top:0; }
+.computherm-program { margin-top:14px; padding:12px 13px; border:1px solid var(--line); border-radius:12px; background:#f7f5ee; }
+.computherm-program-title { display:block; margin-bottom:10px; font-size:.78rem; font-weight:900; }
+.computherm-program-groups { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.computherm-program-groups>div>strong { display:block; color:var(--green); font-size:.72rem; }
+.computherm-program-groups small { display:block; margin-top:1px; color:var(--muted); font-size:.62rem; }
+.computherm-program ol { display:grid; gap:4px; margin:8px 0 0; padding:0; list-style:none; }
+.computherm-program li { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:.69rem; }
+.computherm-program li span { color:var(--ink); font-weight:750; white-space:nowrap; }
+.computherm-program .program-unavailable { display:block; line-height:1.35; }
+.computherm-program form { display:grid; gap:11px; }
+.computherm-program form .computherm-program-groups { grid-template-columns:1fr; gap:12px; }
+.computherm-program fieldset { min-width:0; margin:0; padding:0; border:0; }
+.computherm-program legend { width:100%; color:var(--green); font-size:.72rem; font-weight:850; }
+.computherm-program legend small { display:inline; margin-left:5px; font-weight:600; }
+.computherm-program-fields { display:grid; gap:6px; margin-top:7px; }
+.computherm-program-row { display:grid; grid-template-columns:18px minmax(92px,1fr) minmax(80px,1fr); align-items:center; gap:6px; }
+.computherm-program-row>span { color:var(--muted); font-size:.66rem; font-weight:750; }
+.computherm-program-row input { width:100%; min-width:0; min-height:34px; padding:4px 6px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--ink); font:inherit; font-size:.7rem; }
+.computherm-program-row label { display:grid; grid-template-columns:1fr auto; align-items:center; gap:3px; color:var(--muted); font-size:.66rem; }
+.computherm-program-note { margin:0; color:var(--muted); font-size:.65rem; line-height:1.4; }
+.computherm-program form>button { min-height:38px; border:0; border-radius:9px; padding:0 12px; background:var(--green); color:#fff; font:inherit; font-size:.72rem; font-weight:850; cursor:pointer; }
 .card-climate-control { display:grid; gap:10px; margin-top:14px; padding:13px; border:1px solid var(--line); border-radius:12px; background:#f7f5ee; }
 .card-climate-control .form-title { margin:0; color:var(--ink); font-size:.8rem; font-weight:900; }
 .card-climate-fields { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
